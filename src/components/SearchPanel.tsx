@@ -290,7 +290,7 @@ const SearchPanel = () => {
   return (
     <div className="px-3 space-y-3 max-w-xl mx-auto">
       {/* Feature Cards Grid - neon container */}
-        <div className="rounded-2xl bg-black/60 backdrop-blur-sm border border-neon-green/20 p-3" style={{boxShadow: '0 0 20px hsl(var(--neon-green) / 0.1), inset 0 0 20px hsl(var(--neon-green) / 0.03)'}}>
+        <div className="rounded-2xl bg-black/60 backdrop-blur-sm border border-neon-green/40 p-3" style={{boxShadow: '0 0 25px hsl(var(--neon-green) / 0.3), 0 0 50px hsl(var(--neon-green) / 0.15), inset 0 0 20px hsl(var(--neon-green) / 0.05)', borderColor: 'hsl(var(--neon-green) / 0.5)'}}>
           <div className="grid grid-cols-4 gap-2">
           {visibleTabs.map((tab) => {
             const IconComponent = iconMap[tab.icon] || Sparkles;
