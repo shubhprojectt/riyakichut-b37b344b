@@ -14,6 +14,7 @@ interface ScheduledHitRecord {
   last_executed_at: string | null;
   next_execution_at: string | null;
   total_hits: number;
+  max_rounds: number;
   created_at: string;
 }
 
@@ -23,6 +24,7 @@ export default function ScheduledHit() {
   const [startTime, setStartTime] = useState('');
   const [intervalValue, setIntervalValue] = useState('60');
   const [intervalUnit, setIntervalUnit] = useState<'seconds' | 'minutes'>('seconds');
+  const [maxRounds, setMaxRounds] = useState('0');
   const [jobs, setJobs] = useState<ScheduledHitRecord[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -67,13 +69,16 @@ export default function ScheduledHit() {
 
     const startDateTime = new Date(`${startDate}T${startTime}`).toISOString();
 
+    const maxR = parseInt(maxRounds) || 0;
+
     setLoading(true);
     const { error } = await supabase.from('scheduled_hits').insert({
       phone_number: phone,
       start_time: startDateTime,
       interval_seconds: intervalSec,
       next_execution_at: startDateTime,
-    });
+      max_rounds: maxR,
+    } as any);
 
     if (error) {
       toast({ title: 'Error', description: 'Failed to schedule', variant: 'destructive' });
@@ -105,6 +110,7 @@ export default function ScheduledHit() {
   };
 
   const getStatus = (job: ScheduledHitRecord) => {
+    if (!job.is_active && job.max_rounds > 0 && job.total_hits >= job.max_rounds) return { text: 'COMPLETED', color: 'text-violet-400', bg: 'bg-violet-500/10' };
     if (!job.is_active) return { text: 'PAUSED', color: 'text-yellow-400', bg: 'bg-yellow-500/10' };
     const now = new Date();
     if (new Date(job.start_time) > now) return { text: 'WAITING', color: 'text-blue-400', bg: 'bg-blue-500/10' };
@@ -169,28 +175,41 @@ export default function ScheduledHit() {
           </div>
         </div>
 
-        {/* Interval */}
-        <div className="space-y-1">
-          <label className="text-[9px] font-bold text-white/40 tracking-wider uppercase">Interval</label>
-          <div className="flex gap-2">
+        {/* Interval & Max Rounds */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <label className="text-[9px] font-bold text-white/40 tracking-wider uppercase">Interval</label>
+            <div className="flex gap-1">
+              <Input
+                type="number"
+                min="10"
+                value={intervalValue}
+                onChange={e => setIntervalValue(e.target.value)}
+                placeholder="60"
+                className="h-9 flex-1 bg-white/[0.04] border-white/[0.08] text-white text-xs focus:border-orange-500/40"
+              />
+              <div className="flex rounded-lg overflow-hidden border border-white/[0.08]">
+                <button
+                  onClick={() => setIntervalUnit('seconds')}
+                  className={`px-2 h-9 text-[9px] font-bold transition-colors ${intervalUnit === 'seconds' ? 'bg-orange-500/20 text-orange-400' : 'bg-white/[0.02] text-white/30'}`}
+                >S</button>
+                <button
+                  onClick={() => setIntervalUnit('minutes')}
+                  className={`px-2 h-9 text-[9px] font-bold transition-colors ${intervalUnit === 'minutes' ? 'bg-orange-500/20 text-orange-400' : 'bg-white/[0.02] text-white/30'}`}
+                >M</button>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-[9px] font-bold text-white/40 tracking-wider uppercase">Max Rounds (0=∞)</label>
             <Input
               type="number"
-              min="10"
-              value={intervalValue}
-              onChange={e => setIntervalValue(e.target.value)}
-              placeholder="60"
-              className="h-9 flex-1 bg-white/[0.04] border-white/[0.08] text-white text-xs focus:border-orange-500/40"
+              min="0"
+              value={maxRounds}
+              onChange={e => setMaxRounds(e.target.value)}
+              placeholder="0"
+              className="h-9 bg-white/[0.04] border-white/[0.08] text-white text-xs focus:border-orange-500/40"
             />
-            <div className="flex rounded-lg overflow-hidden border border-white/[0.08]">
-              <button
-                onClick={() => setIntervalUnit('seconds')}
-                className={`px-3 h-9 text-[10px] font-bold transition-colors ${intervalUnit === 'seconds' ? 'bg-orange-500/20 text-orange-400' : 'bg-white/[0.02] text-white/30'}`}
-              >SEC</button>
-              <button
-                onClick={() => setIntervalUnit('minutes')}
-                className={`px-3 h-9 text-[10px] font-bold transition-colors ${intervalUnit === 'minutes' ? 'bg-orange-500/20 text-orange-400' : 'bg-white/[0.02] text-white/30'}`}
-              >MIN</button>
-            </div>
           </div>
         </div>
 
@@ -228,7 +247,7 @@ export default function ScheduledHit() {
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-1 text-center">
+                  <div className="grid grid-cols-4 gap-1 text-center">
                     <div className="p-1 rounded bg-white/[0.02]">
                       <p className="text-[7px] text-white/25">INTERVAL</p>
                       <p className="text-[10px] text-white/60 font-mono">
@@ -238,6 +257,10 @@ export default function ScheduledHit() {
                     <div className="p-1 rounded bg-white/[0.02]">
                       <p className="text-[7px] text-white/25">HITS</p>
                       <p className="text-[10px] text-emerald-400 font-mono font-bold">{job.total_hits}</p>
+                    </div>
+                    <div className="p-1 rounded bg-white/[0.02]">
+                      <p className="text-[7px] text-white/25">LIMIT</p>
+                      <p className="text-[10px] text-orange-400 font-mono font-bold">{job.max_rounds > 0 ? job.max_rounds : '∞'}</p>
                     </div>
                     <div className="p-1 rounded bg-white/[0.02]">
                       <p className="text-[7px] text-white/25">NEXT</p>
