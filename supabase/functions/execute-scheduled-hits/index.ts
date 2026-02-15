@@ -108,17 +108,25 @@ serve(async (req) => {
       );
 
       // Calculate next execution time
-      const nextExec = new Date(Date.now() + hit.interval_seconds * 1000).toISOString();
+      const newTotal = (hit.total_hits || 0) + 1;
+      const maxRounds = hit.max_rounds || 0;
+      const reachedLimit = maxRounds > 0 && newTotal >= maxRounds;
+      const nextExec = reachedLimit ? null : new Date(Date.now() + hit.interval_seconds * 1000).toISOString();
 
-      // Update the scheduled hit record
+      // Update the scheduled hit record (auto-deactivate if limit reached)
       await supabase
         .from('scheduled_hits')
         .update({
           last_executed_at: now,
           next_execution_at: nextExec,
-          total_hits: (hit.total_hits || 0) + 1,
+          total_hits: newTotal,
+          is_active: reachedLimit ? false : hit.is_active,
         })
         .eq('id', hit.id);
+
+      if (reachedLimit) {
+        console.log(`Hit ${hit.id} reached max rounds (${maxRounds}), deactivated.`);
+      }
 
       // Log to search_history
       await supabase.from('search_history').insert({

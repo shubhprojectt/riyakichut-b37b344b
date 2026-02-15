@@ -236,6 +236,7 @@ export type Database = {
           interval_seconds: number
           is_active: boolean
           last_executed_at: string | null
+          max_rounds: number | null
           next_execution_at: string | null
           phone_number: string
           start_time: string
@@ -248,6 +249,7 @@ export type Database = {
           interval_seconds?: number
           is_active?: boolean
           last_executed_at?: string | null
+          max_rounds?: number | null
           next_execution_at?: string | null
           phone_number: string
           start_time: string
@@ -260,6 +262,7 @@ export type Database = {
           interval_seconds?: number
           is_active?: boolean
           last_executed_at?: string | null
+          max_rounds?: number | null
           next_execution_at?: string | null
           phone_number?: string
           start_time?: string
