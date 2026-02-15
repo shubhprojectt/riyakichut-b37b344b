@@ -285,7 +285,7 @@ const SearchPanel = () => {
   };
 
   const showSearchInput = activeTab && activeButton && 
-    !["shubh", "darkdb", "telegram", "phprat", "calldark", "imagetoinfo", "smsbomber", "scheduledhit"].includes(activeButton.searchType);
+    !["shubh", "darkdb", "telegram", "phprat", "calldark", "imagetoinfo", "smsbomber"].includes(activeButton.searchType);
 
   return (
     <div className="px-3 space-y-3 max-w-xl mx-auto">
@@ -395,10 +395,7 @@ const SearchPanel = () => {
       {/* Image to Info Panel */}
       {activeButton?.searchType === "imagetoinfo" && activeButton.enabled && <ImageToInfo />}
 
-      {/* Scheduled Hit Panel */}
-      {activeButton?.searchType === "scheduledhit" && activeButton.enabled && <ScheduledHit />}
-
-      {/* SMS BOMBER - Inline Hit Engine */}
+      {/* SMS BOMBER - Inline Hit Engine + Scheduled Hit */}
       {activeButton?.searchType === "smsbomber" && activeButton.enabled && (
         <div className="space-y-4">
           <QuickHitEngine
@@ -417,6 +414,7 @@ const SearchPanel = () => {
             noApisWarning={hitSettings.noApisWarning}
             uaRotation={hitSettings.uaRotationEnabled}
           />
+          <ScheduledHit />
           <LogsPanel logs={logs} onClear={clearLogs} />
         </div>
       )}
