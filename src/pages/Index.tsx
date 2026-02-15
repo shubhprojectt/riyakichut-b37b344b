@@ -8,8 +8,8 @@ const Index = () => {
 
   return (
     <PasswordProtection>
-      <div className="min-h-[100dvh] relative overflow-x-hidden bg-[#05030a]">
-        {/* Background */}
+      <div className="min-h-[100dvh] relative overflow-x-hidden bg-black">
+        {/* Background - pure black with neon glow orbs */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
           {settings.backgroundImage ? (
             <div 
@@ -26,14 +26,10 @@ const Index = () => {
             />
           ) : (
             <>
-              {/* Hard neon green glow */}
-              <div className="absolute top-[-5%] right-[-5%] w-[500px] h-[500px] rounded-full bg-emerald-500/[0.20] blur-[100px]" />
-              {/* Hard neon pink glow */}
-              <div className="absolute bottom-[-5%] left-[-5%] w-[450px] h-[450px] rounded-full bg-pink-500/[0.18] blur-[90px]" />
-              {/* Center green */}
-              <div className="absolute top-[35%] left-[25%] w-[350px] h-[350px] rounded-full bg-emerald-600/[0.12] blur-[80px]" />
-              {/* Extra pink accent */}
-              <div className="absolute top-[60%] right-[20%] w-[250px] h-[250px] rounded-full bg-pink-500/[0.15] blur-[70px]" />
+              <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-neon-green/[0.08] blur-[150px]" />
+              <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-neon-pink/[0.08] blur-[130px]" />
+              <div className="absolute top-[40%] left-[30%] w-[400px] h-[400px] rounded-full bg-neon-cyan/[0.06] blur-[120px]" />
+              <div className="absolute top-[20%] right-[20%] w-[300px] h-[300px] rounded-full bg-neon-purple/[0.06] blur-[100px]" />
             </>
           )}
         </div>
@@ -48,10 +44,10 @@ const Index = () => {
           
           {/* Footer */}
           <footer className="text-center py-3 px-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08]">
-              <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse shadow-sm shadow-emerald-400/50" />
-              <p className="text-[9px] text-white/30 font-medium tracking-widest uppercase">
-                Educational Purpose Only
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-green/[0.05] border border-neon-green/20">
+              <div className="w-1.5 h-1.5 bg-neon-green rounded-full animate-pulse" style={{boxShadow: '0 0 8px hsl(var(--neon-green))'}} />
+              <p className="text-[9px] text-neon-green/60 font-bold tracking-widest uppercase font-mono" style={{textShadow: '0 0 10px hsl(var(--neon-green) / 0.5)'}}>
+                System Active • Educational Purpose Only
               </p>
             </div>
           </footer>

@@ -289,8 +289,8 @@ const SearchPanel = () => {
 
   return (
     <div className="px-3 space-y-3 max-w-xl mx-auto">
-      {/* Feature Cards Grid */}
-        <div className="rounded-2xl bg-white/[0.04] backdrop-blur-sm border border-white/[0.08] p-3 shadow-lg shadow-emerald-500/[0.05]">
+      {/* Feature Cards Grid - neon container */}
+        <div className="rounded-2xl bg-black/60 backdrop-blur-sm border border-neon-green/20 p-3" style={{boxShadow: '0 0 20px hsl(var(--neon-green) / 0.1), inset 0 0 20px hsl(var(--neon-green) / 0.03)'}}>
           <div className="grid grid-cols-4 gap-2">
           {visibleTabs.map((tab) => {
             const IconComponent = iconMap[tab.icon] || Sparkles;
@@ -314,10 +314,10 @@ const SearchPanel = () => {
 
       {/* Search Input Section */}
       {showSearchInput && (
-        <div className="rounded-2xl bg-white/[0.04] backdrop-blur-sm border border-white/[0.08] p-3 shadow-lg shadow-emerald-500/[0.05]">
+        <div className="rounded-2xl bg-black/60 backdrop-blur-sm border border-neon-cyan/20 p-3" style={{boxShadow: '0 0 15px hsl(var(--neon-cyan) / 0.1)'}}>
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50" />
-            <span className="text-[10px] font-bold text-white/50 tracking-wider uppercase">
+            <div className="w-1.5 h-1.5 rounded-full bg-neon-cyan" style={{boxShadow: '0 0 6px hsl(var(--neon-cyan))'}} />
+            <span className="text-[10px] font-bold text-neon-cyan/70 tracking-wider uppercase font-mono" style={{textShadow: '0 0 8px hsl(var(--neon-cyan) / 0.5)'}}>
               {activeButton?.label || "SEARCH"}
             </span>
           </div>
@@ -326,13 +326,15 @@ const SearchPanel = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={activeButton?.placeholder || "Enter search query..."}
-              className="flex-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/20 focus:border-emerald-500/40 focus:ring-emerald-500/20 h-10 text-sm font-mono rounded-xl"
+              className="flex-1 bg-black/80 border-neon-green/20 text-neon-green placeholder:text-neon-green/20 focus:border-neon-green/50 focus:ring-neon-green/20 h-10 text-sm font-mono rounded-xl"
+              style={{textShadow: '0 0 4px hsl(var(--neon-green) / 0.3)', boxShadow: 'inset 0 0 10px hsl(var(--neon-green) / 0.05)'}}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             />
             <Button
               onClick={handleSearch}
               disabled={loading}
-              className="h-10 px-4 rounded-xl font-bold bg-gradient-to-r from-emerald-500 to-pink-500 text-white hover:opacity-90 active:scale-[0.97] transition-all shadow-lg shadow-emerald-500/20"
+              className="h-10 px-4 rounded-xl font-bold bg-black border-2 border-neon-green/50 text-neon-green hover:bg-neon-green/10 active:scale-[0.97] transition-all"
+              style={{boxShadow: '0 0 15px hsl(var(--neon-green) / 0.3), inset 0 0 10px hsl(var(--neon-green) / 0.1)', textShadow: '0 0 8px hsl(var(--neon-green))'}}
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
             </Button>

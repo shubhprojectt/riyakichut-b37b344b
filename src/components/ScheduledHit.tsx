@@ -129,26 +129,27 @@ export default function ScheduledHit() {
   return (
     <div className="space-y-4">
       {/* Create Schedule Form */}
-      <div className="rounded-2xl bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] p-4 space-y-3">
+      <div className="rounded-2xl bg-black/60 backdrop-blur-sm border border-neon-orange/20 p-4 space-y-3" style={{boxShadow: '0 0 15px hsl(var(--neon-orange) / 0.08)'}}>
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500/20 to-red-500/20 flex items-center justify-center">
-            <Clock className="w-3.5 h-3.5 text-orange-400" />
+          <div className="w-7 h-7 rounded-lg bg-black border border-neon-orange/30 flex items-center justify-center" style={{boxShadow: '0 0 10px hsl(var(--neon-orange) / 0.3)'}}>
+            <Clock className="w-3.5 h-3.5 text-neon-orange animate-neon-flicker" style={{filter: 'drop-shadow(0 0 6px hsl(var(--neon-orange)))'}} />
           </div>
-          <h2 className="text-sm font-semibold text-white tracking-tight">TIME SCHEDULED HIT</h2>
+          <h2 className="text-sm font-bold text-neon-orange tracking-tight font-mono" style={{textShadow: '0 0 10px hsl(var(--neon-orange))'}}>TIME SCHEDULED HIT</h2>
         </div>
 
-        <p className="text-[10px] text-white/30">⚡ Browser band hone ke baad bhi server-side chalta rahega</p>
+        <p className="text-[10px] text-neon-orange/30 font-mono" style={{textShadow: '0 0 6px hsl(var(--neon-orange) / 0.3)'}}>⚡ Browser band hone ke baad bhi server-side chalta rahega</p>
 
         {/* Phone */}
         <div className="space-y-1">
-          <label className="text-[9px] font-bold text-white/40 tracking-wider uppercase">Phone Number</label>
+          <label className="text-[9px] font-bold text-neon-cyan/40 tracking-wider uppercase font-mono">Phone Number</label>
           <div className="flex items-center gap-1.5">
-            <Phone className="w-3 h-3 text-white/30 flex-shrink-0" />
+            <Phone className="w-3 h-3 text-neon-green/40 flex-shrink-0" style={{filter: 'drop-shadow(0 0 3px hsl(var(--neon-green)))'}} />
             <Input
               value={phone}
               onChange={e => setPhone(e.target.value.replace(/[^0-9+]/g, ''))}
               placeholder="91XXXXXXXXXX"
-              className="h-9 bg-white/[0.04] border-white/[0.08] text-white text-xs placeholder:text-white/15 focus:border-orange-500/40"
+              className="h-9 bg-black/80 border-neon-orange/15 text-neon-orange text-xs placeholder:text-neon-orange/15 focus:border-neon-orange/40 font-mono"
+              style={{textShadow: '0 0 4px hsl(var(--neon-orange) / 0.3)'}}
             />
           </div>
         </div>
@@ -156,69 +157,47 @@ export default function ScheduledHit() {
         {/* Date & Time */}
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1">
-            <label className="text-[9px] font-bold text-white/40 tracking-wider uppercase">Start Date</label>
-            <Input
-              type="date"
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-              className="h-9 bg-white/[0.04] border-white/[0.08] text-white text-xs focus:border-orange-500/40 [color-scheme:dark]"
-            />
+            <label className="text-[9px] font-bold text-neon-cyan/40 tracking-wider uppercase font-mono">Start Date</label>
+            <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+              className="h-9 bg-black/80 border-neon-orange/15 text-neon-orange text-xs focus:border-neon-orange/40 [color-scheme:dark] font-mono" />
           </div>
           <div className="space-y-1">
-            <label className="text-[9px] font-bold text-white/40 tracking-wider uppercase">Start Time</label>
-            <Input
-              type="time"
-              value={startTime}
-              onChange={e => setStartTime(e.target.value)}
-              className="h-9 bg-white/[0.04] border-white/[0.08] text-white text-xs focus:border-orange-500/40 [color-scheme:dark]"
-            />
+            <label className="text-[9px] font-bold text-neon-cyan/40 tracking-wider uppercase font-mono">Start Time</label>
+            <Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
+              className="h-9 bg-black/80 border-neon-orange/15 text-neon-orange text-xs focus:border-neon-orange/40 [color-scheme:dark] font-mono" />
           </div>
         </div>
 
         {/* Interval & Max Rounds */}
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1">
-            <label className="text-[9px] font-bold text-white/40 tracking-wider uppercase">Interval</label>
+            <label className="text-[9px] font-bold text-neon-cyan/40 tracking-wider uppercase font-mono">Interval</label>
             <div className="flex gap-1">
-              <Input
-                type="number"
-                min="10"
-                value={intervalValue}
-                onChange={e => setIntervalValue(e.target.value)}
-                placeholder="60"
-                className="h-9 flex-1 bg-white/[0.04] border-white/[0.08] text-white text-xs focus:border-orange-500/40"
-              />
-              <div className="flex rounded-lg overflow-hidden border border-white/[0.08]">
-                <button
-                  onClick={() => setIntervalUnit('seconds')}
-                  className={`px-2 h-9 text-[9px] font-bold transition-colors ${intervalUnit === 'seconds' ? 'bg-orange-500/20 text-orange-400' : 'bg-white/[0.02] text-white/30'}`}
+              <Input type="number" min="10" value={intervalValue} onChange={e => setIntervalValue(e.target.value)} placeholder="60"
+                className="h-9 flex-1 bg-black/80 border-neon-orange/15 text-neon-orange text-xs focus:border-neon-orange/40 font-mono" />
+              <div className="flex rounded-lg overflow-hidden border border-neon-orange/20">
+                <button onClick={() => setIntervalUnit('seconds')}
+                  className={`px-2 h-9 text-[9px] font-bold font-mono transition-colors ${intervalUnit === 'seconds' ? 'bg-neon-orange/20 text-neon-orange' : 'bg-black/40 text-white/30'}`}
+                  style={intervalUnit === 'seconds' ? {textShadow: '0 0 6px hsl(var(--neon-orange))'} : undefined}
                 >S</button>
-                <button
-                  onClick={() => setIntervalUnit('minutes')}
-                  className={`px-2 h-9 text-[9px] font-bold transition-colors ${intervalUnit === 'minutes' ? 'bg-orange-500/20 text-orange-400' : 'bg-white/[0.02] text-white/30'}`}
+                <button onClick={() => setIntervalUnit('minutes')}
+                  className={`px-2 h-9 text-[9px] font-bold font-mono transition-colors ${intervalUnit === 'minutes' ? 'bg-neon-orange/20 text-neon-orange' : 'bg-black/40 text-white/30'}`}
+                  style={intervalUnit === 'minutes' ? {textShadow: '0 0 6px hsl(var(--neon-orange))'} : undefined}
                 >M</button>
               </div>
             </div>
           </div>
           <div className="space-y-1">
-            <label className="text-[9px] font-bold text-white/40 tracking-wider uppercase">Max Rounds (0=∞)</label>
-            <Input
-              type="number"
-              min="0"
-              value={maxRounds}
-              onChange={e => setMaxRounds(e.target.value)}
-              placeholder="0"
-              className="h-9 bg-white/[0.04] border-white/[0.08] text-white text-xs focus:border-orange-500/40"
-            />
+            <label className="text-[9px] font-bold text-neon-cyan/40 tracking-wider uppercase font-mono">Max Rounds (0=∞)</label>
+            <Input type="number" min="0" value={maxRounds} onChange={e => setMaxRounds(e.target.value)} placeholder="0"
+              className="h-9 bg-black/80 border-neon-orange/15 text-neon-orange text-xs focus:border-neon-orange/40 font-mono" />
           </div>
         </div>
 
         {/* Schedule Button */}
-        <Button
-          onClick={handleSchedule}
-          disabled={loading || phone.length < 10}
-          className="w-full h-10 rounded-xl font-bold bg-gradient-to-r from-orange-500 to-red-500 text-white hover:opacity-90 active:scale-[0.97] transition-all shadow-lg shadow-orange-500/20"
-        >
+        <Button onClick={handleSchedule} disabled={loading || phone.length < 10}
+          className="w-full h-10 rounded-xl font-bold bg-black border-2 border-neon-orange/50 text-neon-orange hover:bg-neon-orange/10 active:scale-[0.97] transition-all font-mono"
+          style={{boxShadow: '0 0 20px hsl(var(--neon-orange) / 0.3)', textShadow: '0 0 10px hsl(var(--neon-orange))'}}>
           <Clock className="w-4 h-4 mr-2" />
           {loading ? 'Scheduling...' : 'SCHEDULE HIT'}
         </Button>
@@ -226,63 +205,61 @@ export default function ScheduledHit() {
 
       {/* Active Jobs */}
       {jobs.length > 0 && (
-        <div className="rounded-2xl bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] p-4 space-y-3">
+        <div className="rounded-2xl bg-black/60 backdrop-blur-sm border border-neon-green/20 p-4 space-y-3" style={{boxShadow: '0 0 15px hsl(var(--neon-green) / 0.08)'}}>
           <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-emerald-400" />
-            <h3 className="text-xs font-bold text-white/60 uppercase tracking-wider">Scheduled Jobs ({jobs.length})</h3>
+            <Zap className="w-4 h-4 text-neon-green" style={{filter: 'drop-shadow(0 0 6px hsl(var(--neon-green)))'}} />
+            <h3 className="text-xs font-bold text-neon-green/70 uppercase tracking-wider font-mono" style={{textShadow: '0 0 8px hsl(var(--neon-green) / 0.5)'}}>Scheduled Jobs ({jobs.length})</h3>
           </div>
 
           <div className="space-y-2 max-h-[300px] overflow-y-auto">
             {jobs.map(job => {
               const status = getStatus(job);
+              const statusNeonMap: Record<string, string> = {
+                'text-yellow-400': '--neon-yellow', 'text-blue-400': '--neon-blue',
+                'text-emerald-400': '--neon-green', 'text-violet-400': '--neon-purple',
+              };
+              const statusNeon = statusNeonMap[status.color] || '--neon-green';
               return (
-                <div key={job.id} className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] space-y-2">
+                <div key={job.id} className="p-3 rounded-xl bg-black/40 border border-white/[0.06] space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Phone className="w-3 h-3 text-white/40" />
-                      <span className="text-xs font-mono text-white/80">{job.phone_number}</span>
+                      <Phone className="w-3 h-3 text-neon-cyan/40" />
+                      <span className="text-xs font-mono text-neon-cyan/80" style={{textShadow: '0 0 6px hsl(var(--neon-cyan) / 0.4)'}}>{job.phone_number}</span>
                     </div>
-                    <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full ${status.bg} ${status.color}`}>
+                    <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full font-mono ${status.color}`}
+                      style={{textShadow: `0 0 8px hsl(var(${statusNeon}))`, backgroundColor: `hsl(var(${statusNeon}) / 0.1)`, border: `1px solid hsl(var(${statusNeon}) / 0.3)`}}>
                       {status.text}
                     </span>
                   </div>
 
                   <div className="grid grid-cols-4 gap-1 text-center">
-                    <div className="p-1 rounded bg-white/[0.02]">
-                      <p className="text-[7px] text-white/25">INTERVAL</p>
-                      <p className="text-[10px] text-white/60 font-mono">
-                        {job.interval_seconds >= 60 ? `${Math.round(job.interval_seconds / 60)}m` : `${job.interval_seconds}s`}
-                      </p>
-                    </div>
-                    <div className="p-1 rounded bg-white/[0.02]">
-                      <p className="text-[7px] text-white/25">HITS</p>
-                      <p className="text-[10px] text-emerald-400 font-mono font-bold">{job.total_hits}</p>
-                    </div>
-                    <div className="p-1 rounded bg-white/[0.02]">
-                      <p className="text-[7px] text-white/25">LIMIT</p>
-                      <p className="text-[10px] text-orange-400 font-mono font-bold">{job.max_rounds > 0 ? job.max_rounds : '∞'}</p>
-                    </div>
-                    <div className="p-1 rounded bg-white/[0.02]">
-                      <p className="text-[7px] text-white/25">NEXT</p>
-                      <p className="text-[8px] text-white/40 font-mono">{formatDateTime(job.next_execution_at)}</p>
-                    </div>
+                    {[
+                      { label: 'INTERVAL', value: job.interval_seconds >= 60 ? `${Math.round(job.interval_seconds / 60)}m` : `${job.interval_seconds}s`, neon: '--neon-cyan' },
+                      { label: 'HITS', value: job.total_hits, neon: '--neon-green' },
+                      { label: 'LIMIT', value: job.max_rounds > 0 ? job.max_rounds : '∞', neon: '--neon-orange' },
+                      { label: 'NEXT', value: formatDateTime(job.next_execution_at), neon: '--neon-purple' },
+                    ].map(s => (
+                      <div key={s.label} className="p-1 rounded bg-black/40">
+                        <p className="text-[7px] text-white/20 font-mono">{s.label}</p>
+                        <p className="text-[10px] font-mono font-bold" style={{color: `hsl(var(${s.neon}))`, textShadow: `0 0 6px hsl(var(${s.neon}))`}}>{s.value}</p>
+                      </div>
+                    ))}
                   </div>
 
                   <div className="flex gap-1.5">
-                    <button
-                      onClick={() => toggleJob(job.id, job.is_active)}
-                      className={`flex-1 h-7 rounded-lg text-[9px] font-bold flex items-center justify-center gap-1 transition-colors ${
+                    <button onClick={() => toggleJob(job.id, job.is_active)}
+                      className={`flex-1 h-7 rounded-lg text-[9px] font-bold font-mono flex items-center justify-center gap-1 transition-colors border ${
                         job.is_active
-                          ? 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20'
-                          : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+                          ? 'bg-neon-yellow/5 text-neon-yellow border-neon-yellow/20 hover:bg-neon-yellow/10'
+                          : 'bg-neon-green/5 text-neon-green border-neon-green/20 hover:bg-neon-green/10'
                       }`}
+                      style={{textShadow: job.is_active ? '0 0 6px hsl(var(--neon-yellow))' : '0 0 6px hsl(var(--neon-green))'}}
                     >
                       {job.is_active ? <><Square className="w-2.5 h-2.5" /> PAUSE</> : <><Play className="w-2.5 h-2.5" /> RESUME</>}
                     </button>
-                    <button
-                      onClick={() => deleteJob(job.id)}
-                      className="h-7 px-3 rounded-lg text-[9px] font-bold bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center gap-1 transition-colors"
-                    >
+                    <button onClick={() => deleteJob(job.id)}
+                      className="h-7 px-3 rounded-lg text-[9px] font-bold font-mono bg-neon-red/5 text-neon-red border border-neon-red/20 hover:bg-neon-red/10 flex items-center gap-1 transition-colors"
+                      style={{textShadow: '0 0 6px hsl(var(--neon-red))'}}>
                       <Trash2 className="w-2.5 h-2.5" /> DELETE
                     </button>
                   </div>
@@ -294,12 +271,12 @@ export default function ScheduledHit() {
       )}
 
       {/* Info Box */}
-      <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-3 space-y-1">
+      <div className="rounded-xl bg-black/40 border border-neon-orange/10 p-3 space-y-1">
         <div className="flex items-center gap-1.5">
-          <AlertCircle className="w-3 h-3 text-orange-400/60" />
-          <span className="text-[9px] font-bold text-white/30">HOW IT WORKS</span>
+          <AlertCircle className="w-3 h-3 text-neon-orange/40" />
+          <span className="text-[9px] font-bold text-neon-orange/30 font-mono" style={{textShadow: '0 0 6px hsl(var(--neon-orange) / 0.3)'}}>HOW IT WORKS</span>
         </div>
-        <ul className="text-[9px] text-white/25 space-y-0.5 pl-4 list-disc">
+        <ul className="text-[9px] text-neon-green/25 space-y-0.5 pl-4 list-disc font-mono" style={{textShadow: '0 0 4px hsl(var(--neon-green) / 0.2)'}}>
           <li>Server har minute check karta hai scheduled jobs</li>
           <li>Start time aane pe APIs automatically hit hoti hain</li>
           <li>Browser band hone pe bhi chalta rahega</li>
