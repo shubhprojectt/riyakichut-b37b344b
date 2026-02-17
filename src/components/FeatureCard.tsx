@@ -13,23 +13,35 @@ interface FeatureCardProps {
 
 export type { FeatureCardProps };
 
-const colorMap: Record<string, { text: string; glow: string; border: string; activeBg: string; activeShadow: string; neonVar: string }> = {
-  green: { text: "text-neon-green", glow: "glow-green", border: "border-neon-green/50", activeBg: "bg-neon-green/20", activeShadow: "shadow-neon-green/40", neonVar: "--neon-green" },
-  pink: { text: "text-neon-pink", glow: "glow-pink", border: "border-neon-pink/50", activeBg: "bg-neon-pink/20", activeShadow: "shadow-neon-pink/40", neonVar: "--neon-pink" },
-  orange: { text: "text-neon-orange", glow: "glow-orange", border: "border-neon-orange/50", activeBg: "bg-neon-orange/20", activeShadow: "shadow-neon-orange/40", neonVar: "--neon-orange" },
-  cyan: { text: "text-neon-cyan", glow: "glow-cyan", border: "border-neon-cyan/50", activeBg: "bg-neon-cyan/20", activeShadow: "shadow-neon-cyan/40", neonVar: "--neon-cyan" },
-  red: { text: "text-neon-red", glow: "glow-red", border: "border-neon-red/50", activeBg: "bg-neon-red/20", activeShadow: "shadow-neon-red/40", neonVar: "--neon-red" },
-  purple: { text: "text-neon-purple", glow: "glow-purple", border: "border-neon-purple/50", activeBg: "bg-neon-purple/20", activeShadow: "shadow-neon-purple/40", neonVar: "--neon-purple" },
-  yellow: { text: "text-neon-yellow", glow: "glow-yellow", border: "border-neon-yellow/50", activeBg: "bg-neon-yellow/20", activeShadow: "shadow-neon-yellow/40", neonVar: "--neon-yellow" },
-  blue: { text: "text-neon-blue", glow: "", border: "border-neon-blue/50", activeBg: "bg-neon-blue/20", activeShadow: "shadow-neon-blue/40", neonVar: "--neon-blue" },
-  white: { text: "text-white/90", glow: "", border: "border-white/30", activeBg: "bg-white/10", activeShadow: "shadow-white/20", neonVar: "--foreground" },
-  teal: { text: "text-neon-teal", glow: "", border: "border-neon-teal/50", activeBg: "bg-neon-teal/20", activeShadow: "shadow-neon-teal/40", neonVar: "--neon-teal" },
-  lime: { text: "text-neon-lime", glow: "", border: "border-neon-lime/50", activeBg: "bg-neon-lime/20", activeShadow: "shadow-neon-lime/40", neonVar: "--neon-lime" },
-  emerald: { text: "text-neon-emerald", glow: "glow-green", border: "border-neon-emerald/50", activeBg: "bg-neon-emerald/20", activeShadow: "shadow-neon-emerald/40", neonVar: "--neon-emerald" },
+const neonColors = [
+  { text: "text-neon-green", border: "border-neon-green/50", activeBg: "bg-neon-green/20", neonVar: "--neon-green" },
+  { text: "text-neon-cyan", border: "border-neon-cyan/50", activeBg: "bg-neon-cyan/20", neonVar: "--neon-cyan" },
+  { text: "text-neon-pink", border: "border-neon-pink/50", activeBg: "bg-neon-pink/20", neonVar: "--neon-pink" },
+  { text: "text-neon-purple", border: "border-neon-purple/50", activeBg: "bg-neon-purple/20", neonVar: "--neon-purple" },
+  { text: "text-neon-orange", border: "border-neon-orange/50", activeBg: "bg-neon-orange/20", neonVar: "--neon-orange" },
+  { text: "text-neon-yellow", border: "border-neon-yellow/50", activeBg: "bg-neon-yellow/20", neonVar: "--neon-yellow" },
+  { text: "text-neon-red", border: "border-neon-red/50", activeBg: "bg-neon-red/20", neonVar: "--neon-red" },
+  { text: "text-neon-blue", border: "border-neon-blue/50", activeBg: "bg-neon-blue/20", neonVar: "--neon-blue" },
+  { text: "text-neon-teal", border: "border-neon-teal/50", activeBg: "bg-neon-teal/20", neonVar: "--neon-teal" },
+  { text: "text-neon-lime", border: "border-neon-lime/50", activeBg: "bg-neon-lime/20", neonVar: "--neon-lime" },
+  { text: "text-neon-emerald", border: "border-neon-emerald/50", activeBg: "bg-neon-emerald/20", neonVar: "--neon-emerald" },
+  { text: "text-neon-coral", border: "border-neon-coral/50", activeBg: "bg-neon-coral/20", neonVar: "--neon-coral" },
+];
+
+// Get a unique neon color for each tab based on its index in the grid
+let tabCounter = 0;
+const tabColorCache = new Map<string, number>();
+
+const getTabColor = (label: string) => {
+  if (!tabColorCache.has(label)) {
+    tabColorCache.set(label, tabCounter % neonColors.length);
+    tabCounter++;
+  }
+  return neonColors[tabColorCache.get(label)!];
 };
 
-const FeatureCard = ({ icon: Icon, label, color, active, onClick, curved, disabled }: FeatureCardProps) => {
-  const colors = colorMap[color] || colorMap.pink;
+const FeatureCard = ({ icon: Icon, label, active, onClick, curved, disabled }: FeatureCardProps) => {
+  const colors = getTabColor(label);
 
   return (
     <button
@@ -39,7 +51,7 @@ const FeatureCard = ({ icon: Icon, label, color, active, onClick, curved, disabl
         curved ? "rounded-2xl" : "rounded-xl",
         disabled && !active ? "opacity-30 grayscale" : "",
         active
-          ? `${colors.activeBg} ${colors.border} border-2 ${colors.activeShadow} shadow-lg`
+          ? `${colors.activeBg} ${colors.border} border-2`
           : "bg-black/60 border-white/[0.08] hover:border-white/20",
         "active:scale-[0.96]"
       )}
