@@ -1,9 +1,10 @@
 import { useState, useRef, useCallback } from 'react';
-import { Zap, Phone, Square, AlertCircle, Loader2 } from 'lucide-react';
+import { Zap, Phone, Square, AlertCircle, Loader2, Clock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { HitApi } from '@/hooks/useHitApis';
 import { HitLog } from '@/hooks/useHitLogs';
+import ScheduledHit from '@/components/ScheduledHit';
 
 function replacePlaceholders(text: string, phone: string): string {
   return text.replace(/\{PHONE\}/gi, phone);
@@ -107,7 +108,7 @@ export default function QuickHitEngine({
   const [isRunning2, setIsRunning2] = useState(false);
   const [stats1, setStats1] = useState({ rounds: 0, hits: 0, success: 0, fails: 0 });
   const [stats2, setStats2] = useState({ rounds: 0, hits: 0, success: 0, fails: 0 });
-  const [activeMode, setActiveMode] = useState<'sequential' | 'parallel'>('sequential');
+  const [activeMode, setActiveMode] = useState<'sequential' | 'parallel' | 'schedule'>('sequential');
   const stopRef1 = useRef(false);
   const stopRef2 = useRef(false);
 
@@ -190,130 +191,127 @@ export default function QuickHitEngine({
         </div>
 
         {/* Mode Tabs - Pill Style */}
-        <div className="flex gap-3">
-          <button
-            onClick={() => setActiveMode('sequential')}
-            className="flex-1 py-3 rounded-2xl text-xs font-bold tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-2"
-            style={activeMode === 'sequential' ? {
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.06) 100%)',
-              boxShadow: '0 4px 15px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15), 0 0 20px hsl(var(--neon-green) / 0.2)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              color: 'hsl(var(--neon-green))',
-              textShadow: '0 0 10px hsl(var(--neon-green))',
-            } : {
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.06)',
-              color: 'rgba(255,255,255,0.4)',
-            }}
-          >
-            <Zap className="w-3.5 h-3.5" /> Sequential
-          </button>
-          <button
-            onClick={() => setActiveMode('parallel')}
-            className="flex-1 py-3 rounded-2xl text-xs font-bold tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-2"
-            style={activeMode === 'parallel' ? {
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.06) 100%)',
-              boxShadow: '0 4px 15px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15), 0 0 20px hsl(var(--neon-cyan) / 0.2)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              color: 'hsl(var(--neon-cyan))',
-              textShadow: '0 0 10px hsl(var(--neon-cyan))',
-            } : {
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.06)',
-              color: 'rgba(255,255,255,0.4)',
-            }}
-          >
-            <Zap className="w-3.5 h-3.5" /> Parallel
-          </button>
+        <div className="flex gap-2">
+          {([
+            { key: 'sequential' as const, label: 'Sequential', icon: <Zap className="w-3.5 h-3.5" />, neon: '--neon-green' },
+            { key: 'parallel' as const, label: 'Parallel', icon: <Zap className="w-3.5 h-3.5" />, neon: '--neon-cyan' },
+            { key: 'schedule' as const, label: 'Schedule', icon: <Clock className="w-3.5 h-3.5" />, neon: '--neon-orange' },
+          ]).map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveMode(tab.key)}
+              className="flex-1 py-3 rounded-2xl text-[10px] font-bold tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-1.5"
+              style={activeMode === tab.key ? {
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.06) 100%)',
+                boxShadow: `0 4px 15px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15), 0 0 20px hsl(var(${tab.neon}) / 0.2)`,
+                border: '1px solid rgba(255,255,255,0.15)',
+                color: `hsl(var(${tab.neon}))`,
+                textShadow: `0 0 10px hsl(var(${tab.neon}))`,
+              } : {
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                color: 'rgba(255,255,255,0.4)',
+              }}
+            >
+              {tab.icon} {tab.label}
+            </button>
+          ))}
         </div>
 
-        {/* No APIs warning */}
-        {enabledApis.length === 0 && (
-          <div className="flex items-center gap-2 p-3 rounded-2xl" style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,165,0,0.15)',
-          }}>
-            <AlertCircle className="w-4 h-4 text-neon-orange/70" />
-            <p className="text-[11px] text-neon-orange/60 font-mono">{noApisWarning}</p>
-          </div>
-        )}
-
-        {/* Enter Number Label */}
-        <div>
-          <label className="text-xs font-bold text-white/50 tracking-wider uppercase mb-2 block flex items-center gap-1.5">
-            <Phone className="w-3.5 h-3.5" /> Enter Number:
-          </label>
-          <Input
-            value={currentPhone}
-            onChange={e => setCurrentPhone(e.target.value.replace(/[^0-9+]/g, ''))}
-            placeholder={phonePlaceholder}
-            disabled={currentIsRunning}
-            className="h-14 rounded-2xl text-center text-lg font-mono tracking-[0.2em] border-white/[0.08] bg-white/[0.04] text-white placeholder:text-white/15 focus:border-neon-green/40 focus:ring-0"
-            style={{
-              boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.2)',
-            }}
-          />
-        </div>
-
-        {/* Action Button */}
-        {!currentIsRunning ? (
-          <button
-            onClick={currentStart}
-            disabled={currentPhone.length < 10 || enabledApis.length === 0}
-            className="w-full py-4 rounded-2xl text-sm font-bold tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-2.5 disabled:opacity-20 active:scale-[0.98]"
-            style={{
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 30px hsl(var(--neon-green) / 0.15)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              color: 'hsl(var(--neon-green))',
-              textShadow: '0 0 15px hsl(var(--neon-green))',
-            }}
-          >
-            <Zap className="w-5 h-5" style={{filter: 'drop-shadow(0 0 6px currentColor)'}} /> {hitButtonText}
-          </button>
+        {/* Schedule Mode */}
+        {activeMode === 'schedule' ? (
+          <ScheduledHit />
         ) : (
-          <button
-            onClick={() => { currentStopRef.current = true; }}
-            className="w-full py-4 rounded-2xl text-sm font-bold tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-2.5 active:scale-[0.98]"
-            style={{
-              background: 'linear-gradient(135deg, rgba(255,50,50,0.15) 0%, rgba(255,50,50,0.05) 100%)',
-              boxShadow: '0 4px 20px rgba(255,50,50,0.2), inset 0 1px 0 rgba(255,255,255,0.1)',
-              border: '1px solid rgba(255,50,50,0.2)',
-              color: 'hsl(var(--neon-red))',
-              textShadow: '0 0 15px hsl(var(--neon-red))',
-            }}
-          >
-            <Square className="w-5 h-5" /> {stopButtonText}
-          </button>
-        )}
+          <>
+            {/* No APIs warning */}
+            {enabledApis.length === 0 && (
+              <div className="flex items-center gap-2 p-3 rounded-2xl" style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,165,0,0.15)',
+              }}>
+                <AlertCircle className="w-4 h-4 text-neon-orange/70" />
+                <p className="text-[11px] text-neon-orange/60 font-mono">{noApisWarning}</p>
+              </div>
+            )}
 
-        {/* Stats when running */}
-        {currentIsRunning && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-4 gap-2 text-center">
-              {[
-                { label: 'Round', value: currentStats.rounds, neon: '--neon-cyan' },
-                { label: 'Hits', value: currentStats.hits, neon: '--neon-blue' },
-                { label: 'OK', value: currentStats.success, neon: '--neon-green' },
-                { label: 'Fail', value: currentStats.fails, neon: '--neon-red' },
-              ].map(s => (
-                <div key={s.label} className="py-2 rounded-xl" style={{
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                }}>
-                  <p className="text-[8px] text-white/30 font-mono uppercase">{s.label}</p>
-                  <p className="text-sm font-bold font-mono" style={{
-                    color: `hsl(var(${s.neon}))`,
-                    textShadow: `0 0 10px hsl(var(${s.neon}))`,
-                  }}>{s.value}</p>
+            {/* Enter Number Label */}
+            <div>
+              <label className="text-xs font-bold text-white/50 tracking-wider uppercase mb-2 block flex items-center gap-1.5">
+                <Phone className="w-3.5 h-3.5" /> Enter Number:
+              </label>
+              <Input
+                value={currentPhone}
+                onChange={e => setCurrentPhone(e.target.value.replace(/[^0-9+]/g, ''))}
+                placeholder={phonePlaceholder}
+                disabled={currentIsRunning}
+                className="h-14 rounded-2xl text-center text-lg font-mono tracking-[0.2em] border-white/[0.08] bg-white/[0.04] text-white placeholder:text-white/15 focus:border-neon-green/40 focus:ring-0"
+                style={{
+                  boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.2)',
+                }}
+              />
+            </div>
+
+            {/* Action Button */}
+            {!currentIsRunning ? (
+              <button
+                onClick={currentStart}
+                disabled={currentPhone.length < 10 || enabledApis.length === 0}
+                className="w-full py-4 rounded-2xl text-sm font-bold tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-2.5 disabled:opacity-20 active:scale-[0.98]"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 30px hsl(var(--neon-green) / 0.15)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: 'hsl(var(--neon-green))',
+                  textShadow: '0 0 15px hsl(var(--neon-green))',
+                }}
+              >
+                <Zap className="w-5 h-5" style={{filter: 'drop-shadow(0 0 6px currentColor)'}} /> {hitButtonText}
+              </button>
+            ) : (
+              <button
+                onClick={() => { currentStopRef.current = true; }}
+                className="w-full py-4 rounded-2xl text-sm font-bold tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-2.5 active:scale-[0.98]"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255,50,50,0.15) 0%, rgba(255,50,50,0.05) 100%)',
+                  boxShadow: '0 4px 20px rgba(255,50,50,0.2), inset 0 1px 0 rgba(255,255,255,0.1)',
+                  border: '1px solid rgba(255,50,50,0.2)',
+                  color: 'hsl(var(--neon-red))',
+                  textShadow: '0 0 15px hsl(var(--neon-red))',
+                }}
+              >
+                <Square className="w-5 h-5" /> {stopButtonText}
+              </button>
+            )}
+
+            {/* Stats when running */}
+            {currentIsRunning && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-4 gap-2 text-center">
+                  {[
+                    { label: 'Round', value: currentStats.rounds, neon: '--neon-cyan' },
+                    { label: 'Hits', value: currentStats.hits, neon: '--neon-blue' },
+                    { label: 'OK', value: currentStats.success, neon: '--neon-green' },
+                    { label: 'Fail', value: currentStats.fails, neon: '--neon-red' },
+                  ].map(s => (
+                    <div key={s.label} className="py-2 rounded-xl" style={{
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                    }}>
+                      <p className="text-[8px] text-white/30 font-mono uppercase">{s.label}</p>
+                      <p className="text-sm font-bold font-mono" style={{
+                        color: `hsl(var(${s.neon}))`,
+                        textShadow: `0 0 10px hsl(var(${s.neon}))`,
+                      }}>{s.value}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <div className="flex items-center justify-center gap-2 py-2">
-              <Loader2 className="w-3.5 h-3.5 text-neon-purple animate-spin" />
-              <span className="text-[10px] text-white/40 font-mono">Hitting APIs...</span>
-            </div>
-          </div>
+                <div className="flex items-center justify-center gap-2 py-2">
+                  <Loader2 className="w-3.5 h-3.5 text-neon-purple animate-spin" />
+                  <span className="text-[10px] text-white/40 font-mono">Hitting APIs...</span>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Footer */}

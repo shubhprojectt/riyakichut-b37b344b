@@ -1,19 +1,13 @@
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
-import { useSettings } from "@/contexts/SettingsContext";
-import defaultLoaderImage from "@/assets/loader-logo.jpg";
+import { Loader2, Shield } from "lucide-react";
 
 interface HackerLoaderProps {
   inline?: boolean;
 }
 
 const HackerLoader = ({ inline = false }: HackerLoaderProps) => {
-   const { settings, isLoaded } = useSettings();
   const [progress, setProgress] = useState(0);
   const [dots, setDots] = useState("");
-   
-   // Use custom image from settings or default bundled image
-   const loaderImage = settings.loaderImageUrl?.trim() || defaultLoaderImage;
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -55,34 +49,49 @@ const HackerLoader = ({ inline = false }: HackerLoaderProps) => {
     );
   }
 
-  // Full screen version - Clean and attractive
+  // Full screen version - Clean neon spinner (no image)
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
-       <div className="relative flex flex-col items-center gap-8">
-         {/* Logo Image with glow ring */}
+      <div className="relative flex flex-col items-center gap-6">
+        {/* Neon glow ring spinner */}
         <div className="relative">
-           {/* Outer glow */}
-           <div className="absolute -inset-4 bg-gradient-to-r from-neon-purple/40 via-neon-pink/30 to-neon-purple/40 rounded-full blur-2xl animate-pulse" />
-          
-           {/* Image container with animated border */}
-           <div className="relative w-48 h-48 rounded-full overflow-hidden border-4 border-neon-purple/60 shadow-[0_0_30px_hsl(var(--neon-purple)/0.5)]">
-             <img 
-               src={loaderImage} 
-               alt="Loading" 
-               className="w-full h-full object-cover"
-             />
+          <div className="absolute -inset-6 rounded-full blur-2xl animate-pulse" style={{
+            background: 'radial-gradient(circle, hsl(var(--neon-purple) / 0.3), hsl(var(--neon-cyan) / 0.15), transparent)',
+          }} />
+          <div className="relative w-24 h-24 rounded-full flex items-center justify-center" style={{
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))',
+            border: '2px solid hsl(var(--neon-purple) / 0.4)',
+            boxShadow: '0 0 25px hsl(var(--neon-purple) / 0.3), inset 0 0 15px hsl(var(--neon-purple) / 0.1)',
+          }}>
+            <Shield className="w-10 h-10 text-neon-purple" style={{ filter: 'drop-shadow(0 0 10px hsl(var(--neon-purple)))' }} />
           </div>
+          {/* Orbiting ring */}
+          <div className="absolute inset-[-8px] rounded-full animate-spin" style={{
+            border: '2px solid transparent',
+            borderTopColor: 'hsl(var(--neon-cyan))',
+            borderRightColor: 'hsl(var(--neon-green) / 0.5)',
+            animationDuration: '1.5s',
+            filter: 'drop-shadow(0 0 6px hsl(var(--neon-cyan)))',
+          }} />
         </div>
-        
-         {/* Spinner */}
-         <div className="relative">
-           <Loader2 className="w-8 h-8 text-neon-purple animate-spin" />
+
+        {/* Progress bar */}
+        <div className="w-48 h-1 rounded-full overflow-hidden" style={{
+          background: 'rgba(255,255,255,0.06)',
+        }}>
+          <div className="h-full rounded-full transition-all duration-75" style={{
+            width: `${progress}%`,
+            background: 'linear-gradient(90deg, hsl(var(--neon-purple)), hsl(var(--neon-cyan)), hsl(var(--neon-green)))',
+            boxShadow: '0 0 10px hsl(var(--neon-cyan) / 0.5)',
+          }} />
         </div>
-        
-         {/* Loading text */}
-         <h2 className="text-sm font-display font-bold tracking-[0.3em] uppercase text-neon-purple">
-           SYSTEM LOADING{dots}
-         </h2>
+
+        {/* Loading text */}
+        <h2 className="text-xs font-mono font-bold tracking-[0.3em] uppercase text-neon-purple" style={{
+          textShadow: '0 0 10px hsl(var(--neon-purple))',
+        }}>
+          SYSTEM LOADING{dots}
+        </h2>
       </div>
     </div>
   );
