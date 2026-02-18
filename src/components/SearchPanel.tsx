@@ -290,9 +290,9 @@ const SearchPanel = () => {
   return (
     <div className="px-3 space-y-3 max-w-xl mx-auto">
       {/* Feature Cards Grid - neon container */}
-        <div className="rounded-2xl bg-black/60 backdrop-blur-sm p-3 relative overflow-hidden" style={{border: 'none'}}>
+      <div className="rounded-2xl bg-black/60 backdrop-blur-sm p-3 relative overflow-hidden" style={{border: 'none'}}>
           <div className="absolute inset-0 rounded-2xl pointer-events-none" style={{padding: '1px', background: 'linear-gradient(90deg, hsl(var(--neon-green)), hsl(var(--neon-cyan)), hsl(var(--neon-pink)), hsl(var(--neon-purple)), hsl(var(--neon-green)))', backgroundSize: '300% 100%', animation: 'borderColorRun 4s linear infinite', WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude', borderRadius: 'inherit'}} />
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-4 gap-2.5">
           {visibleTabs.map((tab) => {
             const IconComponent = iconMap[tab.icon] || Sparkles;
             const isPhoneSearch = tab.searchType === "phone";
