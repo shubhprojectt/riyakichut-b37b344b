@@ -431,12 +431,55 @@ const Admin = () => {
       <div className="relative container mx-auto px-4 py-4">
         <Tabs defaultValue="credits" className="w-full">
           <div className="sticky top-[56px] z-40 -mx-4 px-4 pb-3 pt-3 bg-background/80 backdrop-blur">
-            <TabsList className="w-full grid grid-cols-3">
+            <TabsList className="w-full grid grid-cols-4">
               <TabsTrigger value="credits">Credits</TabsTrigger>
+              <TabsTrigger value="theme">Theme</TabsTrigger>
               <TabsTrigger value="tools">Tools</TabsTrigger>
               <TabsTrigger value="logs">Logs</TabsTrigger>
             </TabsList>
           </div>
+
+          {/* ── THEME TAB ── */}
+          <TabsContent value="theme" className="mt-0 space-y-4">
+            <Section title="Dashboard UI Theme" icon={Palette} defaultOpen>
+              <PanelCard title="Choose Theme" description="Select from 10 unique dashboard styles. Changes apply instantly.">
+                <div className="grid grid-cols-1 gap-3">
+                  {([
+                    { id: "cyber-grid",      label: "Cyber Grid",       desc: "Green + Cyan neon grid (Default)",  emoji: "🟩" },
+                    { id: "matrix-rain",     label: "Matrix Rain",      desc: "Classic green rain hacker style",   emoji: "🟢" },
+                    { id: "neon-cards",      label: "Neon Cards",       desc: "Pink + Purple dominant glow",       emoji: "🟣" },
+                    { id: "minimal-dark",    label: "Minimal Dark",     desc: "Clean black, desaturated & calm",   emoji: "⬛" },
+                    { id: "hologram",        label: "Hologram",         desc: "Cyan sci-fi holographic grid",      emoji: "🔵" },
+                    { id: "retro-terminal",  label: "Retro Terminal",   desc: "Amber CRT terminal scanlines",      emoji: "🟡" },
+                    { id: "glassmorphic",    label: "Glassmorphic",     desc: "Frosted glass with blur orbs",      emoji: "🪟" },
+                    { id: "brutal-neon",     label: "Brutal Neon",      desc: "Max contrast, all colors raw",      emoji: "💥" },
+                    { id: "cosmic",          label: "Cosmic",           desc: "Deep space purple starfield",       emoji: "🌌" },
+                    { id: "blood-hex",       label: "Blood Hex",        desc: "Red hacker grid, dark blood tone",  emoji: "🔴" },
+                  ] as const).map((theme) => {
+                    const isActive = settings.dashboardTheme === theme.id;
+                    return (
+                      <button
+                        key={theme.id}
+                        onClick={() => updateSettings({ dashboardTheme: theme.id })}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                          isActive
+                            ? "border-primary bg-primary/15 shadow-lg shadow-primary/20"
+                            : "border-border bg-background/50 hover:border-primary/40"
+                        }`}
+                      >
+                        <span className="text-xl">{theme.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className={`text-sm font-semibold ${isActive ? "text-primary" : "text-foreground"}`}>{theme.label}</div>
+                          <div className="text-xs text-muted-foreground truncate">{theme.desc}</div>
+                        </div>
+                        {isActive && <div className="w-2 h-2 rounded-full bg-primary shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </PanelCard>
+            </Section>
+          </TabsContent>
 
           <TabsContent value="credits" className="mt-0 space-y-4">
             {/* Credits Section */}
