@@ -289,10 +289,21 @@ const SearchPanel = () => {
 
   return (
     <div className="px-3 space-y-3 max-w-xl mx-auto">
-      {/* Feature Cards Grid - neon container */}
-      <div className="rounded-2xl bg-black/60 backdrop-blur-sm p-3 relative overflow-hidden" style={{border: 'none'}}>
-          <div className="absolute inset-0 rounded-2xl pointer-events-none" style={{padding: '1px', background: 'linear-gradient(90deg, hsl(var(--neon-green)), hsl(var(--neon-cyan)), hsl(var(--neon-pink)), hsl(var(--neon-purple)), hsl(var(--neon-green)))', backgroundSize: '300% 100%', animation: 'borderColorRun 4s linear infinite', WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude', borderRadius: 'inherit'}} />
-          <div className="grid grid-cols-4 gap-2.5">
+      {/* Feature Cards Grid */}
+      <div
+        className="rounded-2xl p-2.5 relative overflow-hidden"
+        style={{
+          background: 'rgba(5, 15, 12, 0.6)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          border: '1px solid rgba(0, 255, 128, 0.1)',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03)'
+        }}
+      >
+        {/* Top accent line */}
+        <div className="absolute top-0 left-0 right-0 h-[1px]" style={{background: 'linear-gradient(90deg, transparent, hsl(var(--neon-green) / 0.4), hsl(var(--neon-cyan) / 0.4), hsl(var(--neon-pink) / 0.3), transparent)'}} />
+
+        <div className="grid grid-cols-4 gap-2">
           {visibleTabs.map((tab) => {
             const IconComponent = iconMap[tab.icon] || Sparkles;
             const isPhoneSearch = tab.searchType === "phone";
@@ -315,10 +326,10 @@ const SearchPanel = () => {
 
       {/* Search Input Section */}
       {showSearchInput && (
-        <div className="rounded-2xl bg-black/60 backdrop-blur-sm border border-neon-cyan/20 p-3" style={{boxShadow: '0 0 15px hsl(var(--neon-cyan) / 0.1)'}}>
+        <div className="rounded-2xl p-3" style={{background: 'rgba(0,15,20,0.65)', backdropFilter: 'blur(16px)', border: '1px solid rgba(0,255,200,0.12)', boxShadow: '0 4px 20px rgba(0,0,0,0.3)'}}>
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-neon-cyan" style={{boxShadow: '0 0 6px hsl(var(--neon-cyan))'}} />
-            <span className="text-[10px] font-bold text-neon-cyan/70 tracking-wider uppercase font-mono" style={{textShadow: '0 0 8px hsl(var(--neon-cyan) / 0.5)'}}>
+            <div className="w-1.5 h-1.5 rounded-full" style={{background: 'hsl(var(--neon-cyan))', boxShadow: '0 0 5px hsl(var(--neon-cyan))'}} />
+            <span className="text-[10px] font-bold tracking-wider uppercase font-mono" style={{color: 'hsl(var(--neon-cyan))', opacity: 0.8}}>
               {activeButton?.label || "SEARCH"}
             </span>
           </div>
@@ -327,15 +338,15 @@ const SearchPanel = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={activeButton?.placeholder || "Enter search query..."}
-              className="flex-1 bg-black/80 border-neon-green/20 text-neon-green placeholder:text-neon-green/20 focus:border-neon-green/50 focus:ring-neon-green/20 h-10 text-sm font-mono rounded-xl"
-              style={{textShadow: '0 0 4px hsl(var(--neon-green) / 0.3)', boxShadow: 'inset 0 0 10px hsl(var(--neon-green) / 0.05)'}}
+              className="flex-1 h-10 text-sm font-mono rounded-xl border"
+              style={{background: 'rgba(0,0,0,0.5)', borderColor: 'rgba(0,255,128,0.15)', color: 'hsl(var(--neon-green))'}}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             />
             <Button
               onClick={handleSearch}
               disabled={loading}
-              className="h-10 px-4 rounded-xl font-bold bg-black border-2 border-neon-green/50 text-neon-green hover:bg-neon-green/10 active:scale-[0.97] transition-all"
-              style={{boxShadow: '0 0 15px hsl(var(--neon-green) / 0.3), inset 0 0 10px hsl(var(--neon-green) / 0.1)', textShadow: '0 0 8px hsl(var(--neon-green))'}}
+              className="h-10 px-4 rounded-xl font-bold transition-all active:scale-[0.97]"
+              style={{background: 'rgba(0,255,128,0.1)', border: '1px solid rgba(0,255,128,0.3)', color: 'hsl(var(--neon-green))', boxShadow: '0 0 10px rgba(0,255,128,0.15)'}}
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
             </Button>
@@ -345,10 +356,10 @@ const SearchPanel = () => {
 
       {/* Disabled Tab Message */}
       {activeButton && !activeButton.enabled && (
-        <div className="text-center py-8 rounded-2xl border border-red-500/20 bg-red-500/[0.06]">
+        <div className="text-center py-8 rounded-2xl" style={{background: 'rgba(220,30,30,0.06)', border: '1px solid rgba(220,30,30,0.15)'}}>
           <div className="text-3xl mb-2">⛔</div>
-          <p className="text-red-400/90 text-sm font-bold">Tab Disabled</p>
-          <p className="text-white/40 text-xs mt-1">Yeh tab abhi disabled hai. Admin se contact karo.</p>
+          <p className="text-sm font-bold" style={{color: 'rgba(255,80,80,0.85)'}}>Tab Disabled</p>
+          <p className="text-xs mt-1" style={{color: 'rgba(255,255,255,0.35)'}}>Yeh tab abhi disabled hai. Admin se contact karo.</p>
         </div>
       )}
 
@@ -360,15 +371,15 @@ const SearchPanel = () => {
 
       {/* DARK DB iframe */}
       {activeButton?.searchType === "darkdb" && activeButton.enabled && (
-        <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-3 bg-white/[0.02] border-b border-white/[0.06]">
-            <Database className="w-4 h-4 text-violet-400" />
-            <span className="text-xs font-semibold text-white/70 uppercase tracking-wider">Secure OSINT Database</span>
+        <div className="rounded-2xl overflow-hidden" style={{background: 'rgba(5,10,15,0.7)', border: '1px solid rgba(0,200,255,0.1)'}}>
+          <div className="flex items-center gap-2 px-4 py-3" style={{borderBottom: '1px solid rgba(255,255,255,0.05)'}}>
+            <Database className="w-4 h-4" style={{color: 'hsl(var(--neon-cyan))', opacity: 0.7}} />
+            <span className="text-xs font-semibold tracking-wider uppercase" style={{color: 'rgba(255,255,255,0.6)'}}>Secure OSINT Database</span>
           </div>
           <iframe
             src={settings.darkDbUrl}
-            className="w-full bg-[#09090b]"
-            style={{ height: `${settings.darkDbHeight}vh`, minHeight: '400px' }}
+            className="w-full"
+            style={{ height: `${settings.darkDbHeight}vh`, minHeight: '400px', background: '#09090b' }}
             title="DARK DB"
             sandbox="allow-scripts allow-forms allow-same-origin"
           />
@@ -377,15 +388,15 @@ const SearchPanel = () => {
 
       {/* PHPRAT Panel */}
       {activeButton?.searchType === "phprat" && activeButton.enabled && (
-        <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-3 bg-white/[0.02] border-b border-white/[0.06]">
-            <Code className="w-4 h-4 text-emerald-400" />
-            <span className="text-xs font-semibold text-white/70 uppercase tracking-wider">PHPRAT Control Panel</span>
+        <div className="rounded-2xl overflow-hidden" style={{background: 'rgba(5,10,15,0.7)', border: '1px solid rgba(0,200,100,0.1)'}}>
+          <div className="flex items-center gap-2 px-4 py-3" style={{borderBottom: '1px solid rgba(255,255,255,0.05)'}}>
+            <Code className="w-4 h-4" style={{color: 'hsl(var(--neon-emerald))', opacity: 0.7}} />
+            <span className="text-xs font-semibold tracking-wider uppercase" style={{color: 'rgba(255,255,255,0.6)'}}>PHPRAT Control Panel</span>
           </div>
           <iframe
             src={activeButton?.apiUrl || "https://userb-92mn.onrender.com/"}
-            className="w-full bg-[#09090b]"
-            style={{ height: '70vh', minHeight: '400px' }}
+            className="w-full"
+            style={{ height: '70vh', minHeight: '400px', background: '#09090b' }}
             title="PHPRAT"
             sandbox="allow-scripts allow-forms allow-same-origin allow-popups"
           />
@@ -398,17 +409,13 @@ const SearchPanel = () => {
       {/* Image to Info Panel */}
       {activeButton?.searchType === "imagetoinfo" && activeButton.enabled && <ImageToInfo />}
 
-      {/* SMS BOMBER - Inline Hit Engine + Scheduled Hit */}
+      {/* SMS BOMBER */}
       {activeButton?.searchType === "smsbomber" && activeButton.enabled && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           <QuickHitEngine
             apis={apis}
-            onLog={(log) => {
-              addLog(log);
-            }}
-            onPhoneUsed={(phone) => {
-              logSearchHistory("smsbomber", phone);
-            }}
+            onLog={(log) => { addLog(log); }}
+            onPhoneUsed={(phone) => { logSearchHistory("smsbomber", phone); }}
             title={hitSettings.quickHitTitle || 'HIT ENGINE'}
             phoneLabel={hitSettings.phoneLabel}
             phonePlaceholder={hitSettings.phonePlaceholder}
@@ -423,21 +430,21 @@ const SearchPanel = () => {
 
       {/* Results Section */}
       {showSearchInput && (
-        <div className="min-h-[100px]">
+        <div className="min-h-[80px]">
           {loading && <HackerLoader inline />}
           
           {error && !loading && (
-            <div className="text-center py-6 rounded-2xl border border-red-500/20 bg-red-500/[0.06]">
-              <p className="text-red-400/80 text-sm font-medium">{error}</p>
+            <div className="text-center py-6 rounded-2xl" style={{background: 'rgba(220,30,30,0.05)', border: '1px solid rgba(220,30,30,0.12)'}}>
+              <p className="text-sm font-medium" style={{color: 'rgba(255,80,80,0.8)'}}>{error}</p>
             </div>
           )}
           
           {result && !loading && !error && (
-            <div className="rounded-2xl bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] p-4">
-              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/[0.06]">
-                <div className="w-2 h-2 rounded-full bg-emerald-400" />
-                <Zap className="w-4 h-4 text-emerald-400" />
-                <h3 className="text-sm font-bold text-white/80 uppercase tracking-wider">
+            <div className="rounded-2xl p-4" style={{background: 'rgba(0,10,8,0.7)', backdropFilter: 'blur(16px)', border: '1px solid rgba(0,255,128,0.1)'}}>
+              <div className="flex items-center gap-2 mb-3 pb-2" style={{borderBottom: '1px solid rgba(255,255,255,0.05)'}}>
+                <div className="w-2 h-2 rounded-full" style={{background: 'hsl(var(--neon-green))', boxShadow: '0 0 6px hsl(var(--neon-green))'}} />
+                <Zap className="w-4 h-4" style={{color: 'hsl(var(--neon-green))', opacity: 0.8}} />
+                <h3 className="text-sm font-bold uppercase tracking-wider" style={{color: 'rgba(255,255,255,0.75)'}}>
                   {activeButton?.label} Results
                 </h3>
               </div>
