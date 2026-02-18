@@ -30,7 +30,7 @@ const iconMap: Record<string, LucideIcon> = {
   Phone, CreditCard, Car, Camera, Users, ClipboardPaste, Sparkles, Code, Globe, Database, Send, MessageCircle, Skull, Bomb, Shield, Search, PhoneCall, Image: ImageIcon, Clock
 };
 
-const SearchPanel = () => {
+const SearchPanel = ({ theme = "cyber-grid" }: { theme?: string }) => {
   const { settings } = useSettings();
   const { credits, deductCredits, isUnlimited } = useAuth();
   const navigate = useNavigate();
@@ -287,23 +287,87 @@ const SearchPanel = () => {
   const showSearchInput = activeTab && activeButton && 
     !["shubh", "darkdb", "telegram", "phprat", "calldark", "imagetoinfo", "smsbomber"].includes(activeButton.searchType);
 
+  // ── Theme-specific tab grid styles ──
+  const tabGridStyles: Record<string, { wrapper: React.CSSProperties; grid: string; accent: React.CSSProperties | null }> = {
+    "cyber-grid": {
+      wrapper: { background:'rgba(5,15,12,0.6)', backdropFilter:'blur(16px)', border:'1px solid rgba(0,255,128,0.1)', boxShadow:'0 4px 24px rgba(0,0,0,0.4)', borderRadius:'1rem', padding:'10px', position:'relative', overflow:'hidden' },
+      grid: "grid grid-cols-4 gap-2",
+      accent: { background:'linear-gradient(90deg,transparent,hsl(var(--neon-green)/0.4),hsl(var(--neon-cyan)/0.4),hsl(var(--neon-pink)/0.3),transparent)' }
+    },
+    "matrix-rain": {
+      wrapper: { background:'rgba(0,20,0,0.7)', border:'1px solid rgba(0,255,0,0.15)', borderRadius:'0', padding:'8px', position:'relative', overflow:'hidden', fontFamily:'monospace' },
+      grid: "grid grid-cols-4 gap-1",
+      accent: { background:'linear-gradient(90deg,transparent,rgba(0,255,0,0.5),transparent)' }
+    },
+    "neon-cards": {
+      wrapper: { background:'rgba(20,0,20,0.65)', backdropFilter:'blur(12px)', border:'2px solid rgba(255,0,200,0.2)', borderRadius:'0.5rem', padding:'12px', position:'relative', overflow:'hidden', boxShadow:'0 0 30px rgba(255,0,200,0.08)' },
+      grid: "grid grid-cols-3 gap-3",
+      accent: { background:'linear-gradient(90deg,transparent,rgba(255,0,200,0.5),rgba(100,0,255,0.4),transparent)' }
+    },
+    "minimal-dark": {
+      wrapper: { background:'rgba(15,15,15,0.9)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:'0.75rem', padding:'10px', position:'relative', overflow:'hidden' },
+      grid: "grid grid-cols-4 gap-2",
+      accent: null
+    },
+    "hologram": {
+      wrapper: { background:'rgba(0,30,40,0.5)', backdropFilter:'blur(20px)', border:'1px solid rgba(0,255,255,0.15)', borderRadius:'0.75rem', padding:'10px', position:'relative', overflow:'hidden', boxShadow:'0 0 20px rgba(0,255,255,0.06)' },
+      grid: "grid grid-cols-4 gap-2",
+      accent: { background:'linear-gradient(90deg,transparent,rgba(0,255,255,0.5),rgba(0,200,255,0.4),transparent)' }
+    },
+    "retro-terminal": {
+      wrapper: { background:'rgba(8,6,0,0.9)', border:'2px solid rgba(255,180,0,0.25)', borderRadius:'0', padding:'8px', position:'relative', overflow:'hidden', boxShadow:'inset 0 0 20px rgba(255,180,0,0.04)' },
+      grid: "grid grid-cols-4 gap-1",
+      accent: { background:'linear-gradient(90deg,transparent,rgba(255,180,0,0.5),transparent)' }
+    },
+    "glassmorphic": {
+      wrapper: { background:'rgba(255,255,255,0.03)', backdropFilter:'blur(24px)', WebkitBackdropFilter:'blur(24px)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'1.25rem', padding:'12px', position:'relative', overflow:'hidden' },
+      grid: "grid grid-cols-4 gap-2",
+      accent: { background:'linear-gradient(90deg,rgba(100,0,255,0.4),rgba(255,0,128,0.4),rgba(0,200,255,0.4))' }
+    },
+    "brutal-neon": {
+      wrapper: { background:'#000', border:'3px solid rgba(255,255,0,0.5)', borderRadius:'0', padding:'8px', position:'relative', overflow:'hidden', boxShadow:'4px 4px 0 rgba(255,0,255,0.4)' },
+      grid: "grid grid-cols-4 gap-1",
+      accent: null
+    },
+    "cosmic": {
+      wrapper: { background:'rgba(5,0,20,0.75)', backdropFilter:'blur(16px)', border:'1px solid rgba(150,50,255,0.2)', borderRadius:'1rem', padding:'10px', position:'relative', overflow:'hidden', boxShadow:'0 0 30px rgba(100,0,255,0.08)' },
+      grid: "grid grid-cols-4 gap-2",
+      accent: { background:'linear-gradient(90deg,transparent,rgba(150,50,255,0.5),rgba(255,50,200,0.4),transparent)' }
+    },
+    "blood-hex": {
+      wrapper: { background:'rgba(15,0,0,0.8)', border:'1px solid rgba(200,0,0,0.25)', borderRadius:'0.5rem', padding:'8px', position:'relative', overflow:'hidden', boxShadow:'inset 0 0 20px rgba(200,0,0,0.05)' },
+      grid: "grid grid-cols-4 gap-1",
+      accent: { background:'linear-gradient(90deg,transparent,rgba(200,0,0,0.5),rgba(150,0,0,0.4),transparent)' }
+    },
+  };
+
+  const tStyle = tabGridStyles[theme] || tabGridStyles["cyber-grid"];
+
+  // Theme-specific search input styles
+  const searchInputColors: Record<string, { bg: string; border: string; color: string; btnBg: string; btnBorder: string; btnColor: string }> = {
+    "matrix-rain":    { bg:'rgba(0,10,0,0.8)',     border:'rgba(0,200,0,0.3)',   color:'#00ff00', btnBg:'rgba(0,200,0,0.1)',   btnBorder:'rgba(0,200,0,0.4)',  btnColor:'#00ee00' },
+    "neon-cards":     { bg:'rgba(10,0,10,0.8)',     border:'rgba(255,0,200,0.3)', color:'#ff66ff', btnBg:'rgba(200,0,255,0.1)', btnBorder:'rgba(200,0,255,0.4)',btnColor:'#dd44ff' },
+    "minimal-dark":   { bg:'rgba(20,20,20,0.9)',    border:'rgba(80,80,80,0.4)', color:'#e0e0e0', btnBg:'rgba(60,60,60,0.4)',   btnBorder:'rgba(80,80,80,0.5)', btnColor:'#ccc' },
+    "hologram":       { bg:'rgba(0,15,20,0.8)',     border:'rgba(0,255,255,0.2)', color:'#00ffff', btnBg:'rgba(0,200,255,0.1)', btnBorder:'rgba(0,200,255,0.4)',btnColor:'#00ddff' },
+    "retro-terminal": { bg:'rgba(5,4,0,0.9)',       border:'rgba(255,180,0,0.3)', color:'#ffb400', btnBg:'rgba(255,180,0,0.1)', btnBorder:'rgba(255,180,0,0.4)',btnColor:'#ffaa00' },
+    "glassmorphic":   { bg:'rgba(255,255,255,0.04)',border:'rgba(255,255,255,0.12)',color:'#f0f0ff',btnBg:'rgba(150,50,255,0.15)',btnBorder:'rgba(150,50,255,0.4)',btnColor:'#cc88ff' },
+    "brutal-neon":    { bg:'#000',                  border:'rgba(255,255,0,0.6)', color:'#ffff00', btnBg:'rgba(255,0,255,0.2)', btnBorder:'rgba(255,0,255,0.8)',btnColor:'#ff00ff' },
+    "cosmic":         { bg:'rgba(5,0,20,0.9)',      border:'rgba(150,50,255,0.3)',color:'#bb88ff', btnBg:'rgba(150,50,255,0.15)',btnBorder:'rgba(150,50,255,0.5)',btnColor:'#bb88ff' },
+    "blood-hex":      { bg:'rgba(10,0,0,0.9)',      border:'rgba(200,0,0,0.3)',  color:'#ff4444', btnBg:'rgba(200,0,0,0.12)',   btnBorder:'rgba(200,0,0,0.4)',  btnColor:'#ff3333' },
+    "cyber-grid":     { bg:'rgba(0,0,0,0.5)',       border:'rgba(0,255,128,0.15)',color:'hsl(var(--neon-green))',btnBg:'rgba(0,255,128,0.1)',btnBorder:'rgba(0,255,128,0.3)',btnColor:'hsl(var(--neon-green))' },
+  };
+  const sc = searchInputColors[theme] || searchInputColors["cyber-grid"];
+
   return (
     <div className="px-3 space-y-3 max-w-xl mx-auto">
       {/* Feature Cards Grid */}
-      <div
-        className="rounded-2xl p-2.5 relative overflow-hidden"
-        style={{
-          background: 'rgba(5, 15, 12, 0.6)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          border: '1px solid rgba(0, 255, 128, 0.1)',
-          boxShadow: '0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03)'
-        }}
-      >
+      <div style={tStyle.wrapper}>
         {/* Top accent line */}
-        <div className="absolute top-0 left-0 right-0 h-[1px]" style={{background: 'linear-gradient(90deg, transparent, hsl(var(--neon-green) / 0.4), hsl(var(--neon-cyan) / 0.4), hsl(var(--neon-pink) / 0.3), transparent)'}} />
+        {tStyle.accent && (
+          <div className="absolute top-0 left-0 right-0 h-[1px]" style={tStyle.accent} />
+        )}
 
-        <div className="grid grid-cols-4 gap-2">
+        <div className={tStyle.grid}>
           {visibleTabs.map((tab) => {
             const IconComponent = iconMap[tab.icon] || Sparkles;
             const isPhoneSearch = tab.searchType === "phone";
@@ -326,10 +390,10 @@ const SearchPanel = () => {
 
       {/* Search Input Section */}
       {showSearchInput && (
-        <div className="rounded-2xl p-3" style={{background: 'rgba(0,15,20,0.65)', backdropFilter: 'blur(16px)', border: '1px solid rgba(0,255,200,0.12)', boxShadow: '0 4px 20px rgba(0,0,0,0.3)'}}>
+        <div className="rounded-xl p-3" style={{background: sc.bg, backdropFilter:'blur(12px)', border:`1px solid ${sc.border}`, boxShadow:'0 4px 20px rgba(0,0,0,0.3)'}}>
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-1.5 h-1.5 rounded-full" style={{background: 'hsl(var(--neon-cyan))', boxShadow: '0 0 5px hsl(var(--neon-cyan))'}} />
-            <span className="text-[10px] font-bold tracking-wider uppercase font-mono" style={{color: 'hsl(var(--neon-cyan))', opacity: 0.8}}>
+            <div className="w-1.5 h-1.5 rounded-full" style={{background: sc.color, boxShadow:`0 0 5px ${sc.color}`}} />
+            <span className="text-[10px] font-bold tracking-wider uppercase font-mono" style={{color: sc.color, opacity: 0.85}}>
               {activeButton?.label || "SEARCH"}
             </span>
           </div>
@@ -339,14 +403,14 @@ const SearchPanel = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={activeButton?.placeholder || "Enter search query..."}
               className="flex-1 h-10 text-sm font-mono rounded-xl border"
-              style={{background: 'rgba(0,0,0,0.5)', borderColor: 'rgba(0,255,128,0.15)', color: 'hsl(var(--neon-green))'}}
+              style={{background: sc.bg, borderColor: sc.border, color: sc.color}}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             />
             <Button
               onClick={handleSearch}
               disabled={loading}
               className="h-10 px-4 rounded-xl font-bold transition-all active:scale-[0.97]"
-              style={{background: 'rgba(0,255,128,0.1)', border: '1px solid rgba(0,255,128,0.3)', color: 'hsl(var(--neon-green))', boxShadow: '0 0 10px rgba(0,255,128,0.15)'}}
+              style={{background: sc.btnBg, border:`1px solid ${sc.btnBorder}`, color: sc.btnColor, boxShadow:`0 0 10px ${sc.btnBg}`}}
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
             </Button>
