@@ -12,7 +12,7 @@ import { toast } from "@/hooks/use-toast";
 import ShubhCam from "./ShubhCam";
 import TelegramOSINT from "./TelegramOSINT";
 import CallDark from "./CallDark";
-import ScheduledHit from "./ScheduledHit";
+
 import ImageToInfo from "./ImageToInfo";
 import HackerLoader from "./HackerLoader";
 import AnimatedJsonViewer from "./AnimatedJsonViewer";
@@ -417,7 +417,6 @@ const SearchPanel = () => {
             noApisWarning={hitSettings.noApisWarning}
             uaRotation={hitSettings.uaRotationEnabled}
           />
-          <ScheduledHit />
           <LogsPanel logs={logs} onClear={clearLogs} />
         </div>
       )}
