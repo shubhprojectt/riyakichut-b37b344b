@@ -268,7 +268,7 @@ const Admin = () => {
     setIsLoadingPasswords(true);
     try {
       const { data, error } = await supabase.functions.invoke('admin-passwords', {
-        body: { action: 'list', adminPassword: settings.adminPassword }
+        body: { action: 'list', adminPassword: adminPasswordInput }
       });
       if (error) throw error;
       setPasswordRecords(data.passwords || []);
@@ -295,7 +295,7 @@ const Admin = () => {
       const { data, error } = await supabase.functions.invoke('admin-passwords', {
         body: { 
           action: 'create', 
-          adminPassword: settings.adminPassword, 
+          adminPassword: adminPasswordInput, 
           credits,
           customPassword: customPassword.trim() || undefined
         }
@@ -314,7 +314,7 @@ const Admin = () => {
   const updatePassword = async (passwordId: string, updates: { credits?: number; isEnabled?: boolean; isUnlimited?: boolean }) => {
     try {
       const { error } = await supabase.functions.invoke('admin-passwords', {
-        body: { action: 'update', adminPassword: settings.adminPassword, passwordId, ...updates }
+        body: { action: 'update', adminPassword: adminPasswordInput, passwordId, ...updates }
       });
       if (error) throw error;
       toast({ title: "Updated", description: "Password updated successfully" });
@@ -328,7 +328,7 @@ const Admin = () => {
   const deletePassword = async (passwordId: string) => {
     try {
       const { error } = await supabase.functions.invoke('admin-passwords', {
-        body: { action: 'delete', adminPassword: settings.adminPassword, passwordId }
+        body: { action: 'delete', adminPassword: adminPasswordInput, passwordId }
       });
       if (error) throw error;
       toast({ title: "Deleted", description: "Password deleted" });
@@ -341,7 +341,7 @@ const Admin = () => {
   const resetPassword = async (passwordId: string) => {
     try {
       const { error } = await supabase.functions.invoke('admin-passwords', {
-        body: { action: 'reset', adminPassword: settings.adminPassword, passwordId }
+        body: { action: 'reset', adminPassword: adminPasswordInput, passwordId }
       });
       if (error) throw error;
       toast({ title: "Reset", description: "Password reset - can be used on new device" });
