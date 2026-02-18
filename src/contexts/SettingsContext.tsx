@@ -106,6 +106,8 @@ export interface AppSettings {
   qrIncludeLogo: boolean; // Include logo in center
    // Loader settings
    loaderImageUrl: string; // Custom loader image URL
+  // Dashboard UI Theme
+  dashboardTheme: "cyber-grid" | "matrix-rain" | "neon-cards" | "minimal-dark" | "hologram" | "retro-terminal" | "glassmorphic" | "brutal-neon" | "cosmic" | "blood-hex";
 }
 
 const defaultTelegramTools: TelegramToolConfig[] = [
@@ -229,6 +231,8 @@ const defaultSettings: AppSettings = {
   qrIncludeLogo: false,
    // Loader defaults
    loaderImageUrl: "", // Empty means use default bundled image
+  // Dashboard theme
+  dashboardTheme: "cyber-grid",
 };
 
 const mergeTabsWithDefaults = (tabs?: TabConfig[]): TabConfig[] => {
