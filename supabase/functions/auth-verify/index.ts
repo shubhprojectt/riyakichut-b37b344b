@@ -37,7 +37,7 @@ serve(async (req) => {
     if (sessionError || !session) {
       return new Response(
         JSON.stringify({ valid: false, error: 'Invalid or expired session' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -45,7 +45,7 @@ serve(async (req) => {
     if (!session.access_passwords.is_enabled) {
       return new Response(
         JSON.stringify({ valid: false, error: 'Password has been disabled' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
