@@ -46,43 +46,53 @@ const FeatureCard = ({ icon: Icon, label, active, onClick, curved, disabled }: F
   return (
     <button
       onClick={onClick}
+      disabled={disabled && !active}
       className={cn(
-        "group relative flex flex-col items-center gap-1.5 p-2 border transition-all duration-200",
-        curved ? "rounded-2xl" : "rounded-xl",
-        disabled && !active ? "opacity-30 grayscale" : "",
+        "group relative flex flex-col items-center justify-center gap-2 p-3 rounded-2xl border-2 transition-all duration-200 aspect-square",
+        disabled && !active ? "opacity-30 grayscale cursor-not-allowed" : "active:scale-[0.94]",
         active
-          ? `${colors.activeBg} ${colors.border} border-2`
-          : "bg-black/60 border-white/[0.08] hover:border-white/20",
-        "active:scale-[0.96]"
+          ? `${colors.activeBg} ${colors.border}`
+          : `bg-black/70 border-white/[0.07] hover:${colors.border} hover:${colors.activeBg}`
       )}
       style={active ? {
-        boxShadow: `0 0 15px hsl(var(${colors.neonVar}) / 0.5), 0 0 30px hsl(var(${colors.neonVar}) / 0.2), inset 0 0 10px hsl(var(${colors.neonVar}) / 0.1)`
-      } : undefined}
+        boxShadow: `0 0 18px hsl(var(${colors.neonVar}) / 0.6), 0 0 35px hsl(var(${colors.neonVar}) / 0.2), inset 0 0 15px hsl(var(${colors.neonVar}) / 0.1)`
+      } : {
+        boxShadow: `inset 0 0 20px rgba(0,0,0,0.4)`
+      }}
     >
+      {/* Gradient bg tint */}
+      <div
+        className="absolute inset-0 rounded-2xl opacity-20 pointer-events-none"
+        style={{ background: `radial-gradient(circle at 50% 40%, hsl(var(${colors.neonVar}) / 0.4), transparent 70%)` }}
+      />
+
       {/* Icon */}
       <div className={cn(
-        "w-7 h-7 rounded-lg flex items-center justify-center transition-all",
-        active ? "bg-black/40" : "bg-white/[0.04]"
+        "w-9 h-9 rounded-xl flex items-center justify-center transition-all z-10",
+        active ? "bg-black/50" : "bg-black/40"
       )}>
-        <Icon 
-          className={cn("w-3.5 h-3.5 transition-all", colors.text, active && "animate-glow-breathe")} 
-          style={active ? { filter: `drop-shadow(0 0 8px currentColor)` } : { filter: `drop-shadow(0 0 3px currentColor)` }}
+        <Icon
+          className={cn("w-5 h-5 transition-all", colors.text, active && "animate-glow-breathe")}
+          style={{ filter: active ? `drop-shadow(0 0 10px currentColor)` : `drop-shadow(0 0 4px currentColor)` }}
         />
       </div>
-      
+
       {/* Label */}
       <span className={cn(
-        "text-[7px] font-bold tracking-wider uppercase text-center leading-tight max-w-full truncate",
+        "text-[8px] font-extrabold tracking-widest uppercase text-center leading-tight z-10 w-full px-0.5",
         colors.text
-      )} style={{ textShadow: `0 0 6px currentColor` }}>
+      )} style={{ textShadow: `0 0 8px currentColor` }}>
         {label}
       </span>
 
-      {/* Active neon dot */}
+      {/* Active bottom glow bar */}
       {active && (
-        <div 
-          className={cn("absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full", colors.text.replace('text-', 'bg-'))}
-          style={{ boxShadow: `0 0 6px currentColor, 0 0 12px currentColor` }}
+        <div
+          className="absolute bottom-0 left-1/4 right-1/4 h-[2px] rounded-full"
+          style={{
+            background: `hsl(var(${colors.neonVar}))`,
+            boxShadow: `0 0 8px hsl(var(${colors.neonVar})), 0 0 16px hsl(var(${colors.neonVar}))`
+          }}
         />
       )}
     </button>
