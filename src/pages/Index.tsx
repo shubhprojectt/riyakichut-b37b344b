@@ -8,8 +8,8 @@ const Index = () => {
 
   return (
     <PasswordProtection>
-      <div className="min-h-[100dvh] relative overflow-x-hidden bg-black">
-        {/* Background - pure black with neon glow orbs */}
+        <div className="min-h-[100dvh] relative overflow-x-hidden" style={{background: '#050a0a'}}>
+        {/* Subtle background glow orbs */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
           {settings.backgroundImage ? (
             <div 
@@ -26,12 +26,14 @@ const Index = () => {
             />
           ) : (
             <>
-              <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-neon-green/[0.08] blur-[150px]" />
-              <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-neon-pink/[0.08] blur-[130px]" />
-              <div className="absolute top-[40%] left-[30%] w-[400px] h-[400px] rounded-full bg-neon-cyan/[0.06] blur-[120px]" />
-              <div className="absolute top-[20%] right-[20%] w-[300px] h-[300px] rounded-full bg-neon-purple/[0.06] blur-[100px]" />
+              {/* Very subtle, soft glow orbs */}
+              <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full" style={{background: 'radial-gradient(circle, hsl(var(--neon-green) / 0.06) 0%, transparent 70%)'}} />
+              <div className="absolute bottom-0 left-0 w-[450px] h-[450px] rounded-full" style={{background: 'radial-gradient(circle, hsl(var(--neon-pink) / 0.06) 0%, transparent 70%)'}} />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full" style={{background: 'radial-gradient(circle, hsl(var(--neon-cyan) / 0.04) 0%, transparent 70%)'}} />
             </>
           )}
+          {/* Subtle grid overlay */}
+          <div className="absolute inset-0" style={{backgroundImage: 'linear-gradient(hsl(var(--neon-green) / 0.03) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--neon-cyan) / 0.03) 1px, transparent 1px)', backgroundSize: '40px 40px'}} />
         </div>
         
         {/* Content */}
@@ -43,10 +45,10 @@ const Index = () => {
           </main>
           
           {/* Footer */}
-          <footer className="text-center py-3 px-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-green/[0.05] border border-neon-green/20">
-              <div className="w-1.5 h-1.5 bg-neon-green rounded-full animate-pulse" style={{boxShadow: '0 0 8px hsl(var(--neon-green))'}} />
-              <p className="text-[9px] text-neon-green/60 font-bold tracking-widest uppercase font-mono" style={{textShadow: '0 0 10px hsl(var(--neon-green) / 0.5)'}}>
+          <footer className="text-center py-2 px-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full" style={{background: 'rgba(0,255,128,0.04)', border: '1px solid hsl(var(--neon-green) / 0.15)'}}>
+              <div className="w-1 h-1 bg-neon-green rounded-full animate-pulse" />
+              <p className="text-[8px] text-white/30 font-mono tracking-widest uppercase">
                 System Active • Educational Purpose Only
               </p>
             </div>
