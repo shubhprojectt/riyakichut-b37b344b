@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Trash2, Code, Zap, ChevronDown, ChevronUp, ToggleLeft, ToggleRight, Download, Upload, AlertTriangle, Save } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Code, Zap, ChevronDown, ChevronUp, ToggleLeft, ToggleRight, Download, Upload, AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
@@ -148,8 +149,6 @@ export default function DirectHitAdmin() {
   const [apis, setApis] = useState<DirectApi[]>([]);
   const [tab, setTab] = useState<Tab>('apis');
   const [expandedApi, setExpandedApi] = useState<string | null>(null);
-  const [headerKey, setHeaderKey] = useState('');
-  const [headerVal, setHeaderVal] = useState('');
   const [fetchCode, setFetchCode] = useState('');
   const [parseResult, setParseResult] = useState<{ api?: Partial<DirectApi>; error?: string; warnings: string[] } | null>(null);
   const [importName, setImportName] = useState('');
@@ -185,19 +184,11 @@ export default function DirectHitAdmin() {
     save(apis.map(a => ({ ...a, enabled })));
   };
 
-  const addHeader = (apiId: string) => {
-    if (!headerKey.trim()) return;
-    const api = apis.find(a => a.id === apiId);
-    if (!api) return;
-    updateApi(apiId, { headers: { ...api.headers, [headerKey]: headerVal } });
-    setHeaderKey(''); setHeaderVal('');
-  };
-
-  const removeHeader = (apiId: string, key: string) => {
-    const api = apis.find(a => a.id === apiId);
-    if (!api) return;
-    const h = { ...api.headers }; delete h[key];
-    updateApi(apiId, { headers: h });
+  const updateHeaders = (apiId: string, jsonStr: string) => {
+    try {
+      const parsed = JSON.parse(jsonStr);
+      updateApi(apiId, { headers: parsed });
+    } catch { /* user still typing */ }
   };
 
   // Import
@@ -317,47 +308,57 @@ export default function DirectHitAdmin() {
               </div>
 
               {expandedApi === api.id && (
-                <div className="p-3 pt-0 space-y-2.5 border-t border-white/[0.04]">
-                  <Input value={api.name} onChange={e => updateApi(api.id, { name: e.target.value })} placeholder="API Name"
-                    className="h-9 bg-white/[0.04] border-white/[0.06] text-white/80 text-xs" />
-                  <Input value={api.url} onChange={e => updateApi(api.id, { url: e.target.value })} placeholder="https://api.example.com/{PHONE}"
-                    className="h-9 bg-white/[0.04] border-white/[0.06] text-white/80 text-xs font-mono" />
-                  <div className="grid grid-cols-2 gap-2">
-                    <Select value={api.method} onValueChange={v => updateApi(api.id, { method: v as DirectApi['method'] })}>
-                      <SelectTrigger className="h-9 bg-white/[0.04] border-white/[0.06] text-white/80 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Select value={api.bodyType} onValueChange={v => updateApi(api.id, { bodyType: v as DirectApi['bodyType'] })}>
-                      <SelectTrigger className="h-9 bg-white/[0.04] border-white/[0.06] text-white/80 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {['none', 'json', 'form-urlencoded', 'text'].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {api.bodyType !== 'none' && (
-                    <textarea value={api.body} onChange={e => updateApi(api.id, { body: e.target.value })}
-                      placeholder='{"phone": "{PHONE}"}' rows={3}
-                      className="w-full rounded-lg bg-white/[0.04] border border-white/[0.06] text-white/80 text-xs font-mono p-2 resize-none focus:outline-none focus:border-orange-500/30" />
-                  )}
+                <div className="p-3 pt-0 space-y-3 border-t border-white/[0.04]">
                   <div className="space-y-1.5">
-                    <p className="text-[10px] text-white/30">Headers</p>
-                    {Object.entries(api.headers).map(([k, v]) => (
-                      <div key={k} className="flex items-center gap-1.5 text-[10px]">
-                        <span className="text-white/40 font-mono truncate">{k}:</span>
-                        <span className="text-white/60 font-mono truncate flex-1">{v}</span>
-                        <button onClick={() => removeHeader(api.id, k)} className="text-red-400/40 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
-                      </div>
-                    ))}
-                    <div className="flex gap-1.5">
-                      <Input value={headerKey} onChange={e => setHeaderKey(e.target.value)} placeholder="Key"
-                        className="h-7 bg-white/[0.03] border-white/[0.05] text-white/70 text-[10px] flex-1" />
-                      <Input value={headerVal} onChange={e => setHeaderVal(e.target.value)} placeholder="Value"
-                        className="h-7 bg-white/[0.03] border-white/[0.05] text-white/70 text-[10px] flex-1" />
-                      <Button size="sm" variant="ghost" onClick={() => addHeader(api.id)} className="h-7 px-2 text-[10px] text-orange-400">+</Button>
+                    <Label className="text-white/40 text-xs">Name</Label>
+                    <Input value={api.name} onChange={e => updateApi(api.id, { name: e.target.value })} placeholder="API Name"
+                      className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/15 focus:border-orange-500/40" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-white/40 text-xs">URL</Label>
+                    <Input value={api.url} onChange={e => updateApi(api.id, { url: e.target.value })} placeholder="https://api.example.com/{PHONE}"
+                      className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/15 focus:border-orange-500/40 font-mono text-xs" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-white/40 text-xs">Method</Label>
+                      <Select value={api.method} onValueChange={v => updateApi(api.id, { method: v as DirectApi['method'] })}>
+                        <SelectTrigger className="bg-white/[0.04] border-white/[0.08] text-white"><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-[#141418] border-white/[0.08]">
+                          {['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].map(m => (
+                            <SelectItem key={m} value={m} className="text-white/80">{m}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-white/40 text-xs">Body Type</Label>
+                      <Select value={api.bodyType} onValueChange={v => updateApi(api.id, { bodyType: v as DirectApi['bodyType'] })}>
+                        <SelectTrigger className="bg-white/[0.04] border-white/[0.08] text-white"><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-[#141418] border-white/[0.08]">
+                          {['none', 'json', 'form-urlencoded', 'text'].map(t => (
+                            <SelectItem key={t} value={t} className="text-white/80">{t}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-white/40 text-xs">Headers (JSON)</Label>
+                    <Textarea
+                      defaultValue={JSON.stringify(api.headers, null, 2)}
+                      onBlur={e => updateHeaders(api.id, e.target.value)}
+                      className="bg-white/[0.04] border-white/[0.08] text-white/80 text-xs h-20 font-mono placeholder:text-white/15 focus:border-orange-500/40"
+                      placeholder='{"Content-Type": "application/json"}' />
+                  </div>
+                  {api.bodyType !== 'none' && (
+                    <div className="space-y-1.5">
+                      <Label className="text-white/40 text-xs">Body</Label>
+                      <Textarea value={api.body} onChange={e => updateApi(api.id, { body: e.target.value })}
+                        className="bg-white/[0.04] border-white/[0.08] text-white/80 text-xs h-20 font-mono placeholder:text-white/15 focus:border-orange-500/40"
+                        placeholder='{"phone": "{PHONE}"}' />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
