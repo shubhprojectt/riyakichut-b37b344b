@@ -20,6 +20,7 @@ import Page3 from "./pages/Page3";
 import Page3Admin from "./pages/Page3Admin";
 import Page3Dashboard from "./pages/Page3Dashboard";
 import RandiPanel from "./pages/RandiPanel";
+import DirectHit from "./pages/DirectHit";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -108,6 +109,7 @@ const AppRoutes = () => {
       <Route path="/page3" element={<Page3 />} />
       <Route path="/page3/admin" element={<Page3Admin />} />
       <Route path="/page3/dashboard" element={<Page3Dashboard />} />
+      <Route path="/direct-hit" element={<DirectHit />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
