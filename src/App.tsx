@@ -21,6 +21,7 @@ import Page3Admin from "./pages/Page3Admin";
 import Page3Dashboard from "./pages/Page3Dashboard";
 import RandiPanel from "./pages/RandiPanel";
 import DirectHit from "./pages/DirectHit";
+import DirectHitAdmin from "./pages/DirectHitAdmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -110,6 +111,7 @@ const AppRoutes = () => {
       <Route path="/page3/admin" element={<Page3Admin />} />
       <Route path="/page3/dashboard" element={<Page3Dashboard />} />
       <Route path="/direct-hit" element={<DirectHit />} />
+      <Route path="/direct-hit/admin" element={<DirectHitAdmin />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
