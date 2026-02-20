@@ -523,6 +523,38 @@ ON CONFLICT (setting_key) DO NOTHING;
 -- =====================================================
 
 -- =====================================================
+-- 10. PG_CRON SETUP (for Scheduled Hits)
+-- =====================================================
+-- IMPORTANT: Enable pg_cron and pg_net extensions first from
+-- Supabase Dashboard > Database > Extensions
+-- Then run this SQL to create the cron job:
+
+-- Enable extensions
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
+
+-- Create cron job that calls execute-scheduled-hits every minute
+-- REPLACE <YOUR-PROJECT-REF> with your Supabase project ref (e.g., abcdefghijklmnop)
+-- REPLACE <YOUR-ANON-KEY> with your Supabase anon/public key
+SELECT cron.schedule(
+  'execute-scheduled-hits-every-minute',
+  '* * * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://<YOUR-PROJECT-REF>.supabase.co/functions/v1/execute-scheduled-hits',
+    headers := '{"Content-Type": "application/json", "Authorization": "Bearer <YOUR-ANON-KEY>"}'::jsonb,
+    body := '{}'::jsonb
+  ) AS request_id;
+  $$
+);
+
+-- To check existing cron jobs:
+-- SELECT * FROM cron.job;
+--
+-- To delete a cron job:
+-- SELECT cron.unschedule('execute-scheduled-hits-every-minute');
+
+-- =====================================================
 -- QUICK REFERENCE: Tables & Their Purpose
 -- =====================================================
 -- access_passwords  : Stores login credentials with credit info
