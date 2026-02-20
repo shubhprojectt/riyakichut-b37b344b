@@ -359,6 +359,11 @@ export default function DirectHitAdmin() {
                         placeholder='{"phone": "{PHONE}"}' />
                     </div>
                   )}
+                  <button
+                    onClick={() => { saveDirectApis(apis); toast.success('API saved!'); }}
+                    className="w-full h-10 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-medium hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-2">
+                    💾 Save API
+                  </button>
                 </div>
               )}
             </div>
