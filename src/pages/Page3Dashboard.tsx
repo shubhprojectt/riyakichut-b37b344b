@@ -12,6 +12,7 @@ import ApiImporter from '@/components/hit-engine/ApiImporter';
 import LogsPanel from '@/components/hit-engine/LogsPanel';
 import SiteSettingsPanel from '@/components/hit-engine/SiteSettingsPanel';
 import BulkImporter from '@/components/hit-engine/BulkImporter';
+import FastApiKeyManager from '@/components/hit-engine/FastApiKeyManager';
 import type { HitApi } from '@/hooks/useHitApis';
 import { toast } from 'sonner';
 
@@ -186,15 +187,8 @@ const Page3Dashboard = () => {
                 <Switch checked={settings.uaRotationEnabled} onCheckedChange={(v) => updateSettings({ uaRotationEnabled: v })} />
               </div>
 
-              {/* Fast API Link */}
-              <button onClick={() => {
-                const url = `https://qetbvgvdsgetkkupbbse.supabase.co/functions/v1/fast-hit-all`;
-                navigator.clipboard.writeText(url);
-                toast.success('Fast API link copied!');
-              }}
-                className="w-full h-9 rounded-xl bg-violet-600/20 border border-violet-500/20 text-violet-300 text-xs font-medium hover:bg-violet-600/30 transition-all flex items-center justify-center gap-1.5">
-                <Zap className="w-3.5 h-3.5" /> Copy Fast API Link <Copy className="w-3 h-3 opacity-60" />
-              </button>
+              {/* Fast API Key Manager */}
+              <FastApiKeyManager />
 
               {/* Export */}
               <button onClick={handleExportAll}
