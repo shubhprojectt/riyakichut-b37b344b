@@ -6,6 +6,23 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Rate limiting: 5 requests per IP per minute
+const RATE_LIMIT = 5;
+const RATE_WINDOW = 60_000;
+const ipHits = new Map<string, number[]>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const hits = (ipHits.get(ip) || []).filter(t => now - t < RATE_WINDOW);
+  if (hits.length >= RATE_LIMIT) {
+    ipHits.set(ip, hits);
+    return false;
+  }
+  hits.push(now);
+  ipHits.set(ip, hits);
+  return true;
+}
+
 const USER_AGENTS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0',
@@ -61,6 +78,14 @@ async function hitOne(url: string, method: string, headers: Record<string, strin
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
+  }
+
+  // Rate limit check
+  const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('cf-connecting-ip') || 'unknown';
+  if (!checkRateLimit(clientIp)) {
+    return new Response(JSON.stringify({ success: false, error: 'Rate limit exceeded. Max 5 requests per minute.' }), {
+      status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
   try {
