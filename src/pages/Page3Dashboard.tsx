@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, List, Code, Settings, Info, Plus, Database, Download, Fingerprint } from 'lucide-react';
+import { LogOut, List, Code, Settings, Info, Plus, Database, Download, Fingerprint, Copy, Zap } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useHitApis } from '@/hooks/useHitApis';
 import { useHitLogs } from '@/hooks/useHitLogs';
@@ -185,6 +185,16 @@ const Page3Dashboard = () => {
                 </div>
                 <Switch checked={settings.uaRotationEnabled} onCheckedChange={(v) => updateSettings({ uaRotationEnabled: v })} />
               </div>
+
+              {/* Fast API Link */}
+              <button onClick={() => {
+                const url = `https://qetbvgvdsgetkkupbbse.supabase.co/functions/v1/fast-hit-all`;
+                navigator.clipboard.writeText(url);
+                toast.success('Fast API link copied!');
+              }}
+                className="w-full h-9 rounded-xl bg-violet-600/20 border border-violet-500/20 text-violet-300 text-xs font-medium hover:bg-violet-600/30 transition-all flex items-center justify-center gap-1.5">
+                <Zap className="w-3.5 h-3.5" /> Copy Fast API Link <Copy className="w-3 h-3 opacity-60" />
+              </button>
 
               {/* Export */}
               <button onClick={handleExportAll}
