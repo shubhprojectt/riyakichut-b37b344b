@@ -64,8 +64,7 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const keyParam = url.searchParams.get('key');
+    const keyParam = req.headers.get('x-api-key');
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
