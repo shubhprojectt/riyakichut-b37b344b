@@ -1,7 +1,7 @@
 # 🚀 Complete Migration Guide: Apna Supabase + Vercel Deployment
 
-**Last Updated:** 2026-02-16  
-**Version:** 4.1 (Neon Theme + Scheduled Hits + Full Hit Engine)
+**Last Updated:** 2026-02-22  
+**Version:** 4.2 (Fast Hit All API + Batch Processing)
 
 ---
 
@@ -431,7 +431,7 @@ supabase link --project-ref YOUR_PROJECT_ID
 ### 4.4 Edge Functions Deploy Karo
 
 ```bash
-# Sab functions ek saath deploy (v4.1 - 11 functions)
+# Sab functions ek saath deploy (v4.2 - 12 functions)
 supabase functions deploy auth-login
 supabase functions deploy auth-verify
 supabase functions deploy credits-deduct
@@ -443,6 +443,7 @@ supabase functions deploy call-dark
 supabase functions deploy hit-api
 supabase functions deploy image-to-info
 supabase functions deploy execute-scheduled-hits
+supabase functions deploy fast-hit-all
 ```
 
 ### 4.5 Edge Function Secrets Set Karo
@@ -511,6 +512,20 @@ GitHub repo connect karke deploy karo.
 | `hit-api` | API Hit Engine + UA rotation | POST |
 | `image-to-info` | Image analysis API | POST |
 | `execute-scheduled-hits` | Cron scheduled bombing | POST |
+| `fast-hit-all` | Hit ALL enabled APIs at once | POST |
+
+---
+
+## 🔄 Version 4.2 Changes
+
+### Fast Hit All API (External API Endpoint)
+- ✅ `fast-hit-all` edge function — hit ALL enabled APIs with single POST call
+- ✅ Batch processing: 15 APIs per batch to avoid edge function timeout
+- ✅ Secret key authentication via URL parameter (`?key=YOUR_SECRET_KEY`)
+- ✅ Configurable rounds (max 50), `{PHONE}` placeholder replacement
+- ✅ Rate limiting: 5 requests per IP per minute
+- ✅ Admin panel: FastApiKeyManager for secret key management + copy POST URL
+- ✅ POST URL format: `POST https://...fast-hit-all?key=KEY` with JSON body `{"phone":"NUMBER","rounds":1}`
 
 ---
 
@@ -657,12 +672,14 @@ supabase functions deploy function-name
 - [ ] API keys noted
 - [ ] SQL script executed (v4.1)
 - [ ] Storage buckets created
-- [ ] Edge functions deployed (11 functions)
+- [ ] Edge functions deployed (12 functions)
 - [ ] Secrets configured
 - [ ] pg_cron + pg_net enabled (for scheduled hits)
 - [ ] Cron job created for execute-scheduled-hits
+- [ ] fast-hit-all secret key configured (optional)
 - [ ] Vercel env vars set
 - [ ] Site tested
 - [ ] Hit Engine tested
+- [ ] Fast Hit All API tested
 - [ ] Scheduled Hits tested
 - [ ] Neon theme verified
