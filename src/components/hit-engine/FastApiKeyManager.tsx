@@ -69,9 +69,11 @@ export default function FastApiKeyManager() {
 
   const copyLinkWithKey = () => {
     const base = `https://qetbvgvdsgetkkupbbse.supabase.co/functions/v1/fast-hit-all`;
-    const url = secretKey ? `${base}?key=${encodeURIComponent(secretKey)}` : base;
-    navigator.clipboard.writeText(url);
-    toast.success('Link with key copied!');
+    const info = secretKey
+      ? `${base}\n\nHeader: x-api-key: ${secretKey}`
+      : base;
+    navigator.clipboard.writeText(info);
+    toast.success('Link + header info copied!');
   };
 
   if (loading) return null;
