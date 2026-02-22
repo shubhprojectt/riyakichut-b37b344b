@@ -64,16 +64,33 @@ serve(async (req) => {
   }
 
   try {
+    const url = new URL(req.url);
+    const keyParam = url.searchParams.get('key');
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const sb = createClient(supabaseUrl, supabaseKey);
+
+    // Validate secret key from app_settings
+    const { data: keySetting } = await sb
+      .from('app_settings')
+      .select('setting_value')
+      .eq('setting_key', 'fast_api_secret_key')
+      .single();
+
+    const storedKey = keySetting?.setting_value as string | null;
+    if (storedKey && storedKey !== '' && keyParam !== storedKey) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid or missing secret key' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { phone, rounds = 1 } = await req.json();
     if (!phone || phone.length < 10) {
       return new Response(JSON.stringify({ success: false, error: 'Valid phone number required' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const sb = createClient(supabaseUrl, supabaseKey);
 
     const { data: apis, error: dbErr } = await sb
       .from('hit_apis')
