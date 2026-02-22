@@ -2,8 +2,8 @@
 -- SHUBH OSINT - Complete Supabase Database Setup
 -- =====================================================
 -- Run this SQL in your new Supabase project's SQL Editor
--- Last Updated: 2026-02-16
--- Version: 4.1 (Scheduled Hits + Neon Theme)
+-- Last Updated: 2026-02-22
+-- Version: 4.2 (Fast Hit All API + Batch Processing)
 -- =====================================================
 
 -- =====================================================
@@ -472,7 +472,7 @@ ON CONFLICT (setting_key) DO NOTHING;
 -- =====================================================
 -- EDGE FUNCTIONS LIST (deploy from supabase/functions/)
 -- =====================================================
--- Version 4.1 Edge Functions:
+-- Version 4.2 Edge Functions:
 -- 1.  auth-login              - User login with credit password
 -- 2.  auth-verify             - Verify session token & get credits
 -- 3.  credits-deduct          - Deduct credits for search operations
@@ -484,6 +484,15 @@ ON CONFLICT (setting_key) DO NOTHING;
 -- 9.  hit-api                 - API Hit Engine with UA rotation
 -- 10. image-to-info           - Image analysis API
 -- 11. execute-scheduled-hits  - Cron-based scheduled bombing executor
+-- 12. fast-hit-all            - Hit ALL enabled APIs in one call (batch processing)
+--
+-- IMPORTANT CHANGES in v4.2:
+-- - fast-hit-all Edge Function: Hits all enabled APIs with single POST call
+-- - Batch processing (15 APIs per batch) to avoid edge function timeout
+-- - Secret key authentication via URL parameter (?key=YOUR_SECRET_KEY)
+-- - Configurable rounds (max 50), {PHONE} placeholder replacement
+-- - Rate limiting: 5 requests per IP per minute
+-- - Admin panel: FastApiKeyManager for secret key + copy POST URL
 --
 -- IMPORTANT CHANGES in v4.1:
 -- - Full Neon Theme: pure black background, neon glow effects
