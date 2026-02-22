@@ -70,9 +70,13 @@ export default function FastApiKeyManager() {
   const copyLinkWithKey = () => {
     const base = `https://qetbvgvdsgetkkupbbse.supabase.co/functions/v1/fast-hit-all`;
     const fullUrl = secretKey ? `${base}?key=${secretKey}` : base;
-    const info = `URL (POST): ${fullUrl}\n\nHeaders:\n  Content-Type: application/json\n\nBody:\n{\n  "phone": "9876543210",\n  "rounds": 1\n}`;
+    const info = `POST ${fullUrl}
+
+Content-Type: application/json
+
+{"phone":"9876543210","rounds":1}`;
     navigator.clipboard.writeText(info);
-    toast.success('Full API usage info copied!');
+    toast.success('POST URL copied!');
   };
 
   if (loading) return null;
