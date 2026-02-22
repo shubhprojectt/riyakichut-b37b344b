@@ -131,56 +131,58 @@ serve(async (req) => {
 
     const allResults: Array<{ api: string; round: number; status: number; time: number; success: boolean; error?: string }> = [];
 
+    // Process in batches of 15 to avoid timeout
+    const BATCH_SIZE = 15;
+
     for (let round = 1; round <= Math.min(rounds, 50); round++) {
-      // Hit all APIs in parallel per round
-      const promises = apis.map(async (api) => {
-        const finalUrl = replacePlaceholders(api.url, phone);
-        const finalHeaders: Record<string, string> = {};
-        const hdrs = (api.headers || {}) as Record<string, string>;
-        for (const [k, v] of Object.entries(hdrs)) {
-          finalHeaders[replacePlaceholders(k, phone)] = replacePlaceholders(v, phone);
-        }
-
-        // UA rotation
-        const ua = USER_AGENTS[uaCounter % USER_AGENTS.length];
-        uaCounter++;
-        finalHeaders['User-Agent'] = ua;
-
-        // Query params
-        let urlWithParams = finalUrl;
-        const qp = (api.query_params || {}) as Record<string, string>;
-        if (Object.keys(qp).length > 0) {
-          const url = new URL(finalUrl);
-          for (const [k, v] of Object.entries(qp)) {
-            url.searchParams.set(replacePlaceholders(k, phone), replacePlaceholders(v, phone));
+      for (let i = 0; i < apis.length; i += BATCH_SIZE) {
+        const batch = apis.slice(i, i + BATCH_SIZE);
+        const promises = batch.map(async (api) => {
+          const finalUrl = replacePlaceholders(api.url, phone);
+          const finalHeaders: Record<string, string> = {};
+          const hdrs = (api.headers || {}) as Record<string, string>;
+          for (const [k, v] of Object.entries(hdrs)) {
+            finalHeaders[replacePlaceholders(k, phone)] = replacePlaceholders(v, phone);
           }
-          urlWithParams = url.toString();
+
+          const ua = USER_AGENTS[uaCounter % USER_AGENTS.length];
+          uaCounter++;
+          finalHeaders['User-Agent'] = ua;
+
+          let urlWithParams = finalUrl;
+          const qp = (api.query_params || {}) as Record<string, string>;
+          if (Object.keys(qp).length > 0) {
+            const url = new URL(finalUrl);
+            for (const [k, v] of Object.entries(qp)) {
+              url.searchParams.set(replacePlaceholders(k, phone), replacePlaceholders(v, phone));
+            }
+            urlWithParams = url.toString();
+          }
+
+          const bodyObj = (api.body && Object.keys(api.body as object).length > 0)
+            ? replaceInObj(api.body as Record<string, unknown>, phone)
+            : null;
+          const { serialized, contentType } = buildBody(bodyObj, api.body_type || 'none');
+          if (contentType && !finalHeaders['Content-Type']) {
+            finalHeaders['Content-Type'] = contentType;
+          }
+
+          const result = await hitOne(urlWithParams, api.method || 'GET', finalHeaders, serialized);
+          return {
+            api: api.name,
+            round,
+            status: result.status,
+            time: result.time,
+            success: !result.error && result.status >= 200 && result.status < 400,
+            error: result.error,
+          };
+        });
+
+        const batchResults = await Promise.allSettled(promises);
+        for (const r of batchResults) {
+          if (r.status === 'fulfilled') allResults.push(r.value);
+          else allResults.push({ api: 'unknown', round, status: 0, time: 0, success: false, error: r.reason?.message });
         }
-
-        // Body
-        const bodyObj = (api.body && Object.keys(api.body as object).length > 0)
-          ? replaceInObj(api.body as Record<string, unknown>, phone)
-          : null;
-        const { serialized, contentType } = buildBody(bodyObj, api.body_type || 'none');
-        if (contentType && !finalHeaders['Content-Type']) {
-          finalHeaders['Content-Type'] = contentType;
-        }
-
-        const result = await hitOne(urlWithParams, api.method || 'GET', finalHeaders, serialized);
-        return {
-          api: api.name,
-          round,
-          status: result.status,
-          time: result.time,
-          success: !result.error && result.status >= 200 && result.status < 400,
-          error: result.error,
-        };
-      });
-
-      const roundResults = await Promise.allSettled(promises);
-      for (const r of roundResults) {
-        if (r.status === 'fulfilled') allResults.push(r.value);
-        else allResults.push({ api: 'unknown', round, status: 0, time: 0, success: false, error: r.reason?.message });
       }
     }
 
