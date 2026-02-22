@@ -70,10 +70,10 @@ export default function FastApiKeyManager() {
   const copyLinkWithKey = () => {
     const base = `https://qetbvgvdsgetkkupbbse.supabase.co/functions/v1/fast-hit-all`;
     const info = secretKey
-      ? `${base}\n\nHeader: x-api-key: ${secretKey}`
-      : base;
+      ? `URL: ${base}\n\nHeaders:\n  Content-Type: application/json\n  x-api-key: ${secretKey}\n\nBody (POST):\n{\n  "phone": "9876543210",\n  "rounds": 1\n}`
+      : `URL: ${base}\n\nHeaders:\n  Content-Type: application/json\n\nBody (POST):\n{\n  "phone": "9876543210",\n  "rounds": 1\n}`;
     navigator.clipboard.writeText(info);
-    toast.success('Link + header info copied!');
+    toast.success('Full API usage info copied!');
   };
 
   if (loading) return null;
