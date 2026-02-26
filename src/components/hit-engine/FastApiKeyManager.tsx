@@ -10,6 +10,8 @@ export default function FastApiKeyManager() {
   const [showKey, setShowKey] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const fastHitAllBaseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fast-hit-all`;
+
   const fetchKey = async () => {
     const { data } = await supabase
       .from('app_settings')
@@ -68,8 +70,7 @@ export default function FastApiKeyManager() {
   };
 
   const copyLinkWithKey = () => {
-    const base = `https://qetbvgvdsgetkkupbbse.supabase.co/functions/v1/fast-hit-all`;
-    const fullUrl = secretKey ? `${base}?key=${secretKey}` : base;
+    const fullUrl = secretKey ? `${fastHitAllBaseUrl}?key=${secretKey}` : fastHitAllBaseUrl;
     const info = `POST ${fullUrl}
 
 Content-Type: application/json
