@@ -113,18 +113,25 @@ serve(async (req) => {
       });
     }
 
-    // Support both GET (query params) and POST (JSON body)
+    // Support both GET and POST
+    // time = minutes (0 means instant 1 round), count = kitni baar hit karna hai us time me
     let phone: string | null = null;
-    let rounds = 1;
+    let time = 0;
+    let count = 1;
 
     if (req.method === 'GET') {
       phone = url.searchParams.get('phone');
-      rounds = parseInt(url.searchParams.get('rounds') || '1', 10);
+      time = parseFloat(url.searchParams.get('time') || '0');
+      count = parseInt(url.searchParams.get('count') || '1', 10);
     } else {
       const body = await req.json();
       phone = body.phone;
-      rounds = body.rounds || 1;
+      time = body.time || 0;
+      count = body.count || 1;
     }
+
+    count = Math.max(1, Math.min(count, 50));
+    time = Math.max(0, Math.min(time, 10));
 
     if (!phone || phone.length < 10) {
       return new Response(JSON.stringify({ success: false, error: 'Valid phone number required' }), {
@@ -146,11 +153,18 @@ serve(async (req) => {
 
     const allResults: Array<{ api: string; round: number; status: number; time: number; success: boolean; error?: string }> = [];
 
-    // Process in batches of 5 with 1.5s delay between batches
+    // Calculate delay between rounds based on time
+    // time=0 → 1 round instant, time=1 count=5 → 5 rounds with 12s gap each
     const BATCH_SIZE = 5;
     const BATCH_DELAY = 1500;
+    const roundDelay = time > 0 && count > 1 ? Math.floor((time * 60 * 1000) / count) : 0;
 
-    for (let round = 1; round <= Math.min(rounds, 50); round++) {
+    for (let round = 1; round <= count; round++) {
+      // Delay between rounds (not before the first one)
+      if (round > 1 && roundDelay > 0) {
+        await new Promise(r => setTimeout(r, roundDelay));
+      }
+
       for (let i = 0; i < apis.length; i += BATCH_SIZE) {
         if (i > 0) await new Promise(r => setTimeout(r, BATCH_DELAY));
         const batch = apis.slice(i, i + BATCH_SIZE);
@@ -210,7 +224,9 @@ serve(async (req) => {
       success: true,
       phone,
       total_apis: apis.length,
-      rounds: Math.min(rounds, 50),
+      count,
+      time_minutes: time,
+      round_delay_ms: roundDelay,
       total_hits: allResults.length,
       success_count: totalSuccess,
       fail_count: totalFail,

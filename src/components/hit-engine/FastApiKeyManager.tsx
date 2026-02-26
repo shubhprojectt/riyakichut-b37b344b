@@ -75,14 +75,17 @@ export default function FastApiKeyManager() {
 
 Content-Type: application/json
 
-{"phone":"9876543210","rounds":1}`;
+{"phone":"9876543210","time":0,"count":1}
+
+// time=0 → instant 1 round
+// time=1, count=5 → 5 rounds spread over 1 minute`;
     navigator.clipboard.writeText(info);
     toast.success('POST URL copied!');
   };
 
   const copyGetLink = () => {
     const base = secretKey ? `${fastHitAllBaseUrl}?key=${secretKey}&` : `${fastHitAllBaseUrl}?`;
-    const fullUrl = `${base}phone=9876543210&rounds=1`;
+    const fullUrl = `${base}phone=9876543210&time=0&count=1`;
     navigator.clipboard.writeText(fullUrl);
     toast.success('GET URL copied!');
   };
