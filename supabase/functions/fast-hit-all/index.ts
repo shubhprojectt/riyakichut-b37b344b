@@ -66,7 +66,8 @@ async function hitOne(url: string, method: string, headers: Record<string, strin
   try {
     const res = await fetch(url, { method, headers, body, redirect: 'follow', signal: controller.signal });
     const time = Date.now() - start;
-    await res.text();
+    // Skip reading response body to save runtime
+    res.body?.cancel();
     return { status: res.status, time };
   } catch (e) {
     return { status: 0, time: Date.now() - start, error: e instanceof Error ? e.message : 'Timeout' };
