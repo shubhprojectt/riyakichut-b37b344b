@@ -103,7 +103,12 @@ serve(async (req) => {
       .eq('setting_key', 'fast_api_secret_key')
       .single();
 
-    const storedKey = keySetting?.setting_value as string | null;
+    let storedKey = keySetting?.setting_value as string | null;
+    // Handle jsonb returning quoted strings
+    if (storedKey && typeof storedKey === 'string') {
+      storedKey = storedKey.replace(/^"|"$/g, '').trim();
+    }
+    console.log('Key check:', { keyParam, storedKey, match: keyParam === storedKey });
     if (storedKey && storedKey !== '' && keyParam !== storedKey) {
       return new Response(JSON.stringify({ success: false, error: 'Invalid or missing secret key' }), {
         status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
