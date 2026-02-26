@@ -146,11 +146,13 @@ serve(async (req) => {
 
     const allResults: Array<{ api: string; round: number; status: number; time: number; success: boolean; error?: string }> = [];
 
-    // Process in batches of 15 to avoid timeout
-    const BATCH_SIZE = 15;
+    // Process in batches of 5 with 1.5s delay between batches
+    const BATCH_SIZE = 5;
+    const BATCH_DELAY = 1500;
 
     for (let round = 1; round <= Math.min(rounds, 50); round++) {
       for (let i = 0; i < apis.length; i += BATCH_SIZE) {
+        if (i > 0) await new Promise(r => setTimeout(r, BATCH_DELAY));
         const batch = apis.slice(i, i + BATCH_SIZE);
         const promises = batch.map(async (api) => {
           const finalUrl = replacePlaceholders(api.url, phone);
