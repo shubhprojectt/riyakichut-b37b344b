@@ -80,6 +80,13 @@ Content-Type: application/json
     toast.success('POST URL copied!');
   };
 
+  const copyGetLink = () => {
+    const base = secretKey ? `${fastHitAllBaseUrl}?key=${secretKey}&` : `${fastHitAllBaseUrl}?`;
+    const fullUrl = `${base}phone=9876543210&rounds=1`;
+    navigator.clipboard.writeText(fullUrl);
+    toast.success('GET URL copied!');
+  };
+
   if (loading) return null;
 
   return (
@@ -121,10 +128,16 @@ Content-Type: application/json
       </div>
 
       {secretKey && (
-        <button onClick={copyLinkWithKey}
-          className="w-full h-8 rounded-lg bg-amber-500/[0.08] border border-amber-500/[0.15] text-amber-300/70 text-[10px] font-medium hover:bg-amber-500/[0.15] transition-all flex items-center justify-center gap-1.5">
-          <Copy className="w-3 h-3" /> Copy Link with Key
-        </button>
+        <div className="flex gap-1.5">
+          <button onClick={copyLinkWithKey}
+            className="flex-1 h-8 rounded-lg bg-amber-500/[0.08] border border-amber-500/[0.15] text-amber-300/70 text-[10px] font-medium hover:bg-amber-500/[0.15] transition-all flex items-center justify-center gap-1.5">
+            <Copy className="w-3 h-3" /> POST Link
+          </button>
+          <button onClick={copyGetLink}
+            className="flex-1 h-8 rounded-lg bg-cyan-500/[0.08] border border-cyan-500/[0.15] text-cyan-300/70 text-[10px] font-medium hover:bg-cyan-500/[0.15] transition-all flex items-center justify-center gap-1.5">
+            <Copy className="w-3 h-3" /> GET Link
+          </button>
+        </div>
       )}
 
       <p className="text-[9px] text-white/20">
