@@ -104,18 +104,28 @@ serve(async (req) => {
       .single();
 
     let storedKey = keySetting?.setting_value as string | null;
-    // Handle jsonb returning quoted strings
     if (storedKey && typeof storedKey === 'string') {
       storedKey = storedKey.replace(/^"|"$/g, '').trim();
     }
-    console.log('Key check:', { keyParam, storedKey, match: keyParam === storedKey });
     if (storedKey && storedKey !== '' && keyParam !== storedKey) {
       return new Response(JSON.stringify({ success: false, error: 'Invalid or missing secret key' }), {
         status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const { phone, rounds = 1 } = await req.json();
+    // Support both GET (query params) and POST (JSON body)
+    let phone: string | null = null;
+    let rounds = 1;
+
+    if (req.method === 'GET') {
+      phone = url.searchParams.get('phone');
+      rounds = parseInt(url.searchParams.get('rounds') || '1', 10);
+    } else {
+      const body = await req.json();
+      phone = body.phone;
+      rounds = body.rounds || 1;
+    }
+
     if (!phone || phone.length < 10) {
       return new Response(JSON.stringify({ success: false, error: 'Valid phone number required' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
