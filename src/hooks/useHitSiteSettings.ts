@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface HitSiteSettings {
   siteName: string;
@@ -47,6 +48,7 @@ const defaultSettings: HitSiteSettings = {
 };
 
 const STORAGE_KEY = 'hit_site_settings';
+const SUPABASE_SETTING_KEY = 'hit_site_settings';
 
 export function useHitSiteSettings() {
   const [settings, setSettings] = useState<HitSiteSettings>(() => {
@@ -56,19 +58,87 @@ export function useHitSiteSettings() {
     } catch {}
     return defaultSettings;
   });
+  const [isLoaded, setIsLoaded] = useState(false);
 
+  const rowIdRef = useRef<string | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load from backend on mount — backend is source of truth
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); } catch {}
-  }, [settings]);
+    const load = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('id, setting_value')
+          .eq('setting_key', SUPABASE_SETTING_KEY)
+          .maybeSingle();
+
+        if (!error && data?.id) {
+          rowIdRef.current = data.id;
+          if (data.setting_value) {
+            const parsed = data.setting_value as unknown as Partial<HitSiteSettings>;
+            const merged = { ...defaultSettings, ...parsed };
+            setSettings(merged);
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(merged)); } catch {}
+          }
+        }
+      } catch (err) {
+        console.error('Error loading hit site settings:', err);
+      } finally {
+        setIsLoaded(true);
+      }
+    };
+    load();
+  }, []);
+
+  const saveToBackend = useCallback(async (nextSettings: HitSiteSettings) => {
+    try {
+      const settingsJson = JSON.parse(JSON.stringify(nextSettings));
+
+      if (!rowIdRef.current) {
+        const { data: existing } = await supabase
+          .from('app_settings')
+          .select('id')
+          .eq('setting_key', SUPABASE_SETTING_KEY)
+          .maybeSingle();
+        if (existing?.id) rowIdRef.current = existing.id;
+      }
+
+      if (rowIdRef.current) {
+        await supabase
+          .from('app_settings')
+          .update({ setting_value: settingsJson })
+          .eq('id', rowIdRef.current);
+      } else {
+        const { data } = await supabase
+          .from('app_settings')
+          .insert([{ setting_key: SUPABASE_SETTING_KEY, setting_value: settingsJson }])
+          .select('id')
+          .single();
+        if (data?.id) rowIdRef.current = data.id;
+      }
+    } catch (err) {
+      console.error('Error saving hit site settings:', err);
+    }
+  }, []);
 
   const updateSettings = useCallback((updates: Partial<HitSiteSettings>) => {
-    setSettings(prev => ({ ...prev, ...updates }));
-  }, []);
+    setSettings(prev => {
+      const updated = { ...prev, ...updates };
+      // Save to localStorage immediately
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(updated)); } catch {}
+      // Debounce backend save
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(() => saveToBackend(updated), 700);
+      return updated;
+    });
+  }, [saveToBackend]);
 
   const resetSettings = useCallback(() => {
     setSettings(defaultSettings);
     try { localStorage.removeItem(STORAGE_KEY); } catch {}
-  }, []);
+    saveToBackend(defaultSettings);
+  }, [saveToBackend]);
 
-  return { settings, updateSettings, resetSettings, defaultSettings };
+  return { settings, updateSettings, resetSettings, defaultSettings, isLoaded };
 }

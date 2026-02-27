@@ -4,13 +4,14 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { toast } from "@/hooks/use-toast";
 import { useSettings } from "@/contexts/SettingsContext";
+import HackerLoader from "@/components/HackerLoader";
 
 interface PasswordProtectionProps {
   children: ReactNode;
 }
 
 const PasswordProtection = ({ children }: PasswordProtectionProps) => {
-  const { settings } = useSettings();
+  const { settings, isLoaded } = useSettings();
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [password, setPassword] = useState("");
 
@@ -31,6 +32,17 @@ const PasswordProtection = ({ children }: PasswordProtectionProps) => {
       setPassword("");
     }
   };
+
+  // Wait for backend settings to load before deciding
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-sm">
+          <HackerLoader />
+        </div>
+      </div>
+    );
+  }
 
   if (!settings.sitePasswordEnabled) {
     return <>{children}</>;
