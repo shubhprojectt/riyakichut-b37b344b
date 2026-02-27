@@ -107,7 +107,11 @@ const AppRoutes = () => {
           <RandiPanel />
         </ProtectedRoute>
       } />
-      <Route path="/page3" element={<Page3 />} />
+      <Route path="/page3" element={
+        <ProtectedRoute>
+          <Page3 />
+        </ProtectedRoute>
+      } />
       <Route path="/page3/admin" element={<Page3Admin />} />
       <Route path="/page3/dashboard" element={<Page3Dashboard />} />
       <Route path="/direct-hit" element={<DirectHit />} />
