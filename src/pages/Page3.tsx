@@ -12,29 +12,30 @@ const Page3 = () => {
   const { settings } = useHitSiteSettings();
 
   return (
-    <div className="min-h-[100dvh] bg-[#09090b] relative overflow-hidden">
+    <div className="min-h-[100dvh] bg-background relative overflow-hidden">
       {/* Ambient Background */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-violet-600/[0.07] blur-[100px]" />
-        <div className="absolute bottom-[-15%] left-[-10%] w-[400px] h-[400px] rounded-full bg-blue-600/[0.05] blur-[100px]" />
+        <div className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-primary/[0.05] blur-[120px]" />
+        <div className="absolute bottom-[-15%] left-[-10%] w-[400px] h-[400px] rounded-full bg-secondary/[0.04] blur-[120px]" />
+        <div className="absolute top-[40%] left-[30%] w-[300px] h-[300px] rounded-full bg-accent/[0.03] blur-[100px]" />
       </div>
 
       <div className="relative z-10 min-h-[100dvh] flex flex-col">
-        {/* Header */}
-        <header className="px-4 py-4 bg-white/[0.03] backdrop-blur-xl border-b border-white/[0.06] sticky top-0 z-20">
+        {/* Header - Glassmorphic */}
+        <header className="px-4 py-4 glass-card sticky top-0 z-20 border-b border-border/30">
           <div className="flex items-center justify-between max-w-xl mx-auto">
             <div className="flex items-center gap-3">
               {settings.logoUrl ? (
-                <img src={settings.logoUrl} alt="Logo" className="w-8 h-8 rounded-xl object-cover ring-1 ring-white/10" />
+                <img src={settings.logoUrl} alt="Logo" className="w-9 h-9 rounded-xl object-cover ring-1 ring-primary/20" />
               ) : (
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-white text-xs font-bold">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-primary-foreground text-xs font-bold glow-gold">
                   {settings.siteName.charAt(0)}
                 </div>
               )}
-              <h1 className="text-base font-semibold text-white tracking-tight">{settings.siteName}</h1>
+              <h1 className="text-base font-bold text-foreground tracking-tight">{settings.siteName}</h1>
             </div>
             <Link to="/page3/admin"
-              className="h-9 px-4 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/70 text-xs font-medium transition-all flex items-center gap-1.5">
+              className="h-9 px-4 rounded-xl glass-card hover:bg-primary/10 text-muted-foreground text-xs font-semibold transition-all flex items-center gap-1.5">
               <Settings2 className="w-3.5 h-3.5" /> {settings.adminButtonText}
             </Link>
           </div>
@@ -43,30 +44,23 @@ const Page3 = () => {
         {/* Main Content */}
         <main className="flex-1 px-4 py-5 space-y-4 max-w-xl mx-auto w-full">
           {/* Info Banner */}
-          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/[0.06] border border-amber-500/[0.12]">
-            <Info className="w-4 h-4 text-amber-400/80 flex-shrink-0 mt-0.5" />
-            <p className="text-[11px] text-white/50 leading-relaxed">{settings.warningText}</p>
+          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-primary/5 border border-primary/15">
+            <Info className="w-4 h-4 text-primary/80 flex-shrink-0 mt-0.5" />
+            <p className="text-[11px] text-muted-foreground leading-relaxed">{settings.warningText}</p>
           </div>
 
-          {/* Quick Hit Engine - Dual Input */}
           <QuickHitEngine
-            apis={apis}
-            onLog={addLog}
+            apis={apis} onLog={addLog}
             title={settings.quickHitTitle || 'HIT ENGINE'}
-            phoneLabel={settings.phoneLabel}
-            phonePlaceholder={settings.phonePlaceholder}
-            hitButtonText={settings.hitButtonText}
-            stopButtonText={settings.stopButtonText}
-            noApisWarning={settings.noApisWarning}
-            uaRotation={settings.uaRotationEnabled}
+            phoneLabel={settings.phoneLabel} phonePlaceholder={settings.phonePlaceholder}
+            hitButtonText={settings.hitButtonText} stopButtonText={settings.stopButtonText}
+            noApisWarning={settings.noApisWarning} uaRotation={settings.uaRotationEnabled}
           />
 
-          {/* Logs */}
           <LogsPanel logs={logs} onClear={clearLogs} />
 
-          {/* Back */}
           <Link to="/"
-            className="block w-full py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06] text-white/40 text-xs font-medium text-center hover:bg-white/[0.07] hover:text-white/60 transition-all">
+            className="block w-full py-2.5 rounded-xl glass-card text-muted-foreground text-xs font-medium text-center hover:bg-primary/5 hover:text-foreground transition-all">
             ← Back to Main
           </Link>
         </main>
