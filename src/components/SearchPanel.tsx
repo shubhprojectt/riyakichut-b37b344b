@@ -290,54 +290,54 @@ const SearchPanel = ({ theme = "cyber-grid" }: { theme?: string }) => {
   // ── Theme-specific tab grid styles ──
   const tabGridStyles: Record<string, { wrapper: React.CSSProperties; grid: string; accent: React.CSSProperties | null }> = {
     "cyber-grid": {
-      wrapper: { background:'rgba(5,15,12,0.6)', backdropFilter:'blur(16px)', border:'1px solid rgba(0,255,128,0.1)', boxShadow:'0 4px 24px rgba(0,0,0,0.4)', borderRadius:'1rem', padding:'10px', position:'relative', overflow:'hidden' },
+      wrapper: { background:'rgba(8,6,18,0.65)', backdropFilter:'blur(20px)', WebkitBackdropFilter:'blur(20px)', border:'1px solid rgba(255,200,100,0.08)', boxShadow:'0 8px 32px rgba(0,0,0,0.4)', borderRadius:'1rem', padding:'10px', position:'relative', overflow:'hidden' },
       grid: "grid grid-cols-4 gap-2",
-      accent: { background:'linear-gradient(90deg,transparent,hsl(var(--neon-green)/0.4),hsl(var(--neon-cyan)/0.4),hsl(var(--neon-pink)/0.3),transparent)' }
+      accent: { background:'linear-gradient(90deg,transparent,rgba(255,200,100,0.4),rgba(200,100,255,0.3),transparent)' }
     },
     "matrix-rain": {
-      wrapper: { background:'rgba(0,20,0,0.7)', border:'1px solid rgba(0,255,0,0.15)', borderRadius:'0', padding:'8px', position:'relative', overflow:'hidden', fontFamily:'monospace' },
-      grid: "grid grid-cols-4 gap-1",
-      accent: { background:'linear-gradient(90deg,transparent,rgba(0,255,0,0.5),transparent)' }
+      wrapper: { background:'rgba(2,13,8,0.7)', backdropFilter:'blur(16px)', border:'1px solid rgba(80,200,120,0.1)', borderRadius:'0.75rem', padding:'10px', position:'relative', overflow:'hidden' },
+      grid: "grid grid-cols-4 gap-2",
+      accent: { background:'linear-gradient(90deg,transparent,rgba(80,200,120,0.5),transparent)' }
     },
     "neon-cards": {
-      wrapper: { background:'rgba(20,0,20,0.65)', backdropFilter:'blur(12px)', border:'2px solid rgba(255,0,200,0.2)', borderRadius:'0.5rem', padding:'12px', position:'relative', overflow:'hidden', boxShadow:'0 0 30px rgba(255,0,200,0.08)' },
+      wrapper: { background:'rgba(13,0,8,0.65)', backdropFilter:'blur(16px)', border:'1px solid rgba(255,60,130,0.12)', borderRadius:'1rem', padding:'12px', position:'relative', overflow:'hidden', boxShadow:'0 8px 32px rgba(0,0,0,0.4)' },
       grid: "grid grid-cols-3 gap-3",
-      accent: { background:'linear-gradient(90deg,transparent,rgba(255,0,200,0.5),rgba(100,0,255,0.4),transparent)' }
+      accent: { background:'linear-gradient(90deg,transparent,rgba(255,60,130,0.5),rgba(200,60,255,0.3),transparent)' }
     },
     "minimal-dark": {
-      wrapper: { background:'rgba(15,15,15,0.9)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:'0.75rem', padding:'10px', position:'relative', overflow:'hidden' },
+      wrapper: { background:'rgba(12,12,14,0.9)', border:'1px solid rgba(255,255,255,0.05)', borderRadius:'0.75rem', padding:'10px', position:'relative', overflow:'hidden' },
       grid: "grid grid-cols-4 gap-2",
       accent: null
     },
     "hologram": {
-      wrapper: { background:'rgba(0,30,40,0.5)', backdropFilter:'blur(20px)', border:'1px solid rgba(0,255,255,0.15)', borderRadius:'0.75rem', padding:'10px', position:'relative', overflow:'hidden', boxShadow:'0 0 20px rgba(0,255,255,0.06)' },
+      wrapper: { background:'rgba(1,8,16,0.6)', backdropFilter:'blur(20px)', border:'1px solid rgba(0,200,255,0.1)', borderRadius:'1rem', padding:'10px', position:'relative', overflow:'hidden' },
       grid: "grid grid-cols-4 gap-2",
-      accent: { background:'linear-gradient(90deg,transparent,rgba(0,255,255,0.5),rgba(0,200,255,0.4),transparent)' }
+      accent: { background:'linear-gradient(90deg,transparent,rgba(0,200,255,0.4),transparent)' }
     },
     "retro-terminal": {
-      wrapper: { background:'rgba(8,6,0,0.9)', border:'2px solid rgba(255,180,0,0.25)', borderRadius:'0', padding:'8px', position:'relative', overflow:'hidden', boxShadow:'inset 0 0 20px rgba(255,180,0,0.04)' },
-      grid: "grid grid-cols-4 gap-1",
-      accent: { background:'linear-gradient(90deg,transparent,rgba(255,180,0,0.5),transparent)' }
+      wrapper: { background:'rgba(6,4,0,0.85)', border:'1px solid rgba(255,180,0,0.15)', borderRadius:'0.75rem', padding:'10px', position:'relative', overflow:'hidden' },
+      grid: "grid grid-cols-4 gap-2",
+      accent: { background:'linear-gradient(90deg,transparent,rgba(255,180,0,0.4),transparent)' }
     },
     "glassmorphic": {
-      wrapper: { background:'rgba(255,255,255,0.03)', backdropFilter:'blur(24px)', WebkitBackdropFilter:'blur(24px)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'1.25rem', padding:'12px', position:'relative', overflow:'hidden' },
+      wrapper: { background:'rgba(255,255,255,0.03)', backdropFilter:'blur(24px)', WebkitBackdropFilter:'blur(24px)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:'1.25rem', padding:'12px', position:'relative', overflow:'hidden' },
       grid: "grid grid-cols-4 gap-2",
-      accent: { background:'linear-gradient(90deg,rgba(100,0,255,0.4),rgba(255,0,128,0.4),rgba(0,200,255,0.4))' }
+      accent: { background:'linear-gradient(90deg,rgba(168,85,247,0.3),rgba(255,200,100,0.3),rgba(0,200,255,0.3))' }
     },
     "brutal-neon": {
-      wrapper: { background:'#000', border:'3px solid rgba(255,255,0,0.5)', borderRadius:'0', padding:'8px', position:'relative', overflow:'hidden', boxShadow:'4px 4px 0 rgba(255,0,255,0.4)' },
-      grid: "grid grid-cols-4 gap-1",
+      wrapper: { background:'rgba(0,0,0,0.95)', border:'2px solid rgba(255,220,0,0.4)', borderRadius:'0.5rem', padding:'10px', position:'relative', overflow:'hidden', boxShadow:'3px 3px 0 rgba(255,0,200,0.3)' },
+      grid: "grid grid-cols-4 gap-2",
       accent: null
     },
     "cosmic": {
-      wrapper: { background:'rgba(5,0,20,0.75)', backdropFilter:'blur(16px)', border:'1px solid rgba(150,50,255,0.2)', borderRadius:'1rem', padding:'10px', position:'relative', overflow:'hidden', boxShadow:'0 0 30px rgba(100,0,255,0.08)' },
+      wrapper: { background:'rgba(5,0,18,0.7)', backdropFilter:'blur(16px)', border:'1px solid rgba(168,85,247,0.12)', borderRadius:'1rem', padding:'10px', position:'relative', overflow:'hidden' },
       grid: "grid grid-cols-4 gap-2",
-      accent: { background:'linear-gradient(90deg,transparent,rgba(150,50,255,0.5),rgba(255,50,200,0.4),transparent)' }
+      accent: { background:'linear-gradient(90deg,transparent,rgba(168,85,247,0.4),rgba(255,50,180,0.3),transparent)' }
     },
     "blood-hex": {
-      wrapper: { background:'rgba(15,0,0,0.8)', border:'1px solid rgba(200,0,0,0.25)', borderRadius:'0.5rem', padding:'8px', position:'relative', overflow:'hidden', boxShadow:'inset 0 0 20px rgba(200,0,0,0.05)' },
-      grid: "grid grid-cols-4 gap-1",
-      accent: { background:'linear-gradient(90deg,transparent,rgba(200,0,0,0.5),rgba(150,0,0,0.4),transparent)' }
+      wrapper: { background:'rgba(10,0,0,0.8)', border:'1px solid rgba(220,50,50,0.12)', borderRadius:'0.75rem', padding:'10px', position:'relative', overflow:'hidden' },
+      grid: "grid grid-cols-4 gap-2",
+      accent: { background:'linear-gradient(90deg,transparent,rgba(220,50,50,0.4),rgba(255,100,60,0.3),transparent)' }
     },
   };
 
@@ -345,16 +345,16 @@ const SearchPanel = ({ theme = "cyber-grid" }: { theme?: string }) => {
 
   // Theme-specific search input styles
   const searchInputColors: Record<string, { bg: string; border: string; color: string; btnBg: string; btnBorder: string; btnColor: string }> = {
-    "matrix-rain":    { bg:'rgba(0,10,0,0.8)',     border:'rgba(0,200,0,0.3)',   color:'#00ff00', btnBg:'rgba(0,200,0,0.1)',   btnBorder:'rgba(0,200,0,0.4)',  btnColor:'#00ee00' },
-    "neon-cards":     { bg:'rgba(10,0,10,0.8)',     border:'rgba(255,0,200,0.3)', color:'#ff66ff', btnBg:'rgba(200,0,255,0.1)', btnBorder:'rgba(200,0,255,0.4)',btnColor:'#dd44ff' },
-    "minimal-dark":   { bg:'rgba(20,20,20,0.9)',    border:'rgba(80,80,80,0.4)', color:'#e0e0e0', btnBg:'rgba(60,60,60,0.4)',   btnBorder:'rgba(80,80,80,0.5)', btnColor:'#ccc' },
-    "hologram":       { bg:'rgba(0,15,20,0.8)',     border:'rgba(0,255,255,0.2)', color:'#00ffff', btnBg:'rgba(0,200,255,0.1)', btnBorder:'rgba(0,200,255,0.4)',btnColor:'#00ddff' },
-    "retro-terminal": { bg:'rgba(5,4,0,0.9)',       border:'rgba(255,180,0,0.3)', color:'#ffb400', btnBg:'rgba(255,180,0,0.1)', btnBorder:'rgba(255,180,0,0.4)',btnColor:'#ffaa00' },
-    "glassmorphic":   { bg:'rgba(255,255,255,0.04)',border:'rgba(255,255,255,0.12)',color:'#f0f0ff',btnBg:'rgba(150,50,255,0.15)',btnBorder:'rgba(150,50,255,0.4)',btnColor:'#cc88ff' },
-    "brutal-neon":    { bg:'#000',                  border:'rgba(255,255,0,0.6)', color:'#ffff00', btnBg:'rgba(255,0,255,0.2)', btnBorder:'rgba(255,0,255,0.8)',btnColor:'#ff00ff' },
-    "cosmic":         { bg:'rgba(5,0,20,0.9)',      border:'rgba(150,50,255,0.3)',color:'#bb88ff', btnBg:'rgba(150,50,255,0.15)',btnBorder:'rgba(150,50,255,0.5)',btnColor:'#bb88ff' },
-    "blood-hex":      { bg:'rgba(10,0,0,0.9)',      border:'rgba(200,0,0,0.3)',  color:'#ff4444', btnBg:'rgba(200,0,0,0.12)',   btnBorder:'rgba(200,0,0,0.4)',  btnColor:'#ff3333' },
-    "cyber-grid":     { bg:'rgba(0,0,0,0.5)',       border:'rgba(0,255,128,0.15)',color:'hsl(var(--neon-green))',btnBg:'rgba(0,255,128,0.1)',btnBorder:'rgba(0,255,128,0.3)',btnColor:'hsl(var(--neon-green))' },
+    "matrix-rain":    { bg:'rgba(2,13,8,0.8)',      border:'rgba(80,200,120,0.2)', color:'#50c878', btnBg:'rgba(80,200,120,0.1)', btnBorder:'rgba(80,200,120,0.3)', btnColor:'#50c878' },
+    "neon-cards":     { bg:'rgba(13,0,8,0.8)',      border:'rgba(255,60,130,0.2)', color:'#ff3c82', btnBg:'rgba(255,60,130,0.1)', btnBorder:'rgba(255,60,130,0.3)', btnColor:'#ff3c82' },
+    "minimal-dark":   { bg:'rgba(15,15,18,0.9)',    border:'rgba(100,100,110,0.3)', color:'#d0d0d8', btnBg:'rgba(80,80,90,0.3)', btnBorder:'rgba(100,100,110,0.4)', btnColor:'#c0c0c8' },
+    "hologram":       { bg:'rgba(1,8,16,0.8)',      border:'rgba(0,200,255,0.15)', color:'#00c8ff', btnBg:'rgba(0,200,255,0.1)', btnBorder:'rgba(0,200,255,0.3)', btnColor:'#00c8ff' },
+    "retro-terminal": { bg:'rgba(6,4,0,0.85)',      border:'rgba(255,180,0,0.2)', color:'#ffb400', btnBg:'rgba(255,180,0,0.1)', btnBorder:'rgba(255,180,0,0.3)', btnColor:'#ffb400' },
+    "glassmorphic":   { bg:'rgba(255,255,255,0.03)',border:'rgba(255,255,255,0.08)', color:'#e8e8f0', btnBg:'rgba(168,85,247,0.12)', btnBorder:'rgba(168,85,247,0.3)', btnColor:'#a855f7' },
+    "brutal-neon":    { bg:'rgba(0,0,0,0.9)',       border:'rgba(255,220,0,0.4)', color:'#ffdc00', btnBg:'rgba(255,0,200,0.15)', btnBorder:'rgba(255,0,200,0.5)', btnColor:'#ff00c8' },
+    "cosmic":         { bg:'rgba(5,0,18,0.85)',     border:'rgba(168,85,247,0.2)', color:'#a855f7', btnBg:'rgba(168,85,247,0.12)', btnBorder:'rgba(168,85,247,0.3)', btnColor:'#a855f7' },
+    "blood-hex":      { bg:'rgba(10,0,0,0.85)',     border:'rgba(220,50,50,0.2)', color:'#dc3232', btnBg:'rgba(220,50,50,0.1)', btnBorder:'rgba(220,50,50,0.3)', btnColor:'#dc3232' },
+    "cyber-grid":     { bg:'rgba(8,6,18,0.6)',      border:'rgba(255,200,100,0.1)', color:'hsl(var(--neon-gold))', btnBg:'rgba(255,200,100,0.08)', btnBorder:'rgba(255,200,100,0.2)', btnColor:'hsl(var(--neon-gold))' },
   };
   const sc = searchInputColors[theme] || searchInputColors["cyber-grid"];
 
