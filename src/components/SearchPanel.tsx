@@ -361,30 +361,40 @@ const SearchPanel = ({ theme = "cyber-grid" }: { theme?: string }) => {
   return (
     <div className="px-3 space-y-3 max-w-xl mx-auto">
       {/* Feature Cards Grid */}
-      <div style={tStyle.wrapper}>
-        {/* Top accent line */}
-        {tStyle.accent && (
-          <div className="absolute top-0 left-0 right-0 h-[1px]" style={tStyle.accent} />
-        )}
+      <div className="relative">
+        {/* Running color border - same as login */}
+        <div className="absolute -inset-[1px] rounded-2xl overflow-hidden" style={{ borderRadius: tStyle.wrapper.borderRadius }}>
+          <div className="absolute inset-0 animate-gradient-flow" style={{
+            background: 'linear-gradient(90deg, hsl(var(--neon-gold)), hsl(var(--neon-pink)), hsl(var(--neon-purple)), hsl(var(--neon-cyan)), hsl(var(--neon-gold)))',
+            backgroundSize: '300% 100%'
+          }} />
+        </div>
 
-        <div className={tStyle.grid}>
-          {visibleTabs.map((tab) => {
-            const IconComponent = iconMap[tab.icon] || Sparkles;
-            const isPhoneSearch = tab.searchType === "phone";
-            const isDisabled = !tab.enabled;
-            return (
-              <FeatureCard
-                key={tab.id}
-                icon={IconComponent}
-                label={tab.label}
-                color={tab.color}
-                active={tab.label === activeTab}
-                onClick={() => handleTabClick(tab.label)}
-                curved={isPhoneSearch}
-                disabled={isDisabled}
-              />
-            );
-          })}
+        <div className="relative" style={tStyle.wrapper}>
+          {/* Top accent line */}
+          {tStyle.accent && (
+            <div className="absolute top-0 left-0 right-0 h-[1px]" style={tStyle.accent} />
+          )}
+
+          <div className={tStyle.grid}>
+            {visibleTabs.map((tab) => {
+              const IconComponent = iconMap[tab.icon] || Sparkles;
+              const isPhoneSearch = tab.searchType === "phone";
+              const isDisabled = !tab.enabled;
+              return (
+                <FeatureCard
+                  key={tab.id}
+                  icon={IconComponent}
+                  label={tab.label}
+                  color={tab.color}
+                  active={tab.label === activeTab}
+                  onClick={() => handleTabClick(tab.label)}
+                  curved={isPhoneSearch}
+                  disabled={isDisabled}
+                />
+              );
+            })}
+          </div>
         </div>
       </div>
 
