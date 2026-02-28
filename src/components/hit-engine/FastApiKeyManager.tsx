@@ -75,19 +75,28 @@ export default function FastApiKeyManager() {
 
 Content-Type: application/json
 
-{"phone":"9876543210","time":0,"count":1}
+{"phone":"9876543210","rounds":5,"batch":5,"delay":2,"timeout":15}
 
-// time=0 → instant 1 round
-// time=1, count=5 → 5 rounds spread over 1 minute`;
+// rounds = kitni baar hit karna hai
+// batch = ek baar me kitni APIs simultaneously
+// delay = rounds ke beech gap (seconds)
+// timeout = per API timeout (seconds)`;
     navigator.clipboard.writeText(info);
     toast.success('POST URL copied!');
   };
 
   const copyGetLink = () => {
     const base = secretKey ? `${fastHitAllBaseUrl}?key=${secretKey}&` : `${fastHitAllBaseUrl}?`;
-    const fullUrl = `${base}phone=9876543210&time=0&count=1`;
+    const fullUrl = `${base}phone=9876543210&rounds=5&batch=5&delay=2&timeout=15`;
     navigator.clipboard.writeText(fullUrl);
     toast.success('GET URL copied!');
+  };
+
+  const copyCurlLink = () => {
+    const keyPart = secretKey ? `?key=${secretKey}` : '';
+    const curl = `curl "${fastHitAllBaseUrl}${keyPart}${secretKey ? '&' : '?'}phone=9876543210&rounds=5&batch=5&delay=2&timeout=15"`;
+    navigator.clipboard.writeText(curl);
+    toast.success('cURL copied!');
   };
 
   if (loading) return null;
@@ -134,11 +143,15 @@ Content-Type: application/json
         <div className="flex gap-1.5">
           <button onClick={copyLinkWithKey}
             className="flex-1 h-8 rounded-lg bg-amber-500/[0.08] border border-amber-500/[0.15] text-amber-300/70 text-[10px] font-medium hover:bg-amber-500/[0.15] transition-all flex items-center justify-center gap-1.5">
-            <Copy className="w-3 h-3" /> POST Link
+            <Copy className="w-3 h-3" /> POST
           </button>
           <button onClick={copyGetLink}
             className="flex-1 h-8 rounded-lg bg-cyan-500/[0.08] border border-cyan-500/[0.15] text-cyan-300/70 text-[10px] font-medium hover:bg-cyan-500/[0.15] transition-all flex items-center justify-center gap-1.5">
-            <Copy className="w-3 h-3" /> GET Link
+            <Copy className="w-3 h-3" /> GET
+          </button>
+          <button onClick={copyCurlLink}
+            className="flex-1 h-8 rounded-lg bg-purple-500/[0.08] border border-purple-500/[0.15] text-purple-300/70 text-[10px] font-medium hover:bg-purple-500/[0.15] transition-all flex items-center justify-center gap-1.5">
+            <Copy className="w-3 h-3" /> cURL
           </button>
         </div>
       )}
