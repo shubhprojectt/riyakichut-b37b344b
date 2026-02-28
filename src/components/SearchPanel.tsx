@@ -360,22 +360,18 @@ const SearchPanel = ({ theme = "cyber-grid" }: { theme?: string }) => {
 
   return (
     <div className="px-3 space-y-3 max-w-xl mx-auto">
-      {/* Feature Cards Grid */}
-      <div className="relative">
-        {/* Running color border - same as login */}
-        <div className="absolute -inset-[1px] rounded-2xl overflow-hidden" style={{ borderRadius: tStyle.wrapper.borderRadius }}>
+      {/* Feature Cards Grid with running color border */}
+      <div className="relative" style={{ borderRadius: tStyle.wrapper.borderRadius }}>
+        {/* Animated gradient border layer */}
+        <div className="absolute -inset-[1.5px] overflow-hidden" style={{ borderRadius: tStyle.wrapper.borderRadius }}>
           <div className="absolute inset-0 animate-gradient-flow" style={{
             background: 'linear-gradient(90deg, hsl(var(--neon-gold)), hsl(var(--neon-pink)), hsl(var(--neon-purple)), hsl(var(--neon-cyan)), hsl(var(--neon-gold)))',
             backgroundSize: '300% 100%'
           }} />
         </div>
 
-        <div className="relative" style={tStyle.wrapper}>
-          {/* Top accent line */}
-          {tStyle.accent && (
-            <div className="absolute top-0 left-0 right-0 h-[1px]" style={tStyle.accent} />
-          )}
-
+        {/* Inner card - covers gradient, leaving only 1.5px border visible */}
+        <div className="relative" style={{ ...tStyle.wrapper, border: 'none' }}>
           <div className={tStyle.grid}>
             {visibleTabs.map((tab) => {
               const IconComponent = iconMap[tab.icon] || Sparkles;
