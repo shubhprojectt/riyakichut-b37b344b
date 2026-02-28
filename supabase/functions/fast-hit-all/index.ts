@@ -59,21 +59,36 @@ function buildBody(body: Record<string, unknown> | null, bodyType: string): { se
   return { serialized: null, contentType: null };
 }
 
-async function hitOne(url: string, method: string, headers: Record<string, string>, body: string | null): Promise<{ status: number; time: number; error?: string }> {
+// Per-API 15s timeout — ek slow API baaki ko block nahi karegi
+async function hitOne(url: string, method: string, headers: Record<string, string>, body: string | null, timeoutMs = 15000): Promise<{ status: number; time: number; error?: string }> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 10000);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   const start = Date.now();
   try {
     const res = await fetch(url, { method, headers, body, redirect: 'follow', signal: controller.signal });
     const time = Date.now() - start;
-    // Skip reading response body to save runtime
     res.body?.cancel();
     return { status: res.status, time };
   } catch (e) {
-    return { status: 0, time: Date.now() - start, error: e instanceof Error ? e.message : 'Timeout' };
+    const time = Date.now() - start;
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      return { status: 0, time, error: `Timeout after ${timeoutMs}ms` };
+    }
+    return { status: 0, time, error: e instanceof Error ? e.message : 'Unknown' };
   } finally {
     clearTimeout(timer);
   }
+}
+
+// Auto-retry (1 baar) — fail pe 500ms baad ek aur try
+async function hitWithRetry(url: string, method: string, headers: Record<string, string>, body: string | null, timeoutMs = 15000): Promise<{ status: number; time: number; error?: string }> {
+  const result = await hitOne(url, method, headers, body, timeoutMs);
+  // Retry only on timeout or 5xx errors
+  if (result.error || (result.status >= 500 && result.status < 600)) {
+    await new Promise(r => setTimeout(r, 500));
+    return await hitOne(url, method, headers, body, timeoutMs);
+  }
+  return result;
 }
 
 serve(async (req) => {
@@ -119,17 +134,23 @@ serve(async (req) => {
     let phone: string | null = null;
     let time = 0;
     let count = 1;
+    let customTimeout = 15000; // Default 15s, user can customize
 
     if (req.method === 'GET') {
       phone = url.searchParams.get('phone');
       time = parseFloat(url.searchParams.get('time') || '0');
       count = parseInt(url.searchParams.get('count') || '1', 10);
+      customTimeout = parseInt(url.searchParams.get('timeout') || '15000', 10);
     } else {
       const body = await req.json();
       phone = body.phone;
       time = body.time || 0;
       count = body.count || 1;
+      customTimeout = body.timeout || 15000;
     }
+
+    // Clamp timeout between 3s and 30s
+    customTimeout = Math.max(3000, Math.min(customTimeout, 30000));
 
     count = Math.max(1, Math.min(count, 50));
     time = Math.max(0, Math.min(time, 10));
@@ -179,7 +200,19 @@ serve(async (req) => {
 
           const ua = USER_AGENTS[uaCounter % USER_AGENTS.length];
           uaCounter++;
+          // Browser-like headers — block hone se bachne ke liye
           finalHeaders['User-Agent'] = ua;
+          finalHeaders['Accept'] = 'application/json, text/plain, */*';
+          finalHeaders['Accept-Language'] = 'en-US,en;q=0.9';
+          finalHeaders['Cache-Control'] = 'no-cache';
+          finalHeaders['Pragma'] = 'no-cache';
+          if (finalUrl) {
+            try {
+              const parsed = new URL(finalUrl);
+              finalHeaders['Origin'] = parsed.origin;
+              finalHeaders['Referer'] = parsed.origin + '/';
+            } catch {}
+          }
 
           let urlWithParams = finalUrl;
           const qp = (api.query_params || {}) as Record<string, string>;
@@ -199,7 +232,8 @@ serve(async (req) => {
             finalHeaders['Content-Type'] = contentType;
           }
 
-          const result = await hitOne(urlWithParams, api.method || 'GET', finalHeaders, serialized);
+          // Custom timeout from request or default 15s, with auto-retry
+          const result = await hitWithRetry(urlWithParams, api.method || 'GET', finalHeaders, serialized, customTimeout);
           return {
             api: api.name,
             round,
@@ -221,18 +255,31 @@ serve(async (req) => {
     const totalSuccess = allResults.filter(r => r.success).length;
     const totalFail = allResults.filter(r => !r.success).length;
 
-    return new Response(JSON.stringify({
+    // Non-blocking logging — response pehle bhejo, log baad me save hoga
+    const responsePayload = {
       success: true,
       phone,
       total_apis: apis.length,
       count,
       time_minutes: time,
       round_delay_ms: roundDelay,
+      timeout_ms: customTimeout,
       total_hits: allResults.length,
       success_count: totalSuccess,
       fail_count: totalFail,
       results: allResults,
-    }), {
+    };
+
+    // Fire-and-forget log (non-blocking)
+    EdgeRuntime?.waitUntil?.(
+      (async () => {
+        try {
+          console.log(`[fast-hit-all] phone=${phone} apis=${apis.length} rounds=${count} success=${totalSuccess} fail=${totalFail}`);
+        } catch {}
+      })()
+    );
+
+    return new Response(JSON.stringify(responsePayload), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
