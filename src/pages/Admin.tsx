@@ -302,7 +302,7 @@ const Admin = () => {
 
       <div className="relative z-10 container mx-auto px-4 py-4">
         <Tabs defaultValue="credits" className="w-full">
-          <div className="sticky top-[56px] z-40 -mx-4 px-4 pb-3 pt-3 bg-background/60 backdrop-blur-xl">
+          <div className="sticky top-[56px] z-40 -mx-4 px-4 pb-3 pt-3 bg-background">
             <TabsList className="w-full grid grid-cols-4 glass-card rounded-xl h-11">
               <TabsTrigger value="credits" className="rounded-lg text-xs font-semibold">Credits</TabsTrigger>
               <TabsTrigger value="theme" className="rounded-lg text-xs font-semibold">Theme</TabsTrigger>
