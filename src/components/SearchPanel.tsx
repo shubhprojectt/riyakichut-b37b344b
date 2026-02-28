@@ -288,54 +288,64 @@ const SearchPanel = ({ theme = "cyber-grid" }: { theme?: string }) => {
     !["shubh", "darkdb", "telegram", "phprat", "calldark", "imagetoinfo", "smsbomber"].includes(activeButton.searchType);
 
   // ── Theme-specific tab grid styles ──
-  const tabGridStyles: Record<string, { wrapper: React.CSSProperties; grid: string; accent: React.CSSProperties | null }> = {
+  const tabGridStyles: Record<string, { wrapper: React.CSSProperties; solidBg: string; grid: string; accent: React.CSSProperties | null }> = {
     "cyber-grid": {
       wrapper: { background:'rgba(8,6,18,0.65)', backdropFilter:'blur(20px)', WebkitBackdropFilter:'blur(20px)', border:'1px solid rgba(255,200,100,0.08)', boxShadow:'0 8px 32px rgba(0,0,0,0.4)', borderRadius:'1rem', padding:'10px', position:'relative', overflow:'hidden' },
+      solidBg: '#060510',
       grid: "grid grid-cols-4 gap-2",
       accent: { background:'linear-gradient(90deg,transparent,rgba(255,200,100,0.4),rgba(200,100,255,0.3),transparent)' }
     },
     "matrix-rain": {
       wrapper: { background:'rgba(2,13,8,0.7)', backdropFilter:'blur(16px)', border:'1px solid rgba(80,200,120,0.1)', borderRadius:'0.75rem', padding:'10px', position:'relative', overflow:'hidden' },
+      solidBg: '#020d08',
       grid: "grid grid-cols-4 gap-2",
       accent: { background:'linear-gradient(90deg,transparent,rgba(80,200,120,0.5),transparent)' }
     },
     "neon-cards": {
       wrapper: { background:'rgba(13,0,8,0.65)', backdropFilter:'blur(16px)', border:'1px solid rgba(255,60,130,0.12)', borderRadius:'1rem', padding:'12px', position:'relative', overflow:'hidden', boxShadow:'0 8px 32px rgba(0,0,0,0.4)' },
+      solidBg: '#0d0008',
       grid: "grid grid-cols-3 gap-3",
       accent: { background:'linear-gradient(90deg,transparent,rgba(255,60,130,0.5),rgba(200,60,255,0.3),transparent)' }
     },
     "minimal-dark": {
       wrapper: { background:'rgba(12,12,14,0.9)', border:'1px solid rgba(255,255,255,0.05)', borderRadius:'0.75rem', padding:'10px', position:'relative', overflow:'hidden' },
+      solidBg: '#0c0c0e',
       grid: "grid grid-cols-4 gap-2",
       accent: null
     },
     "hologram": {
       wrapper: { background:'rgba(1,8,16,0.6)', backdropFilter:'blur(20px)', border:'1px solid rgba(0,200,255,0.1)', borderRadius:'1rem', padding:'10px', position:'relative', overflow:'hidden' },
+      solidBg: '#010810',
       grid: "grid grid-cols-4 gap-2",
       accent: { background:'linear-gradient(90deg,transparent,rgba(0,200,255,0.4),transparent)' }
     },
     "retro-terminal": {
       wrapper: { background:'rgba(6,4,0,0.85)', border:'1px solid rgba(255,180,0,0.15)', borderRadius:'0.75rem', padding:'10px', position:'relative', overflow:'hidden' },
+      solidBg: '#060400',
       grid: "grid grid-cols-4 gap-2",
       accent: { background:'linear-gradient(90deg,transparent,rgba(255,180,0,0.4),transparent)' }
     },
     "glassmorphic": {
       wrapper: { background:'rgba(255,255,255,0.03)', backdropFilter:'blur(24px)', WebkitBackdropFilter:'blur(24px)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:'1.25rem', padding:'12px', position:'relative', overflow:'hidden' },
+      solidBg: '#080818',
       grid: "grid grid-cols-4 gap-2",
       accent: { background:'linear-gradient(90deg,rgba(168,85,247,0.3),rgba(255,200,100,0.3),rgba(0,200,255,0.3))' }
     },
     "brutal-neon": {
       wrapper: { background:'rgba(0,0,0,0.95)', border:'2px solid rgba(255,220,0,0.4)', borderRadius:'0.5rem', padding:'10px', position:'relative', overflow:'hidden', boxShadow:'3px 3px 0 rgba(255,0,200,0.3)' },
+      solidBg: '#000000',
       grid: "grid grid-cols-4 gap-2",
       accent: null
     },
     "cosmic": {
       wrapper: { background:'rgba(5,0,18,0.7)', backdropFilter:'blur(16px)', border:'1px solid rgba(168,85,247,0.12)', borderRadius:'1rem', padding:'10px', position:'relative', overflow:'hidden' },
+      solidBg: '#050012',
       grid: "grid grid-cols-4 gap-2",
       accent: { background:'linear-gradient(90deg,transparent,rgba(168,85,247,0.4),rgba(255,50,180,0.3),transparent)' }
     },
     "blood-hex": {
       wrapper: { background:'rgba(10,0,0,0.8)', border:'1px solid rgba(220,50,50,0.12)', borderRadius:'0.75rem', padding:'10px', position:'relative', overflow:'hidden' },
+      solidBg: '#0a0000',
       grid: "grid grid-cols-4 gap-2",
       accent: { background:'linear-gradient(90deg,transparent,rgba(220,50,50,0.4),rgba(255,100,60,0.3),transparent)' }
     },
@@ -370,8 +380,8 @@ const SearchPanel = ({ theme = "cyber-grid" }: { theme?: string }) => {
           }} />
         </div>
 
-        {/* Inner card - covers gradient, leaving only 1.5px border visible */}
-        <div className="relative" style={{ ...tStyle.wrapper, border: 'none' }}>
+        {/* Inner card - solid bg covers gradient, leaving only 1.5px border visible */}
+        <div className="relative" style={{ ...tStyle.wrapper, border: 'none', background: tStyle.solidBg }}>
           <div className={tStyle.grid}>
             {visibleTabs.map((tab) => {
               const IconComponent = iconMap[tab.icon] || Sparkles;
