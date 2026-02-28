@@ -2,8 +2,8 @@
 -- SHUBH OSINT - Complete Supabase Database Setup
 -- =====================================================
 -- Run this SQL in your new Supabase project's SQL Editor
--- Last Updated: 2026-02-22
--- Version: 4.2 (Fast Hit All API + Batch Processing)
+-- Last Updated: 2026-02-28
+-- Version: 4.3 (Fast Hit All v2 — Pro API Style)
 -- =====================================================
 
 -- =====================================================
@@ -472,7 +472,7 @@ ON CONFLICT (setting_key) DO NOTHING;
 -- =====================================================
 -- EDGE FUNCTIONS LIST (deploy from supabase/functions/)
 -- =====================================================
--- Version 4.2 Edge Functions:
+-- Version 4.3 Edge Functions:
 -- 1.  auth-login              - User login with credit password
 -- 2.  auth-verify             - Verify session token & get credits
 -- 3.  credits-deduct          - Deduct credits for search operations
@@ -484,11 +484,24 @@ ON CONFLICT (setting_key) DO NOTHING;
 -- 9.  hit-api                 - API Hit Engine with UA rotation
 -- 10. image-to-info           - Image analysis API
 -- 11. execute-scheduled-hits  - Cron-based scheduled bombing executor
--- 12. fast-hit-all            - Hit ALL enabled APIs in one call (batch processing)
+-- 12. fast-hit-all            - Hit ALL enabled APIs (Pro API style)
+--
+-- IMPORTANT CHANGES in v4.3:
+-- - fast-hit-all API restructured to match professional API style
+-- - New parameters: phone, rounds, batch, delay (seconds), timeout (seconds)
+--   Example: ?phone=9876543210&rounds=5&batch=5&delay=2&timeout=15
+-- - Per-API 15s timeout (customizable 3-30s) — slow API won't block others
+-- - Auto-retry (1 time) with 500ms delay on timeout/5xx errors
+-- - Browser-like headers (Origin, Referer, Cache-Control, Accept) auto-added
+-- - Non-blocking logging — response returned first, logs saved in background
+-- - cURL copy button added in dashboard alongside POST & GET
+-- - Settings sync architecture: all admin settings stored in app_settings DB
+-- - Password protection fixed: waits for backend before showing lock screen
+-- - /page3 route now protected with ProtectedRoute wrapper
 --
 -- IMPORTANT CHANGES in v4.2:
 -- - fast-hit-all Edge Function: Hits all enabled APIs with single POST call
--- - Batch processing (15 APIs per batch) to avoid edge function timeout
+-- - Batch processing (5 APIs per batch) to avoid edge function timeout
 -- - Secret key authentication via URL parameter (?key=YOUR_SECRET_KEY)
 -- - Configurable rounds (max 50), {PHONE} placeholder replacement
 -- - Rate limiting: 5 requests per IP per minute
@@ -506,29 +519,6 @@ ON CONFLICT (setting_key) DO NOTHING;
 -- - scheduled_hits table for cron-based automated API hitting
 -- - execute-scheduled-hits edge function for background execution
 -- - pg_cron + pg_net integration for server-side scheduling
--- - SMS Bomber: Only phone numbers are logged to search_history
---   (no more per-hit status/success/fail logs)
--- - Disabled tabs remain visible but show "contact admin" on use
--- - Disabled tab search attempts logged as [type]_disabled
---
--- IMPORTANT CHANGES in v3.9:
--- - Hit Engine APIs now stored in `hit_apis` database table
--- - APIs persist across sessions and devices (no more localStorage)
--- - Realtime sync enabled for hit_apis table
--- - Delete API feature added to API cards
--- - hit-api Edge Function: 35+ browser User-Agent rotation
---
--- IMPORTANT CHANGES in v3.7:
--- - Tab Container rainbow border now uses 12 UNIQUE colors
--- - tabContainerBorderColors setting (different from header)
---
--- IMPORTANT CHANGES in v3.6:
--- - QR Code Generator added to CAM CAPTURE section
--- - qrSize, qrFgColor, qrBgColor, qrIncludeLogo settings
---
--- IMPORTANT CHANGES in v3.5:
--- - Border Effects toggle added in Admin Panel
--- - headerBorderEnabled, tabContainerBorderEnabled settings
 -- =====================================================
 
 -- =====================================================
@@ -557,11 +547,29 @@ SELECT cron.schedule(
   $$
 );
 
--- To check existing cron jobs:
--- SELECT * FROM cron.job;
+-- =====================================================
+-- 11. FAST-HIT-ALL API REFERENCE (v4.3)
+-- =====================================================
+-- GET:  /functions/v1/fast-hit-all?phone=9876543210&rounds=5&batch=5&delay=2&timeout=15&key=SECRET
+-- POST: /functions/v1/fast-hit-all?key=SECRET
+--       Body: {"phone":"9876543210","rounds":5,"batch":5,"delay":2,"timeout":15}
 --
--- To delete a cron job:
--- SELECT cron.unschedule('execute-scheduled-hits-every-minute');
+-- Parameters:
+-- | Param   | Type   | Default | Range  | Description                    |
+-- |---------|--------|---------|--------|--------------------------------|
+-- | phone   | string | -       | 10+    | Target phone number (required) |
+-- | rounds  | int    | 1       | 1-50   | Number of hit rounds           |
+-- | batch   | int    | 5       | 1-20   | APIs per batch (simultaneous)  |
+-- | delay   | float  | 2       | 0-60   | Seconds between rounds         |
+-- | timeout | float  | 15      | 3-30   | Per-API timeout in seconds     |
+-- | key     | string | -       | -      | Secret key (if configured)     |
+--
+-- Features:
+-- - Auto-retry (1x) on timeout or 5xx errors with 500ms delay
+-- - Browser-like headers (Origin, Referer, Cache-Control, Accept)
+-- - User-Agent rotation across 5 browser profiles
+-- - Non-blocking logging (response returns immediately)
+-- - Rate limit: 5 requests per IP per minute
 
 -- =====================================================
 -- QUICK REFERENCE: Tables & Their Purpose
@@ -570,22 +578,17 @@ SELECT cron.schedule(
 -- user_sessions     : Active login sessions tracking
 -- credit_usage      : Logs all credit deductions
 -- app_settings      : Global app configuration (JSON)
---                     - Includes CALL DARK settings (v3.3)
---                     - Includes Iframe Capture (v3.4)
---                     - Includes Border Effects (v3.5)
---                     - Includes QR Code Generator (v3.6)
+--                     - All admin settings synced across devices
+--                     - fast_api_secret_key for fast-hit-all auth
 -- captured_photos   : Camera capture photo metadata + device info
 -- captured_videos   : Video capture metadata & URLs
 -- search_history    : All search queries log
--- hit_apis          : API Hit Engine configurations (v3.8)
+-- hit_apis          : API Hit Engine configurations
 --                     - name, url, method, headers, body, body_type
---                     - query_params, enabled, proxy_enabled
---                     - force_proxy, rotation_enabled
---                     - residential_proxy_enabled
+--                     - query_params, enabled, proxy/rotation settings
 --                     - Realtime sync enabled for live updates
--- scheduled_hits    : Scheduled bombing configurations (v4.0)
+-- scheduled_hits    : Scheduled bombing configurations
 --                     - phone_number, start_time, interval_seconds
 --                     - max_rounds, is_active, total_hits
---                     - last_executed_at, next_execution_at
 --                     - Executed by pg_cron + execute-scheduled-hits
 -- =====================================================
