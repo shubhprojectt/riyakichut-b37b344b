@@ -56,10 +56,9 @@ const FeatureCard = ({ icon: Icon, label, active, onClick, curved, disabled }: F
         background: active
           ? `linear-gradient(135deg, hsl(var(${colors.neonVar}) / 0.08), hsl(var(${colors.neonVar}) / 0.03))`
           : 'rgba(255,255,255,0.015)',
-        backdropFilter: 'blur(8px)',
         boxShadow: active
-          ? `0 0 12px hsl(var(${colors.neonVar}) / 0.3), inset 0 0 8px hsl(var(${colors.neonVar}) / 0.03)`
-          : '0 2px 8px rgba(0,0,0,0.2)'
+          ? `0 0 12px hsl(var(${colors.neonVar}) / 0.3)`
+          : 'none'
       }}
     >
       {/* Icon */}
