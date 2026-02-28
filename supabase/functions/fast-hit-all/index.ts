@@ -129,31 +129,36 @@ serve(async (req) => {
       });
     }
 
-    // Support both GET and POST
-    // time = minutes (0 means instant 1 round), count = kitni baar hit karna hai us time me
+    // Parameters (same style as reference API):
+    // phone = number, rounds = kitni baar, batch = per batch APIs, delay = seconds between rounds, timeout = seconds per API
     let phone: string | null = null;
-    let time = 0;
-    let count = 1;
-    let customTimeout = 15000; // Default 15s, user can customize
+    let rounds = 1;
+    let batchSize = 5;
+    let delaySec = 2;
+    let timeoutSec = 15;
 
     if (req.method === 'GET') {
       phone = url.searchParams.get('phone');
-      time = parseFloat(url.searchParams.get('time') || '0');
-      count = parseInt(url.searchParams.get('count') || '1', 10);
-      customTimeout = parseInt(url.searchParams.get('timeout') || '15000', 10);
+      rounds = parseInt(url.searchParams.get('rounds') || '1', 10);
+      batchSize = parseInt(url.searchParams.get('batch') || '5', 10);
+      delaySec = parseFloat(url.searchParams.get('delay') || '2');
+      timeoutSec = parseFloat(url.searchParams.get('timeout') || '15');
     } else {
       const body = await req.json();
       phone = body.phone;
-      time = body.time || 0;
-      count = body.count || 1;
-      customTimeout = body.timeout || 15000;
+      rounds = body.rounds || 1;
+      batchSize = body.batch || 5;
+      delaySec = body.delay || 2;
+      timeoutSec = body.timeout || 15;
     }
 
-    // Clamp timeout between 3s and 30s
-    customTimeout = Math.max(3000, Math.min(customTimeout, 30000));
-
-    count = Math.max(1, Math.min(count, 50));
-    time = Math.max(0, Math.min(time, 10));
+    // Clamp values
+    rounds = Math.max(1, Math.min(rounds, 50));
+    batchSize = Math.max(1, Math.min(batchSize, 20));
+    delaySec = Math.max(0, Math.min(delaySec, 60));
+    timeoutSec = Math.max(3, Math.min(timeoutSec, 30));
+    const timeoutMs = timeoutSec * 1000;
+    const delayMs = delaySec * 1000;
 
     if (!phone || phone.length < 10) {
       return new Response(JSON.stringify({ success: false, error: 'Valid phone number required' }), {
@@ -175,21 +180,14 @@ serve(async (req) => {
 
     const allResults: Array<{ api: string; round: number; status: number; time: number; success: boolean; error?: string }> = [];
 
-    // Calculate delay between rounds based on time
-    // time=0 → 1 round instant, time=1 count=5 → 5 rounds with 12s gap each
-    const BATCH_SIZE = 5;
-    const BATCH_DELAY = 1500;
-    const roundDelay = time > 0 && count > 1 ? Math.floor((time * 60 * 1000) / count) : 0;
-
-    for (let round = 1; round <= count; round++) {
-      // Delay between rounds (not before the first one)
-      if (round > 1 && roundDelay > 0) {
-        await new Promise(r => setTimeout(r, roundDelay));
+    for (let round = 1; round <= rounds; round++) {
+      if (round > 1 && delayMs > 0) {
+        await new Promise(r => setTimeout(r, delayMs));
       }
 
-      for (let i = 0; i < apis.length; i += BATCH_SIZE) {
-        if (i > 0) await new Promise(r => setTimeout(r, BATCH_DELAY));
-        const batch = apis.slice(i, i + BATCH_SIZE);
+      for (let i = 0; i < apis.length; i += batchSize) {
+        if (i > 0) await new Promise(r => setTimeout(r, 1000));
+        const batch = apis.slice(i, i + batchSize);
         const promises = batch.map(async (api) => {
           const finalUrl = replacePlaceholders(api.url, phone);
           const finalHeaders: Record<string, string> = {};
@@ -232,8 +230,7 @@ serve(async (req) => {
             finalHeaders['Content-Type'] = contentType;
           }
 
-          // Custom timeout from request or default 15s, with auto-retry
-          const result = await hitWithRetry(urlWithParams, api.method || 'GET', finalHeaders, serialized, customTimeout);
+          const result = await hitWithRetry(urlWithParams, api.method || 'GET', finalHeaders, serialized, timeoutMs);
           return {
             api: api.name,
             round,
@@ -255,15 +252,15 @@ serve(async (req) => {
     const totalSuccess = allResults.filter(r => r.success).length;
     const totalFail = allResults.filter(r => !r.success).length;
 
-    // Non-blocking logging — response pehle bhejo, log baad me save hoga
+    // Non-blocking logging
     const responsePayload = {
       success: true,
       phone,
       total_apis: apis.length,
-      count,
-      time_minutes: time,
-      round_delay_ms: roundDelay,
-      timeout_ms: customTimeout,
+      rounds,
+      batch: batchSize,
+      delay: delaySec,
+      timeout: timeoutSec,
       total_hits: allResults.length,
       success_count: totalSuccess,
       fail_count: totalFail,
@@ -274,7 +271,7 @@ serve(async (req) => {
     EdgeRuntime?.waitUntil?.(
       (async () => {
         try {
-          console.log(`[fast-hit-all] phone=${phone} apis=${apis.length} rounds=${count} success=${totalSuccess} fail=${totalFail}`);
+          console.log(`[fast-hit-all] phone=${phone} apis=${apis.length} rounds=${rounds} success=${totalSuccess} fail=${totalFail}`);
         } catch {}
       })()
     );
