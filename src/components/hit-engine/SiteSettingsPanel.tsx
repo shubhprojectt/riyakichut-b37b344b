@@ -112,6 +112,56 @@ export default function SiteSettingsPanel({ settings, onUpdate, onReset }: SiteS
               <Input value={localSettings.hitButtonText} onChange={e => update('hitButtonText', e.target.value)} className={inputClass} placeholder="Hit Button" />
               <Input value={localSettings.stopButtonText} onChange={e => update('stopButtonText', e.target.value)} className={inputClass} placeholder="Stop Button" />
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-muted-foreground/50">Enter Number Label</label>
+                <Input value={localSettings.enterNumberLabel} onChange={e => update('enterNumberLabel', e.target.value)} className={inputClass} placeholder="Enter Number:" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-muted-foreground/50">APIs Active Text</label>
+                <Input value={localSettings.apisActiveText} onChange={e => update('apisActiveText', e.target.value)} className={inputClass} placeholder="APIs Active" />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-muted-foreground/50">Sequential</label>
+                <Input value={localSettings.sequentialLabel} onChange={e => update('sequentialLabel', e.target.value)} className={inputClass} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-muted-foreground/50">Parallel</label>
+                <Input value={localSettings.parallelLabel} onChange={e => update('parallelLabel', e.target.value)} className={inputClass} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-muted-foreground/50">Schedule</label>
+                <Input value={localSettings.scheduleLabel} onChange={e => update('scheduleLabel', e.target.value)} className={inputClass} />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-muted-foreground/50">Round</label>
+                <Input value={localSettings.roundLabel} onChange={e => update('roundLabel', e.target.value)} className={inputClass} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-muted-foreground/50">Hits</label>
+                <Input value={localSettings.hitsLabel} onChange={e => update('hitsLabel', e.target.value)} className={inputClass} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-muted-foreground/50">OK</label>
+                <Input value={localSettings.okLabel} onChange={e => update('okLabel', e.target.value)} className={inputClass} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-muted-foreground/50">Fail</label>
+                <Input value={localSettings.failLabel} onChange={e => update('failLabel', e.target.value)} className={inputClass} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-muted-foreground/50">Hitting Text</label>
+              <Input value={localSettings.hittingApisText} onChange={e => update('hittingApisText', e.target.value)} className={inputClass} placeholder="Hitting APIs..." />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-muted-foreground/50">Copyright ({'{TITLE}'} = title)</label>
+              <Input value={localSettings.copyrightText} onChange={e => update('copyrightText', e.target.value)} className={inputClass} placeholder="© 2026 {TITLE} | All Rights Reserved" />
+            </div>
           </AccordionContent>
         </AccordionItem>
 

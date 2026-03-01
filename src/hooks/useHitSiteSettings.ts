@@ -22,6 +22,18 @@ export interface HitSiteSettings {
   adminPassword: string;
   residentialProxyUrl: string;
   uaRotationEnabled: boolean;
+  // New customizable labels
+  enterNumberLabel: string;
+  apisActiveText: string;
+  sequentialLabel: string;
+  parallelLabel: string;
+  scheduleLabel: string;
+  hittingApisText: string;
+  copyrightText: string;
+  roundLabel: string;
+  hitsLabel: string;
+  okLabel: string;
+  failLabel: string;
 }
 
 const defaultSettings: HitSiteSettings = {
@@ -45,6 +57,18 @@ const defaultSettings: HitSiteSettings = {
   adminPassword: 'dark',
   residentialProxyUrl: '',
   uaRotationEnabled: true,
+  // New customizable labels
+  enterNumberLabel: 'Enter Number:',
+  apisActiveText: 'APIs Active',
+  sequentialLabel: 'Sequential',
+  parallelLabel: 'Parallel',
+  scheduleLabel: 'Schedule',
+  hittingApisText: 'Hitting APIs...',
+  copyrightText: '© 2026 {TITLE} | All Rights Reserved',
+  roundLabel: 'Round',
+  hitsLabel: 'Hits',
+  okLabel: 'OK',
+  failLabel: 'Fail',
 };
 
 const STORAGE_KEY = 'hit_site_settings';

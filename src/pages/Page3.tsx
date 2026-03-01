@@ -55,6 +55,17 @@ const Page3 = () => {
             phoneLabel={settings.phoneLabel} phonePlaceholder={settings.phonePlaceholder}
             hitButtonText={settings.hitButtonText} stopButtonText={settings.stopButtonText}
             noApisWarning={settings.noApisWarning} uaRotation={settings.uaRotationEnabled}
+            enterNumberLabel={settings.enterNumberLabel}
+            apisActiveText={settings.apisActiveText}
+            sequentialLabel={settings.sequentialLabel}
+            parallelLabel={settings.parallelLabel}
+            scheduleLabel={settings.scheduleLabel}
+            hittingApisText={settings.hittingApisText}
+            copyrightText={settings.copyrightText}
+            roundLabel={settings.roundLabel}
+            hitsLabel={settings.hitsLabel}
+            okLabel={settings.okLabel}
+            failLabel={settings.failLabel}
           />
 
           <LogsPanel logs={logs} onClear={clearLogs} />
