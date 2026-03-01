@@ -31,6 +31,17 @@ interface QuickHitEngineProps {
   stopButtonText?: string;
   noApisWarning?: string;
   uaRotation?: boolean;
+  enterNumberLabel?: string;
+  apisActiveText?: string;
+  sequentialLabel?: string;
+  parallelLabel?: string;
+  scheduleLabel?: string;
+  hittingApisText?: string;
+  copyrightText?: string;
+  roundLabel?: string;
+  hitsLabel?: string;
+  okLabel?: string;
+  failLabel?: string;
 }
 
 async function hitSingleApi(api: HitApi, phone: string, uaRotation: boolean): Promise<{
@@ -78,6 +89,17 @@ export default function QuickHitEngine({
   phonePlaceholder = '91XXXXXXXXXX', hitButtonText = 'START',
   stopButtonText = 'STOP', noApisWarning = 'Admin me APIs add karo.',
   uaRotation = true,
+  enterNumberLabel = 'Enter Number:',
+  apisActiveText = 'APIs Active',
+  sequentialLabel = 'Sequential',
+  parallelLabel = 'Parallel',
+  scheduleLabel = 'Schedule',
+  hittingApisText = 'Hitting APIs...',
+  copyrightText = '© 2026 {TITLE} | All Rights Reserved',
+  roundLabel = 'Round',
+  hitsLabel = 'Hits',
+  okLabel = 'OK',
+  failLabel = 'Fail',
 }: QuickHitEngineProps) {
   const [phone1, setPhone1] = useState('');
   const [phone2, setPhone2] = useState('');
@@ -152,16 +174,16 @@ export default function QuickHitEngine({
             </h2>
           </div>
           {enabledApis.length > 0 && (
-            <p className="text-[10px] text-muted-foreground mt-1 font-mono">{enabledApis.length} APIs Active</p>
+            <p className="text-[10px] text-muted-foreground mt-1 font-mono">{enabledApis.length} {apisActiveText}</p>
           )}
         </div>
 
         {/* Mode Tabs - Premium Glassmorphic Pills */}
         <div className="flex gap-2">
           {([
-            { key: 'sequential' as const, label: 'Sequential', icon: <Zap className="w-3.5 h-3.5" />, color: 'primary' },
-            { key: 'parallel' as const, label: 'Parallel', icon: <Zap className="w-3.5 h-3.5" />, color: 'accent' },
-            { key: 'schedule' as const, label: 'Schedule', icon: <Clock className="w-3.5 h-3.5" />, color: 'secondary' },
+            { key: 'sequential' as const, label: sequentialLabel, icon: <Zap className="w-3.5 h-3.5" />, color: 'primary' },
+            { key: 'parallel' as const, label: parallelLabel, icon: <Zap className="w-3.5 h-3.5" />, color: 'accent' },
+            { key: 'schedule' as const, label: scheduleLabel, icon: <Clock className="w-3.5 h-3.5" />, color: 'secondary' },
           ]).map(tab => (
             <button key={tab.key} onClick={() => setActiveMode(tab.key)}
               className={`flex-1 py-3 rounded-2xl text-[10px] font-bold tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-1.5 ${
@@ -191,7 +213,7 @@ export default function QuickHitEngine({
 
             <div>
               <label className="text-xs font-bold text-muted-foreground tracking-wider uppercase mb-2 block flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5" /> Enter Number:
+                <Phone className="w-3.5 h-3.5" /> {enterNumberLabel}
               </label>
               <Input
                 value={currentPhone}
@@ -221,10 +243,10 @@ export default function QuickHitEngine({
               <div className="space-y-3">
                 <div className="grid grid-cols-4 gap-2 text-center">
                   {[
-                    { label: 'Round', value: currentStats.rounds, color: 'text-accent' },
-                    { label: 'Hits', value: currentStats.hits, color: 'text-neon-blue' },
-                    { label: 'OK', value: currentStats.success, color: 'text-neon-green' },
-                    { label: 'Fail', value: currentStats.fails, color: 'text-destructive' },
+                    { label: roundLabel, value: currentStats.rounds, color: 'text-accent' },
+                    { label: hitsLabel, value: currentStats.hits, color: 'text-neon-blue' },
+                    { label: okLabel, value: currentStats.success, color: 'text-neon-green' },
+                    { label: failLabel, value: currentStats.fails, color: 'text-destructive' },
                   ].map(s => (
                     <div key={s.label} className="py-2 rounded-xl glass-card">
                       <p className="text-[8px] text-muted-foreground font-mono uppercase">{s.label}</p>
@@ -234,7 +256,7 @@ export default function QuickHitEngine({
                 </div>
                 <div className="flex items-center justify-center gap-2 py-2">
                   <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
-                  <span className="text-[10px] text-muted-foreground font-mono">Hitting APIs...</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">{hittingApisText}</span>
                 </div>
               </div>
             )}
@@ -242,7 +264,7 @@ export default function QuickHitEngine({
         )}
 
         <p className="text-center text-[9px] text-muted-foreground/30 font-mono tracking-wider uppercase">
-          © 2026 {title} | All Rights Reserved
+          {copyrightText.replace(/\{TITLE\}/gi, title)}
         </p>
       </div>
     </div>
