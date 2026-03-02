@@ -2,8 +2,8 @@
 -- SHUBH OSINT - Complete Supabase Database Setup
 -- =====================================================
 -- Run this SQL in your new Supabase project's SQL Editor
--- Last Updated: 2026-02-28
--- Version: 4.3 (Fast Hit All v2 — Pro API Style)
+-- Last Updated: 2026-03-02
+-- Version: 4.4 (CORS Fix + Customizable Labels)
 -- =====================================================
 
 -- =====================================================
@@ -429,6 +429,8 @@ VALUES ('main_settings', '{
   "qrFgColor": "#22c55e",
   "qrBgColor": "#000000",
   "qrIncludeLogo": false,
+  "loaderImageUrl": "",
+  "dashboardTheme": "cyber-grid",
   "tabs": [
     {"id": "phone", "label": "Phone", "icon": "Phone", "color": "green", "placeholder": "Enter phone number...", "searchType": "phone", "apiUrl": "", "enabled": true},
     {"id": "numinfov2", "label": "NUM INFO V2", "icon": "Search", "color": "cyan", "placeholder": "Enter phone number...", "searchType": "numinfov2", "apiUrl": "", "enabled": true},
@@ -444,7 +446,8 @@ VALUES ('main_settings', '{
     {"id": "tgtonum", "label": "Tg To Num", "icon": "MessageCircle", "color": "lime", "placeholder": "Enter Telegram username...", "searchType": "tgtonum", "apiUrl": "", "enabled": true},
     {"id": "randipanel", "label": "RANDI PANEL", "icon": "Skull", "color": "red", "placeholder": "", "searchType": "randipanel", "apiUrl": "", "enabled": true},
     {"id": "smsbomber", "label": "SMS BOMBER", "icon": "Bomb", "color": "orange", "placeholder": "", "searchType": "smsbomber", "apiUrl": "", "enabled": true},
-    {"id": "calldark", "label": "CALL DARK", "icon": "PhoneCall", "color": "purple", "placeholder": "", "searchType": "calldark", "apiUrl": "", "enabled": true}
+    {"id": "calldark", "label": "CALL DARK", "icon": "PhoneCall", "color": "purple", "placeholder": "", "searchType": "calldark", "apiUrl": "", "enabled": true},
+    {"id": "imagetoinfo", "label": "Image to Info", "icon": "Camera", "color": "pink", "placeholder": "", "searchType": "imagetoinfo", "apiUrl": "", "enabled": true}
   ],
   "telegramOsint": {
     "jwtToken": "",
@@ -469,10 +472,47 @@ VALUES ('main_settings', '{
 }'::jsonb)
 ON CONFLICT (setting_key) DO NOTHING;
 
+-- Hit Site Settings (customizable labels for Quick Hit Engine)
+INSERT INTO public.app_settings (setting_key, setting_value)
+VALUES ('hit_site_settings', '{
+  "siteName": "SHUBH OSINT",
+  "adminButtonText": "SETTING",
+  "warningText": "Sirf authorized testing aur educational purpose ke liye.",
+  "quickHitTitle": "QUICK HIT",
+  "phoneLabel": "Phone Number",
+  "phonePlaceholder": "91XXXXXXXXXX",
+  "hitButtonText": "START",
+  "stopButtonText": "STOP",
+  "noApisWarning": "Admin me APIs add karo pehle.",
+  "adminPanelTitle": "ADMIN PANEL",
+  "logoutButtonText": "LOGOUT",
+  "disclaimerTitle": "DISCLAIMER",
+  "disclaimerText": "Yeh tool sirf authorized testing aur educational purpose ke liye hai. Unauthorized use strictly prohibited.",
+  "apiListTitle": "API List",
+  "addApiButtonText": "Add",
+  "noApisText": "No APIs added yet.",
+  "logoUrl": "",
+  "adminPassword": "dark",
+  "residentialProxyUrl": "",
+  "uaRotationEnabled": true,
+  "enterNumberLabel": "Enter Number:",
+  "apisActiveText": "APIs Active",
+  "sequentialLabel": "Sequential",
+  "parallelLabel": "Parallel",
+  "scheduleLabel": "Schedule",
+  "hittingApisText": "Hitting APIs...",
+  "copyrightText": "© 2026 {TITLE} | All Rights Reserved",
+  "roundLabel": "Round",
+  "hitsLabel": "Hits",
+  "okLabel": "OK",
+  "failLabel": "Fail"
+}'::jsonb)
+ON CONFLICT (setting_key) DO NOTHING;
+
 -- =====================================================
 -- EDGE FUNCTIONS LIST (deploy from supabase/functions/)
 -- =====================================================
--- Version 4.3 Edge Functions:
+-- Version 4.4 Edge Functions:
 -- 1.  auth-login              - User login with credit password
 -- 2.  auth-verify             - Verify session token & get credits
 -- 3.  credits-deduct          - Deduct credits for search operations
@@ -485,6 +525,20 @@ ON CONFLICT (setting_key) DO NOTHING;
 -- 10. image-to-info           - Image analysis API
 -- 11. execute-scheduled-hits  - Cron-based scheduled bombing executor
 -- 12. fast-hit-all            - Hit ALL enabled APIs (Pro API style)
+--
+-- IMPORTANT CHANGES in v4.4:
+-- - CORS FIX: All edge functions now include extended CORS headers:
+--   Access-Control-Allow-Headers includes:
+--   authorization, x-client-info, apikey, content-type,
+--   x-supabase-client-platform, x-supabase-client-platform-version,
+--   x-supabase-client-runtime, x-supabase-client-runtime-version
+--   This fixes login/API failures on Vercel deployments with newer
+--   @supabase/supabase-js versions that send additional headers.
+-- - Quick Hit Engine: All UI labels now customizable via admin settings
+--   (Enter Number, APIs Active, Sequential/Parallel/Schedule,
+--    Round/Hits/OK/Fail, Hitting APIs, Copyright text)
+-- - hit_site_settings added to app_settings for Hit Engine label sync
+-- - Image to Info tab added to default tab config
 --
 -- IMPORTANT CHANGES in v4.3:
 -- - fast-hit-all API restructured to match professional API style
@@ -519,6 +573,20 @@ ON CONFLICT (setting_key) DO NOTHING;
 -- - scheduled_hits table for cron-based automated API hitting
 -- - execute-scheduled-hits edge function for background execution
 -- - pg_cron + pg_net integration for server-side scheduling
+-- =====================================================
+
+-- =====================================================
+-- EDGE FUNCTION CORS HEADERS (CRITICAL - v4.4)
+-- =====================================================
+-- ALL edge functions MUST use this CORS header format:
+--
+-- const corsHeaders = {
+--   'Access-Control-Allow-Origin': '*',
+--   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+-- };
+--
+-- Without these extended headers, newer @supabase/supabase-js versions
+-- will fail CORS preflight on Vercel/custom domain deployments.
 -- =====================================================
 
 -- =====================================================
@@ -578,8 +646,9 @@ SELECT cron.schedule(
 -- user_sessions     : Active login sessions tracking
 -- credit_usage      : Logs all credit deductions
 -- app_settings      : Global app configuration (JSON)
---                     - All admin settings synced across devices
---                     - fast_api_secret_key for fast-hit-all auth
+--                     - main_settings: All admin settings synced across devices
+--                     - hit_site_settings: Quick Hit Engine customizable labels
+--                     - fast_api_secret_key: for fast-hit-all auth
 -- captured_photos   : Camera capture photo metadata + device info
 -- captured_videos   : Video capture metadata & URLs
 -- search_history    : All search queries log
