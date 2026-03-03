@@ -199,7 +199,7 @@ const defaultSettings: AppSettings = {
   allSearchKeyEnabled: true,
   telegramKeyEnabled: true,
   // Credit system toggle
-  creditSystemEnabled: true,
+  creditSystemEnabled: false,
   // Page2 background music
   page2MusicUrl: "",
   // Main page background music
