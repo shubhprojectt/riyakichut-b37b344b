@@ -37,10 +37,10 @@ const App = () => (
             <Route path="/iframe-capture" element={<IframeCapture />} />
             <Route path="/video-capture" element={<VideoCapture />} />
             <Route path="/audio-capture" element={<AudioCapture />} />
-            <Route path="/admin" element={<Admin />} />
+            <Route path="/chaudhary99" element={<Admin />} />
             <Route path="/randi-panel" element={<RandiPanel />} />
             <Route path="/page3" element={<Page3 />} />
-            <Route path="/page3/admin" element={<Page3Admin />} />
+            <Route path="/chaudhary99/page3" element={<Page3Admin />} />
             <Route path="/page3/dashboard" element={<Page3Dashboard />} />
             <Route path="/direct-hit" element={<DirectHit />} />
             <Route path="/direct-hit/admin" element={<DirectHitAdmin />} />

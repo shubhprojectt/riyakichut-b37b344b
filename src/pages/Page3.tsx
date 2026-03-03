@@ -34,7 +34,7 @@ const Page3 = () => {
               )}
               <h1 className="text-base font-bold text-foreground tracking-tight">{settings.siteName}</h1>
             </div>
-            <Link to="/page3/admin"
+            <Link to="/chaudhary99/page3"
               className="h-9 px-4 rounded-xl glass-card hover:bg-primary/10 text-muted-foreground text-xs font-semibold transition-all flex items-center gap-1.5">
               <Settings2 className="w-3.5 h-3.5" /> {settings.adminButtonText}
             </Link>
