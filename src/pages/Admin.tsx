@@ -15,19 +15,6 @@ import { toast } from "@/hooks/use-toast";
 import { useSettings } from "@/contexts/SettingsContext";
 import { supabase } from "@/integrations/supabase/client";
 
-interface PasswordRecord {
-  id: string;
-  password_display: string;
-  total_credits: number;
-  remaining_credits: number;
-  is_enabled: boolean;
-  is_used: boolean;
-  is_unlimited: boolean;
-  device_id: string | null;
-  created_at: string;
-  used_at: string | null;
-  credit_usage?: Array<{ id: string; search_type: string; credits_used: number; created_at: string; }>;
-}
 
 const colorOptions = [
   { value: "green", label: "Green", color: "bg-neon-green" },
@@ -160,16 +147,9 @@ const Admin = () => {
   const [localAllSearchKey, setLocalAllSearchKey] = useState(settings.allSearchAccessKey || "");
   const [localTelegramKey, setLocalTelegramKey] = useState(settings.telegramOsintAccessKey || "");
 
-  const [passwordRecords, setPasswordRecords] = useState<PasswordRecord[]>([]);
-  const [isLoadingPasswords, setIsLoadingPasswords] = useState(false);
-  const [newCredits, setNewCredits] = useState("50");
-  const [customPassword, setCustomPassword] = useState("");
-  const [isCreating, setIsCreating] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editCredits, setEditCredits] = useState("");
 
   useEffect(() => {
-    if (isAuthenticated) { fetchSearchHistory(); fetchPasswords(); }
+    if (isAuthenticated) { fetchSearchHistory(); }
   }, [isAuthenticated]);
 
   const fetchSearchHistory = async () => {
@@ -182,57 +162,6 @@ const Admin = () => {
     if (!error) { setSearchHistory([]); toast({ title: "History Cleared", description: "All search history deleted" }); }
   };
 
-  const fetchPasswords = async () => {
-    setIsLoadingPasswords(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('admin-passwords', { body: { action: 'list', adminPassword: adminPasswordInput } });
-      if (error) throw error;
-      setPasswordRecords(data.passwords || []);
-    } catch (err) {
-      toast({ title: "Error", description: "Failed to fetch passwords", variant: "destructive" });
-    } finally { setIsLoadingPasswords(false); }
-  };
-
-  const createPassword = async () => {
-    const credits = parseInt(newCredits);
-    if (isNaN(credits) || credits < 1) { toast({ title: "Error", description: "Credits must be at least 1", variant: "destructive" }); return; }
-    if (customPassword && customPassword.trim().length < 4) { toast({ title: "Error", description: "Custom password must be at least 4 characters", variant: "destructive" }); return; }
-    setIsCreating(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('admin-passwords', {
-        body: { action: 'create', adminPassword: adminPasswordInput, credits, customPassword: customPassword.trim() || undefined }
-      });
-      if (error) throw error;
-      toast({ title: "Password Created", description: `Password: ${data.password.password_display}` });
-      setCustomPassword(""); fetchPasswords();
-    } catch (err) {
-      toast({ title: "Error", description: "Failed to create password", variant: "destructive" });
-    } finally { setIsCreating(false); }
-  };
-
-  const updatePassword = async (passwordId: string, updates: { credits?: number; isEnabled?: boolean; isUnlimited?: boolean }) => {
-    try {
-      const { error } = await supabase.functions.invoke('admin-passwords', { body: { action: 'update', adminPassword: adminPasswordInput, passwordId, ...updates } });
-      if (error) throw error;
-      toast({ title: "Updated", description: "Password updated successfully" }); fetchPasswords(); setEditingId(null);
-    } catch (err) { toast({ title: "Error", description: "Failed to update", variant: "destructive" }); }
-  };
-
-  const deletePassword = async (passwordId: string) => {
-    try {
-      const { error } = await supabase.functions.invoke('admin-passwords', { body: { action: 'delete', adminPassword: adminPasswordInput, passwordId } });
-      if (error) throw error;
-      toast({ title: "Deleted", description: "Password deleted" }); fetchPasswords();
-    } catch (err) { toast({ title: "Error", description: "Failed to delete", variant: "destructive" }); }
-  };
-
-  const resetPassword = async (passwordId: string) => {
-    try {
-      const { error } = await supabase.functions.invoke('admin-passwords', { body: { action: 'reset', adminPassword: adminPasswordInput, passwordId } });
-      if (error) throw error;
-      toast({ title: "Reset", description: "Password reset - can be used on new device" }); fetchPasswords();
-    } catch (err) { toast({ title: "Error", description: "Failed to reset", variant: "destructive" }); }
-  };
 
   const handleAdminLogin = () => {
     if (adminPasswordInput === settings.adminPassword) {
@@ -301,10 +230,9 @@ const Admin = () => {
       </div>
 
       <div className="relative z-10 container mx-auto px-4 py-4">
-        <Tabs defaultValue="credits" className="w-full">
+        <Tabs defaultValue="theme" className="w-full">
           <div className="sticky top-[56px] z-40 -mx-4 px-4 pb-3 pt-3 bg-background">
-            <TabsList className="w-full grid grid-cols-4 glass-card rounded-xl h-11">
-              <TabsTrigger value="credits" className="rounded-lg text-xs font-semibold">Credits</TabsTrigger>
+            <TabsList className="w-full grid grid-cols-3 glass-card rounded-xl h-11">
               <TabsTrigger value="theme" className="rounded-lg text-xs font-semibold">Theme</TabsTrigger>
               <TabsTrigger value="tools" className="rounded-lg text-xs font-semibold">Tools</TabsTrigger>
               <TabsTrigger value="logs" className="rounded-lg text-xs font-semibold">Logs</TabsTrigger>
@@ -348,106 +276,6 @@ const Admin = () => {
             </Section>
           </TabsContent>
 
-          <TabsContent value="credits" className="mt-0 space-y-4">
-            <Section title="Credit Password Management" icon={Coins} defaultOpen>
-              <PanelCard title="Credit System"
-                description={settings.creditSystemEnabled ? "ON — Users need password to access" : "OFF — Everything is free"}
-                actions={<Switch checked={settings.creditSystemEnabled} onCheckedChange={(checked) => updateSettings({ creditSystemEnabled: checked })} />}>
-                <div className="text-xs text-muted-foreground">Tip: Keep this ON if you want credit-based access.</div>
-              </PanelCard>
-
-              <PanelCard title="Generate New Password" description="Create a new access password with credits">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Credits</label>
-                    <Input type="number" value={newCredits} onChange={(e) => setNewCredits(e.target.value)} min="1" className="h-10 bg-background/30 border-border/30" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Custom Password (optional)</label>
-                    <Input value={customPassword} onChange={(e) => setCustomPassword(e.target.value.toUpperCase())} placeholder="AUTO" className="h-10 font-mono bg-background/30 border-border/30" />
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {[10, 50, 100, 500].map((c) => (
-                    <Button key={c} variant={newCredits === c.toString() ? "default" : "outline"} size="sm" onClick={() => setNewCredits(c.toString())}>{c}</Button>
-                  ))}
-                </div>
-                <Button onClick={createPassword} disabled={isCreating} className="w-full h-10 bg-gradient-to-r from-primary to-accent text-primary-foreground glow-gold">
-                  {isCreating ? (<><Loader2 className="w-4 h-4 animate-spin" /> Creating…</>) : (<><Plus className="w-4 h-4" /> {customPassword ? "Create Password" : "Generate Password"}</>)}
-                </Button>
-              </PanelCard>
-
-              <PanelCard title="Password List" description={`${passwordRecords.length} passwords`}
-                actions={<Button variant="outline" size="sm" onClick={fetchPasswords} disabled={isLoadingPasswords} className="glass-card border-border/30">
-                  <RefreshCw className={isLoadingPasswords ? "w-4 h-4 animate-spin" : "w-4 h-4"} /> Refresh
-                </Button>}>
-                {isLoadingPasswords ? (
-                  <div className="text-center py-10"><Loader2 className="w-6 h-6 mx-auto animate-spin text-primary" /><p className="text-xs text-muted-foreground mt-2">Loading…</p></div>
-                ) : passwordRecords.length === 0 ? (
-                  <div className="text-center py-10 text-muted-foreground"><Key className="w-10 h-10 mx-auto mb-2 opacity-30" /><p className="text-sm">No passwords yet</p></div>
-                ) : (
-                  <div className="space-y-3">
-                    {passwordRecords.map((record) => (
-                      <div key={record.id} className={`rounded-xl p-3 ${record.is_enabled ? "glass-card" : "glass-card opacity-70"}`}>
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-base font-mono font-bold tracking-widest text-primary">{record.password_display}</span>
-                              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { navigator.clipboard.writeText(record.password_display); toast({ title: "Copied" }); }}>
-                                <Save className="w-4 h-4" />
-                              </Button>
-                            </div>
-                            <div className="mt-1 text-[11px] text-muted-foreground">
-                              Created: {new Date(record.created_at).toLocaleString()}
-                              {record.used_at && ` • First used: ${new Date(record.used_at).toLocaleString()}`}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {record.is_unlimited && <span className="text-[10px] px-2 py-1 rounded-md bg-primary/15 text-primary font-bold">∞ UNLIMITED</span>}
-                            <span className="text-[10px] px-2 py-1 rounded-md bg-muted text-muted-foreground font-bold">{record.is_used ? "USED" : "NEW"}</span>
-                            <Switch checked={record.is_enabled} onCheckedChange={(checked) => updatePassword(record.id, { isEnabled: checked })} />
-                          </div>
-                        </div>
-
-                        <div className="mt-3 grid grid-cols-4 gap-2">
-                          {[
-                            { label: 'Total', value: record.total_credits },
-                            { label: 'Remaining', value: record.remaining_credits },
-                            { label: 'Used', value: record.total_credits - record.remaining_credits },
-                            { label: 'Device', value: record.device_id ? "Bound" : "Free" },
-                          ].map(item => (
-                            <div key={item.label} className="rounded-lg glass-card p-2">
-                              <span className="text-[10px] text-muted-foreground block">{item.label}</span>
-                              <span className="text-sm font-mono font-bold">{item.value}</span>
-                            </div>
-                          ))}
-                        </div>
-
-                        {editingId === record.id && (
-                          <div className="mt-3 flex gap-2">
-                            <Input type="number" value={editCredits} onChange={(e) => setEditCredits(e.target.value)} className="h-9 bg-background/30 border-border/30" placeholder="New credits" />
-                            <Button size="sm" onClick={() => updatePassword(record.id, { credits: parseInt(editCredits) })}>Save</Button>
-                            <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>Cancel</Button>
-                          </div>
-                        )}
-
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <Button size="sm" variant={record.is_unlimited ? "default" : "outline"} onClick={() => updatePassword(record.id, { isUnlimited: !record.is_unlimited })}>
-                            {record.is_unlimited ? "Unlimited ON" : "Make Unlimited"}
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => { setEditingId(record.id); setEditCredits(record.remaining_credits.toString()); }}>
-                            <Coins className="w-3 h-3" /> Edit
-                          </Button>
-                          {record.is_used && <Button size="sm" variant="outline" onClick={() => resetPassword(record.id)}><RotateCcw className="w-3 h-3" /> Reset Device</Button>}
-                          <Button size="sm" variant="destructive" onClick={() => deletePassword(record.id)}><Trash2 className="w-3 h-3" /> Delete</Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </PanelCard>
-            </Section>
-          </TabsContent>
 
           <TabsContent value="tools" className="mt-0 space-y-4">
             <Section title="Tab Configuration" icon={LayoutGrid} defaultOpen>

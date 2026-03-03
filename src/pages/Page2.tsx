@@ -10,9 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { useSettings } from "@/contexts/SettingsContext";
-import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import CreditDisplay from "@/components/CreditDisplay";
 import { cn } from "@/lib/utils";
 
 interface CapturedData {
@@ -37,7 +35,7 @@ const tabs: Tab[] = [
 
 const Page2 = () => {
   const { settings } = useSettings();
-  const { isLoading: authLoading } = useAuth();
+  
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [capturedData, setCapturedData] = useState<CapturedData[]>([]);
@@ -105,13 +103,6 @@ const Page2 = () => {
     orange: { bg: "bg-amber-500/8", text: "text-amber-400", activeBg: "bg-amber-500", border: "border-amber-500/20" },
   };
 
-  if (authLoading) {
-    return (
-      <div className="min-h-[100dvh] bg-[#09090b] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-[100dvh] bg-[#09090b] relative overflow-hidden">
@@ -137,7 +128,7 @@ const Page2 = () => {
               <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider">Page 2</span>
             </div>
             
-            <CreditDisplay />
+            
           </div>
         </header>
 

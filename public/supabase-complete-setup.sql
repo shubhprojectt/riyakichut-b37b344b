@@ -2,15 +2,20 @@
 -- SHUBH OSINT - Complete Supabase Database Setup
 -- =====================================================
 -- Run this SQL in your new Supabase project's SQL Editor
--- Last Updated: 2026-03-02
--- Version: 4.4 (CORS Fix + Customizable Labels)
+-- Last Updated: 2026-03-03
+-- Version: 5.0 (Credit System Removed - Simple Site Password Only)
+-- =====================================================
+-- NOTE: Credit system has been REMOVED. Authentication is now
+-- handled by simple site password (stored in app_settings).
+-- Tables: access_passwords, user_sessions, credit_usage are
+-- LEGACY and no longer used by the application.
 -- =====================================================
 
 -- =====================================================
 -- 1. CREATE TABLES
 -- =====================================================
 
--- Access Passwords Table (for credit-based access system)
+-- [LEGACY] Access Passwords Table (no longer used - kept for reference)
 CREATE TABLE IF NOT EXISTS public.access_passwords (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   password_hash TEXT NOT NULL,
@@ -26,7 +31,7 @@ CREATE TABLE IF NOT EXISTS public.access_passwords (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
--- User Sessions Table (tracks active sessions)
+-- [LEGACY] User Sessions Table (no longer used)
 CREATE TABLE IF NOT EXISTS public.user_sessions (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   password_id UUID NOT NULL REFERENCES public.access_passwords(id) ON DELETE CASCADE,
@@ -37,7 +42,7 @@ CREATE TABLE IF NOT EXISTS public.user_sessions (
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
--- Credit Usage Table (logs all credit usage)
+-- [LEGACY] Credit Usage Table (no longer used)
 CREATE TABLE IF NOT EXISTS public.credit_usage (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   password_id UUID NOT NULL REFERENCES public.access_passwords(id) ON DELETE CASCADE,
@@ -415,7 +420,7 @@ VALUES ('main_settings', '{
   "sitePasswordEnabled": true,
   "allSearchKeyEnabled": true,
   "telegramKeyEnabled": true,
-  "creditSystemEnabled": true,
+  "creditSystemEnabled": false,
   "page2MusicUrl": "",
   "mainPageMusicUrl": "/audio/background-music.mp3",
   "tabSize": "small",
@@ -512,11 +517,14 @@ ON CONFLICT (setting_key) DO NOTHING;
 -- =====================================================
 -- EDGE FUNCTIONS LIST (deploy from supabase/functions/)
 -- =====================================================
--- Version 4.4 Edge Functions:
--- 1.  auth-login              - User login with credit password
--- 2.  auth-verify             - Verify session token & get credits
--- 3.  credits-deduct          - Deduct credits for search operations
--- 4.  admin-passwords         - Admin CRUD for password management
+-- Version 5.0 Edge Functions:
+-- [LEGACY - no longer used by app]:
+-- 1.  auth-login              - (LEGACY) User login with credit password
+-- 2.  auth-verify             - (LEGACY) Verify session token & get credits
+-- 3.  credits-deduct          - (LEGACY) Deduct credits for search operations
+-- 4.  admin-passwords         - (LEGACY) Admin CRUD for password management
+--
+-- Active Edge Functions:
 -- 5.  aadhar-search           - Aadhar lookup API
 -- 6.  numinfo-v2              - Phone number info API
 -- 7.  telegram-osint          - Telegram OSINT API integration

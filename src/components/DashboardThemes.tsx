@@ -2,7 +2,6 @@ import SearchPanel from "@/components/SearchPanel";
 import { useSettings } from "@/contexts/SettingsContext";
 import * as Icons from "lucide-react";
 import { LucideIcon } from "lucide-react";
-import CreditDisplay from "./CreditDisplay";
 import AdminSettings from "./AdminSettings";
 
 // Shared bg helper
@@ -26,7 +25,7 @@ const PremiumHeader = ({ settings, variant }: { settings: any; variant: { bg: st
                 <span className="text-[7px] font-semibold tracking-wider" style={{ color: variant.statusColor }}>{variant.statusLabel}</span>
               </div>
             </div>
-            <div className="flex items-center gap-1.5"><CreditDisplay /><AdminSettings /></div>
+            <div className="flex items-center gap-1.5"><AdminSettings /></div>
           </div>
           <div className="text-center py-0.5">
             <div className="inline-flex items-center justify-center mb-1">

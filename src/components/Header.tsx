@@ -1,6 +1,5 @@
 import { Shield, Cpu, Zap, Radio } from "lucide-react";
 import { useSettings } from "@/contexts/SettingsContext";
-import CreditDisplay from "./CreditDisplay";
 import AdminSettings from "./AdminSettings";
 import * as Icons from "lucide-react";
 import { LucideIcon } from "lucide-react";
@@ -69,9 +68,8 @@ const Header = () => {
           </div>
         </div>
 
-        {/* Right - Credits & Settings */}
+        {/* Right - Settings */}
         <div className="flex items-center gap-1.5">
-          <CreditDisplay />
           <AdminSettings />
         </div>
       </div>
