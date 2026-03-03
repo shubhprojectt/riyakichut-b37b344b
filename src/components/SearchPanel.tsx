@@ -23,7 +23,7 @@ import { useHitLogs } from "@/hooks/useHitLogs";
 import { useHitSiteSettings } from "@/hooks/useHitSiteSettings";
 import { useSettings } from "@/contexts/SettingsContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+
 import { cn } from "@/lib/utils";
 
 const iconMap: Record<string, LucideIcon> = {
@@ -32,7 +32,7 @@ const iconMap: Record<string, LucideIcon> = {
 
 const SearchPanel = ({ theme = "cyber-grid" }: { theme?: string }) => {
   const { settings } = useSettings();
-  const { credits, deductCredits, isUnlimited } = useAuth();
+  
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<string | null>(null);
@@ -144,14 +144,6 @@ const SearchPanel = ({ theme = "cyber-grid" }: { theme?: string }) => {
       return;
     }
 
-    if (settings.creditSystemEnabled) {
-      if (!isUnlimited && credits <= 0) {
-        setLoading(false);
-        toast({ title: "No Credits", description: "Credits finished! Contact admin.", variant: "destructive" });
-        return;
-      }
-      deductCredits(activeButton?.searchType || "search", searchQuery.trim());
-    }
 
     logSearchHistory(activeButton?.searchType || "unknown", searchQuery.trim());
 
