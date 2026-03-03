@@ -1,5 +1,4 @@
 import { useSettings } from "@/contexts/SettingsContext";
-import CreditDisplay from "./CreditDisplay";
 import AdminSettings from "./AdminSettings";
 import * as Icons from "lucide-react";
 import { LucideIcon } from "lucide-react";
@@ -38,7 +37,6 @@ const NewHeader = () => {
               </div>
             </div>
             <div className="flex items-center gap-1.5">
-              <CreditDisplay />
               <AdminSettings />
             </div>
           </div>

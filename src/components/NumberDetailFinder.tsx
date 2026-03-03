@@ -38,7 +38,7 @@ import HackerLoader from "./HackerLoader";
 import AnimatedJsonViewer from "./AnimatedJsonViewer";
 import { useSettings } from "@/contexts/SettingsContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+
 import { cn } from "@/lib/utils";
 
 const iconMap: Record<string, LucideIcon> = {
@@ -123,7 +123,7 @@ interface AadharResult {
 
 const NumberDetailFinder = () => {
   const { settings } = useSettings();
-  const { credits, deductCredits, isAuthenticated, isUnlimited } = useAuth();
+  
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<string | null>(null);
@@ -201,26 +201,6 @@ const NumberDetailFinder = () => {
     setResult(null);
     setError(null);
 
-    // Only check credits if credit system is enabled
-    if (settings.creditSystemEnabled) {
-      // Check if user has credits (skip for unlimited)
-      if (!isUnlimited && credits <= 0) {
-        setLoading(false);
-        toast({
-          title: "No Credits",
-          description: "Credits finished! Contact admin for more.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Deduct credits - but don't block the UI
-      deductCredits(activeButton?.searchType || "search", searchQuery.trim()).then(deductResult => {
-        if (!deductResult.success) {
-          console.error("Credit deduction failed:", deductResult.error);
-        }
-      });
-    }
 
     // Log search history in background (non-blocking)
     logSearchHistory(activeButton?.searchType || "unknown", searchQuery.trim());
