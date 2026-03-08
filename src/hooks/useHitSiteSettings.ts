@@ -23,6 +23,7 @@ export interface HitSiteSettings {
   residentialProxyUrl: string;
   uaRotationEnabled: boolean;
   cloudflareProxyUrl: string;
+  hitProxyMode: 'edge' | 'cloudflare';
   // New customizable labels
   enterNumberLabel: string;
   apisActiveText: string;
