@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Zap, Phone, Square, AlertCircle, Loader2, Clock } from 'lucide-react';
+import { Zap, Phone, Square, AlertCircle, Loader2, Clock, Cloud, Globe } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { HitApi } from '@/hooks/useHitApis';
