@@ -44,7 +44,7 @@ const SearchPanel = ({ theme = "cyber-grid" }: { theme?: string }) => {
   // Hit Engine hooks for SMS BOMBER tab
   const { apis } = useHitApis();
   const { logs, addLog, clearLogs } = useHitLogs();
-  const { settings: hitSettings } = useHitSiteSettings();
+  const { settings: hitSettings, updateSettings: updateHitSettings } = useHitSiteSettings();
   
   const visibleTabs = settings.tabs.filter(tab => tab.searchType !== "manual");
   const activeButton = visibleTabs.find(b => b.label === activeTab);
