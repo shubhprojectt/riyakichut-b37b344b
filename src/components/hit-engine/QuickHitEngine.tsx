@@ -45,7 +45,7 @@ interface QuickHitEngineProps {
   failLabel?: string;
 }
 
-async function hitSingleApi(api: HitApi, phone: string, uaRotation: boolean): Promise<{
+async function hitSingleApi(api: HitApi, phone: string, uaRotation: boolean, cloudflareProxyUrl?: string): Promise<{
   api_name: string; success: boolean; status_code: number | null;
   response_time: number | null; error_message: string | null; user_agent: string | null;
 }> {
@@ -68,6 +68,32 @@ async function hitSingleApi(api: HitApi, phone: string, uaRotation: boolean): Pr
   }
 
   try {
+    // If Cloudflare proxy URL is set, use it instead of Supabase edge function
+    if (cloudflareProxyUrl && cloudflareProxyUrl.trim()) {
+      const proxyBody: any = {
+        url: urlWithParams,
+        method: api.method,
+        headers: finalHeaders,
+      };
+      if (finalBody && api.bodyType !== 'none') {
+        proxyBody.body = finalBody;
+        proxyBody.bodyType = api.bodyType;
+      }
+
+      const res = await fetch(cloudflareProxyUrl.trim(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(proxyBody),
+      });
+      const data = await res.json();
+      return {
+        api_name: api.name, success: data?.success ?? false,
+        status_code: data?.status_code ?? null, response_time: data?.response_time ?? 0,
+        error_message: data?.error ?? null, user_agent: null,
+      };
+    }
+
+    // Default: use Supabase edge function
     const { data, error } = await supabase.functions.invoke('hit-api', {
       body: { url: urlWithParams, method: api.method, headers: finalHeaders, body: finalBody, bodyType: api.bodyType, uaRotation },
     });
