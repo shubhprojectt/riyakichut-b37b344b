@@ -162,6 +162,17 @@ Content-Type: application/json
       <p className="text-[9px] text-white/20">
         {secretKey ? 'API sirf is key ke saath kaam karega.' : 'Koi key set nahi hai — API publicly accessible hai.'}
       </p>
+
+      {/* Cloudflare Worker URL Section */}
+      {cfWorkerUrl && (
+        <div className="mt-3 pt-3 border-t border-white/[0.06] space-y-2">
+          <div className="flex items-center gap-2">
+            <Globe className="w-3.5 h-3.5 text-amber-400" />
+            <span className="text-[10px] font-medium text-amber-300/80">Cloudflare Worker URL</span>
+          </div>
+          <p className="text-[9px] text-white/30 font-mono break-all">{cfWorkerUrl}</p>
+        </div>
+      )}
     </div>
   );
 }
