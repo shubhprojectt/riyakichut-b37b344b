@@ -979,6 +979,13 @@ serve(async (req) => {
         return new Response('OK', { headers: corsHeaders });
       }
 
+      // --- /stop command ---
+      if (text === '/stop') {
+        await setBotState(chatId, { running: false, waiting_phone: false });
+        await sendMessage(chatId, '🛑 <b>Stop signal sent!</b>\n\n<i>Hitting will stop after current round...</i>');
+        return new Response('OK', { headers: corsHeaders });
+      }
+
       // ===== Phone Number Handling =====
       const state = await getBotState(chatId);
 
@@ -1004,12 +1011,10 @@ serve(async (req) => {
         }
 
         const config = await getBotConfig();
-        const rounds = parseInt(parts[1]) || config.defaultRounds;
-        const batch = parseInt(parts[2]) || config.defaultBatch;
-        const delay = parseInt(parts[3]) || config.defaultDelay;
+        const batch = parseInt(parts[1]) || config.defaultBatch;
+        const delay = parseInt(parts[2]) || config.defaultDelay;
 
-        await setBotState(chatId, { waiting_phone: false });
-        await runHitsForPhone(chatId, phone, Math.min(rounds, 50), Math.min(batch, 20), Math.min(delay, 60));
+        await runHitsForPhone(chatId, phone, 1, Math.min(batch, 20), Math.min(delay, 60));
         return new Response('OK', { headers: corsHeaders });
       }
 
