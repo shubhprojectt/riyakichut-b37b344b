@@ -416,7 +416,9 @@ async function runHitsForPhone(
     await setBotState(chatId, { running: false });
     if (statusMsgId) {
       try {
-        const finalText = makeStatusMessage(phone, batch, delay, modeLabel, prevRounds, prevSuccess, prevFail, false) + '\n\n⏰ <b>5 minute time limit reached!</b>\n💎 Premium lo unlimited hitting ke liye.\n💬 Contact: @xyzdark62';
+        const usage = await getUserUsage(chatId);
+        const config = await getBotConfig();
+        const finalText = makeStatusMessage(phone, batch, delay, modeLabel, prevRounds, prevSuccess, prevFail, false) + `\n\n⏰ <b>5 minute time limit reached!</b>\n📊 Used: ${usage.today}/${config.dailyLimit}\n💎 Premium lo unlimited hitting ke liye.\n💬 Contact: @xyzdark62`;
         await editMessage(chatId, statusMsgId, finalText, {
           inline_keyboard: [[
             { text: '💎 Get Premium', callback_data: 'premium_menu' },
@@ -618,7 +620,17 @@ serve(async (req) => {
 
       // --- Main Menu ---
       if (data === 'main_menu') {
-        await editMessage(chatId, msgId, '🔥 <b>Hit API Bot</b>\n\nSelect an option:', await getMainMenuKeyboard(admin, chatId));
+        const prem = await isPremium(chatId);
+        const config = await getBotConfig();
+        const usage = await getUserUsage(chatId);
+        let menuText = '🔥 <b>Hit API Bot</b>\n\n';
+        if (prem.isPremium || admin) {
+          menuText += '💎 <b>Unlimited</b> access\n';
+        } else {
+          menuText += `📊 Daily Limit: <b>${usage.today}/${config.dailyLimit}</b>\n`;
+        }
+        menuText += '\nSelect an option:';
+        await editMessage(chatId, msgId, menuText, await getMainMenuKeyboard(admin, chatId));
         return new Response('OK', { headers: corsHeaders });
       }
 
@@ -910,7 +922,17 @@ serve(async (req) => {
 
       // --- /start ---
       if (text === '/start') {
-        await sendMessage(chatId, '🔥 <b>Hit API Bot</b>\n\nSelect an option:', await getMainMenuKeyboard(admin, chatId));
+        const prem = await isPremium(chatId);
+        const config = await getBotConfig();
+        const usage = await getUserUsage(chatId);
+        let greeting = '🔥 <b>Hit API Bot</b>\n\n';
+        if (prem.isPremium || admin) {
+          greeting += '💎 <b>Unlimited</b> access\n';
+        } else {
+          greeting += `📊 Daily Limit: <b>${usage.today}/${config.dailyLimit}</b>\n`;
+        }
+        greeting += '\nSelect an option:';
+        await sendMessage(chatId, greeting, await getMainMenuKeyboard(admin, chatId));
         return new Response('OK', { headers: corsHeaders });
       }
 
@@ -1288,7 +1310,7 @@ serve(async (req) => {
           const config = await getBotConfig();
           const usage = await getUserUsage(chatId);
           if (usage.today >= config.dailyLimit) {
-            await sendMessage(chatId, `❌ <b>Daily limit reached!</b> (${config.dailyLimit}/day)\n\n💎 Premium le lo unlimited access ke liye.`);
+            await sendMessage(chatId, `❌ <b>Daily limit reached!</b> (${usage.today}/${config.dailyLimit})\n\n💎 Premium le lo unlimited access ke liye.\n💬 Contact: @xyzdark62`);
             return new Response('OK', { headers: corsHeaders });
           }
         }
