@@ -671,7 +671,7 @@ serve(async (req) => {
       // --- Start Hit ---
       if (data === 'start_hit') {
         await setBotState(chatId, { waiting_phone: true });
-        await editMessage(chatId, msgId, '📱 <b>Phone number bhejo</b>\n\nFormat: <code>9876543210</code>\n\nParams ke saath: <code>9876543210 5 10 3</code>\n<i>(number rounds batch delay)</i>');
+        await editMessage(chatId, msgId, '📱 <b>Phone number bhejo</b>\n\n<code>9876543210</code>');
         return new Response('OK', { headers: corsHeaders });
       }
 
