@@ -31,6 +31,7 @@ interface QuickHitEngineProps {
   stopButtonText?: string;
   noApisWarning?: string;
   uaRotation?: boolean;
+  cloudflareProxyUrl?: string;
   enterNumberLabel?: string;
   apisActiveText?: string;
   sequentialLabel?: string;
@@ -44,7 +45,7 @@ interface QuickHitEngineProps {
   failLabel?: string;
 }
 
-async function hitSingleApi(api: HitApi, phone: string, uaRotation: boolean): Promise<{
+async function hitSingleApi(api: HitApi, phone: string, uaRotation: boolean, cloudflareProxyUrl?: string): Promise<{
   api_name: string; success: boolean; status_code: number | null;
   response_time: number | null; error_message: string | null; user_agent: string | null;
 }> {
@@ -67,6 +68,32 @@ async function hitSingleApi(api: HitApi, phone: string, uaRotation: boolean): Pr
   }
 
   try {
+    // If Cloudflare proxy URL is set, use it instead of Supabase edge function
+    if (cloudflareProxyUrl && cloudflareProxyUrl.trim()) {
+      const proxyBody: any = {
+        url: urlWithParams,
+        method: api.method,
+        headers: finalHeaders,
+      };
+      if (finalBody && api.bodyType !== 'none') {
+        proxyBody.body = finalBody;
+        proxyBody.bodyType = api.bodyType;
+      }
+
+      const res = await fetch(cloudflareProxyUrl.trim(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(proxyBody),
+      });
+      const data = await res.json();
+      return {
+        api_name: api.name, success: data?.success ?? false,
+        status_code: data?.status_code ?? null, response_time: data?.response_time ?? 0,
+        error_message: data?.error ?? null, user_agent: null,
+      };
+    }
+
+    // Default: use Supabase edge function
     const { data, error } = await supabase.functions.invoke('hit-api', {
       body: { url: urlWithParams, method: api.method, headers: finalHeaders, body: finalBody, bodyType: api.bodyType, uaRotation },
     });
@@ -89,6 +116,7 @@ export default function QuickHitEngine({
   phonePlaceholder = '91XXXXXXXXXX', hitButtonText = 'START',
   stopButtonText = 'STOP', noApisWarning = 'Admin me APIs add karo.',
   uaRotation = true,
+  cloudflareProxyUrl = '',
   enterNumberLabel = 'Enter Number:',
   apisActiveText = 'APIs Active',
   sequentialLabel = 'Sequential',
@@ -123,14 +151,14 @@ export default function QuickHitEngine({
       round++; setStats1(prev => ({ ...prev, rounds: round }));
       for (const api of enabledApis) {
         if (stopRef1.current) break;
-        const r = await hitSingleApi(api, phone1, uaRotation);
+        const r = await hitSingleApi(api, phone1, uaRotation, cloudflareProxyUrl);
         if (stopRef1.current) break;
         onLog({ api_name: r.api_name, mode: 'SERVER', status_code: r.status_code, success: r.success, response_time: r.response_time, error_message: r.error_message, user_agent: r.user_agent });
         setStats1(prev => ({ ...prev, hits: prev.hits + 1, success: prev.success + (r.success ? 1 : 0), fails: prev.fails + (r.success ? 0 : 1) }));
       }
     }
     setIsRunning1(false);
-  }, [enabledApis, onLog, uaRotation, phone1]);
+  }, [enabledApis, onLog, uaRotation, cloudflareProxyUrl, phone1]);
 
   const runParallel = useCallback(async () => {
     if (phone2.length < 10 || enabledApis.length === 0) return;
@@ -143,7 +171,7 @@ export default function QuickHitEngine({
       await Promise.allSettled(
         enabledApis.map(async (api) => {
           if (stopRef2.current) return null;
-          const r = await hitSingleApi(api, phone2, uaRotation);
+          const r = await hitSingleApi(api, phone2, uaRotation, cloudflareProxyUrl);
           if (stopRef2.current) return null;
           onLog({ api_name: r.api_name, mode: 'SERVER', status_code: r.status_code, success: r.success, response_time: r.response_time, error_message: r.error_message, user_agent: r.user_agent });
           setStats2(prev => ({ ...prev, hits: prev.hits + 1, success: prev.success + (r.success ? 1 : 0), fails: prev.fails + (r.success ? 0 : 1) }));
@@ -153,7 +181,7 @@ export default function QuickHitEngine({
       if (stopRef2.current) break;
     }
     setIsRunning2(false);
-  }, [enabledApis, onLog, uaRotation, phone2]);
+  }, [enabledApis, onLog, uaRotation, cloudflareProxyUrl, phone2]);
 
   const currentPhone = activeMode === 'sequential' ? phone1 : phone2;
   const setCurrentPhone = activeMode === 'sequential' ? setPhone1 : setPhone2;

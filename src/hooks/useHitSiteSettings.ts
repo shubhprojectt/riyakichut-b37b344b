@@ -22,6 +22,7 @@ export interface HitSiteSettings {
   adminPassword: string;
   residentialProxyUrl: string;
   uaRotationEnabled: boolean;
+  cloudflareProxyUrl: string;
   // New customizable labels
   enterNumberLabel: string;
   apisActiveText: string;
@@ -57,6 +58,7 @@ const defaultSettings: HitSiteSettings = {
   adminPassword: 'dark',
   residentialProxyUrl: '',
   uaRotationEnabled: true,
+  cloudflareProxyUrl: '',
   // New customizable labels
   enterNumberLabel: 'Enter Number:',
   apisActiveText: 'APIs Active',
