@@ -870,6 +870,22 @@ serve(async (req) => {
         return new Response('OK', { headers: corsHeaders });
       }
 
+      // --- /setmode ---
+      if (text.startsWith('/setmode') && admin) {
+        const mode = text.split(' ')[1]?.trim()?.toLowerCase();
+        if (mode !== 'edge' && mode !== 'cloudflare' && mode !== 'cf') {
+          const currentMode = await getHitProxyMode();
+          const modeLabel = currentMode === 'cloudflare' ? '☁️ CF Worker' : '⚡ Edge Function';
+          await sendMessage(chatId, `🌐 <b>Current Mode:</b> ${modeLabel}\n\n<b>Change:</b>\n<code>/setmode edge</code> - Edge Function\n<code>/setmode cf</code> - CF Worker`);
+          return new Response('OK', { headers: corsHeaders });
+        }
+        const newMode = (mode === 'cf' || mode === 'cloudflare') ? 'cloudflare' : 'edge';
+        await setHitProxyMode(newMode);
+        const modeLabel = newMode === 'cloudflare' ? '☁️ CF Worker' : '⚡ Edge Function';
+        await sendMessage(chatId, `✅ Mode changed to <b>${modeLabel}</b>\n\n<i>Website aur bot dono sync ho gaye!</i>`);
+        return new Response('OK', { headers: corsHeaders });
+      }
+
       // --- /setadmin (first-time setup) ---
       if (text === '/setadmin') {
         const admins = await getAdminIds();
