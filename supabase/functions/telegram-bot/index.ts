@@ -107,6 +107,25 @@ async function getNextWorker(): Promise<string | null> {
   return worker;
 }
 
+// ===== Hit Proxy Mode (synced with website) =====
+async function getHitProxyMode(): Promise<'edge' | 'cloudflare'> {
+  // Read from hit_site_settings (same as website)
+  const { data } = await supabase.from('app_settings').select('setting_value').eq('setting_key', 'hit_site_settings').maybeSingle();
+  const settings = data?.setting_value as any;
+  return settings?.hitProxyMode || 'edge';
+}
+
+async function setHitProxyMode(mode: 'edge' | 'cloudflare') {
+  const { data } = await supabase.from('app_settings').select('id, setting_value').eq('setting_key', 'hit_site_settings').maybeSingle();
+  if (data?.id) {
+    const current = (data.setting_value as any) || {};
+    current.hitProxyMode = mode;
+    await supabase.from('app_settings').update({ setting_value: current }).eq('id', data.id);
+  } else {
+    await supabase.from('app_settings').insert({ setting_key: 'hit_site_settings', setting_value: { hitProxyMode: mode } });
+  }
+}
+
 // ===== Premium =====
 async function getPremiumUsers(): Promise<Record<string, { plan: string; expiresAt: string; userId: number }>> {
   const val = await getSetting('tgbot_premium_users');
