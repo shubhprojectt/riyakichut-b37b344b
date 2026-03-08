@@ -812,11 +812,10 @@ serve(async (req) => {
       }
 
       // --- Give Premium Prompts ---
-      if (data === 'give_basic' || data === 'give_pro' || data === 'give_ultimate') {
+      if (data === 'give_unlimited' || data === 'give_basic' || data === 'give_pro' || data === 'give_ultimate') {
         if (!admin) { await editMessage(chatId, msgId, '❌ Admin only.'); return new Response('OK', { headers: corsHeaders }); }
-        const plan = data === 'give_basic' ? 'Basic' : data === 'give_pro' ? 'Pro' : 'Ultimate';
-        await setBotState(chatId, { waiting_premium: true, premiumPlan: plan });
-        await editMessage(chatId, msgId, `🎁 <b>Give ${plan} Premium</b>\n\nUser ka Telegram ID bhejo:\n<code>/givepremium USER_ID ${plan} 30</code>\n<i>(ID plan days)</i>`);
+        await setBotState(chatId, { waiting_premium: true, premiumPlan: 'Unlimited' });
+        await editMessage(chatId, msgId, `🎁 <b>Give Unlimited Premium</b>\n\nUser ka Telegram ID bhejo:\n<code>/givepremium USER_ID Unlimited 30</code>\n<i>(ID plan days)</i>`);
         return new Response('OK', { headers: corsHeaders });
       }
 
