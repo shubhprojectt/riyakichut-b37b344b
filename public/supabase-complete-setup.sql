@@ -2,8 +2,8 @@
 -- SHUBH OSINT - Complete Supabase Database Setup
 -- =====================================================
 -- Run this SQL in your new Supabase project's SQL Editor
--- Last Updated: 2026-03-03
--- Version: 5.0 (Credit System Removed - Simple Site Password Only)
+-- Last Updated: 2026-03-08
+-- Version: 5.1 (Telegram Bot Integration + CF Worker Proxy)
 -- =====================================================
 -- NOTE: Credit system has been REMOVED. Authentication is now
 -- handled by simple site password (stored in app_settings).
