@@ -518,6 +518,7 @@ async function runHitsForPhone(
     statusMsgId,
     nextApiIndex,
     runId,
+    startedAt,
   );
 }
 
