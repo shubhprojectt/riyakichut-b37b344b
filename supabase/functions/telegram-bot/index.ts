@@ -1065,9 +1065,9 @@ serve(async (req) => {
       }
 
       // --- /stop command ---
-      if (text === '/stop') {
+      if (/^\/stop(@[\w_]+)?$/i.test(text)) {
         await setBotState(chatId, { running: false, waiting_phone: false });
-        await sendMessage(chatId, '🛑 <b>Stop signal sent!</b>\n\n<i>Hitting will stop after current round...</i>');
+        await sendMessage(chatId, '🛑 <b>Stop request received.</b>\n\nStatus message ab turant STOPPED pe update ho jayega.');
         return new Response('OK', { headers: corsHeaders });
       }
 
