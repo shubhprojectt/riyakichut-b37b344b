@@ -496,6 +496,8 @@ const SearchPanel = ({ theme = "cyber-grid" }: { theme?: string }) => {
             noApisWarning={hitSettings.noApisWarning}
             uaRotation={hitSettings.uaRotationEnabled}
             cloudflareProxyUrl={hitSettings.cloudflareProxyUrl}
+            hitProxyMode={hitSettings.hitProxyMode || 'edge'}
+            onProxyModeChange={(mode) => updateHitSettings({ hitProxyMode: mode })}
           />
           <LogsPanel logs={logs} onClear={clearLogs} />
         </div>
