@@ -202,6 +202,8 @@ export default function QuickHitEngine({
           if (stopRef2.current) return null;
           const r = await hitSingleApi(api, phone2, uaRotation, activeProxyUrl);
           if (stopRef2.current) return null;
+          // Auto-disable tracking
+          if (r.success) { markApiSuccess(api.id); } else { markApiFailed(api.id, api.name); }
           onLog({ api_name: r.api_name, mode: 'SERVER', status_code: r.status_code, success: r.success, response_time: r.response_time, error_message: r.error_message, user_agent: r.user_agent });
           setStats2(prev => ({ ...prev, hits: prev.hits + 1, success: prev.success + (r.success ? 1 : 0), fails: prev.fails + (r.success ? 0 : 1) }));
           return r;
