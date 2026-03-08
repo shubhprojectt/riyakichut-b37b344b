@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, RotateCw, Save, Image, Type, AlertTriangle, Lock, Home } from 'lucide-react';
+import { Settings, RotateCw, Save, Image, Type, AlertTriangle, Lock, Home, Cloud, Globe } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
