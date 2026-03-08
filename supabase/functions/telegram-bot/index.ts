@@ -297,12 +297,15 @@ async function runHitsForPhone(chatId: number, phone: string, rounds = 1, batch 
   let successCount = 0, failCount = 0;
   const results: string[] = [];
 
+  const proxyMode = await getHitProxyMode();
+
   for (let round = 1; round <= rounds; round++) {
     if (round > 1) await new Promise(r => setTimeout(r, delay * 1000));
 
     for (let i = 0; i < apis.length; i += batch) {
       const batchApis = apis.slice(i, i + batch);
-      const workerUrl = await getNextWorker();
+      // Use CF worker only if mode is cloudflare
+      const workerUrl = proxyMode === 'cloudflare' ? await getNextWorker() : null;
 
       const batchResults = await Promise.allSettled(
         batchApis.map(api => hitSingleApi(api, phone, workerUrl))
