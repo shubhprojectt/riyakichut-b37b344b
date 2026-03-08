@@ -59,7 +59,7 @@ const defaultSettings: HitSiteSettings = {
   adminPassword: 'dark',
   residentialProxyUrl: '',
   uaRotationEnabled: true,
-  cloudflareProxyUrl: '',
+  cloudflareProxyUrl: 'https://cors-proxy.rioxbomber.workers.dev/',
   hitProxyMode: 'edge',
   // New customizable labels
   enterNumberLabel: 'Enter Number:',
