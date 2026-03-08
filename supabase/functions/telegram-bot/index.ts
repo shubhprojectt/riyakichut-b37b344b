@@ -590,7 +590,7 @@ serve(async (req) => {
 
       // --- Main Menu ---
       if (data === 'main_menu') {
-        await editMessage(chatId, msgId, '🔥 <b>Hit API Bot</b>\n\nSelect an option:', await getMainMenuKeyboard(admin));
+        await editMessage(chatId, msgId, '🔥 <b>Hit API Bot</b>\n\nSelect an option:', await getMainMenuKeyboard(admin, chatId));
         return new Response('OK', { headers: corsHeaders });
       }
 
