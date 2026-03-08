@@ -757,15 +757,16 @@ serve(async (req) => {
         const prem = await isPremium(chatId);
         let text = `💎 <b>Premium</b>\n\n`;
         if (prem.isPremium) {
-          text += `✅ You have <b>${prem.plan}</b> plan!\n\n`;
+          text += `✅ You have <b>Unlimited</b> plan!\n\n`;
         } else {
           text += `You're on the <b>Free</b> plan.\n\n`;
         }
-        text += `<b>Plans:</b>\n`;
-        text += `🥉 Basic - Extended limits\n`;
-        text += `🥈 Pro - Higher limits + priority\n`;
-        text += `🥇 Ultimate - Unlimited + all features\n\n`;
-        text += `Contact admin for premium access.`;
+        text += `<b>Plan:</b>\n`;
+        text += `🥇 <b>Unlimited</b> - ₹199\n`;
+        text += `• Unlimited daily hits\n`;
+        text += `• All features unlocked\n`;
+        text += `• Priority support\n\n`;
+        text += `💬 Contact: @xyzdark62`;
 
         await editMessage(chatId, msgId, text, { inline_keyboard: [[{ text: '🏠 Main Menu', callback_data: 'main_menu' }]] });
         return new Response('OK', { headers: corsHeaders });
