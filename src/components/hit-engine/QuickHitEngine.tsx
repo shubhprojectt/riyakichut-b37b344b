@@ -140,11 +140,10 @@ export default function QuickHitEngine({
   const [stats1, setStats1] = useState({ rounds: 0, hits: 0, success: 0, fails: 0 });
   const [stats2, setStats2] = useState({ rounds: 0, hits: 0, success: 0, fails: 0 });
   const [activeMode, setActiveMode] = useState<'sequential' | 'parallel' | 'schedule'>('sequential');
-  const [proxyMode, setProxyMode] = useState<'edge' | 'cloudflare'>(cloudflareProxyUrl ? 'cloudflare' : 'edge');
   const stopRef1 = useRef(false);
   const stopRef2 = useRef(false);
 
-  const activeProxyUrl = proxyMode === 'cloudflare' ? cloudflareProxyUrl : '';
+  const activeProxyUrl = hitProxyMode === 'cloudflare' ? cloudflareProxyUrl : '';
 
   const enabledApis = apis.filter(a => a.enabled);
 
