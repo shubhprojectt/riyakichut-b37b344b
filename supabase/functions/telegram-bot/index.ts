@@ -286,16 +286,26 @@ async function hitSingleApi(api: any, phone: string, workerUrl?: string | null):
 }
 
 // ===== Progress Bar Helper =====
-function makeProgressBar(success: number, fail: number, total: number): string {
-  const filled = total > 0 ? Math.round((success / Math.max(total, 1)) * 10) : 0;
-  const empty = 10 - filled;
+function makeProgressBar(success: number, total: number): string {
+  const filled = total > 0 ? Math.round((success / total) * 10) : 0;
+  const empty = Math.max(0, 10 - filled);
   return '▓'.repeat(filled) + '░'.repeat(empty);
 }
 
-function makeStatusMessage(phone: string, batch: number, delay: number, modeLabel: string, round: number, success: number, fail: number, running: boolean): string {
+function makeStatusMessage(
+  phone: string,
+  batch: number,
+  delay: number,
+  modeLabel: string,
+  round: number,
+  success: number,
+  fail: number,
+  running: boolean,
+): string {
   const total = success + fail;
-  const bar = makeProgressBar(success, total, total);
+  const bar = makeProgressBar(success, total);
   const status = running ? '⚡ RUNNING...' : '🛑 STOPPED';
+
   let text = `🚀 <b>${status}</b>\n\n`;
   text += `📱 Number: <code>${phone}</code>\n`;
   text += `🌐 Mode: ${modeLabel} | 📦 Batch: ${batch} | ⏱️ ${delay}s\n\n`;
@@ -308,17 +318,36 @@ function makeStatusMessage(phone: string, batch: number, delay: number, modeLabe
   return text;
 }
 
-// Self-invoke to continue hitting (bypasses edge function timeout)
-async function selfContinueHits(chatId: number, phone: string, batch: number, delay: number, totalRounds: number, totalSuccess: number, totalFail: number, statusMsgId: number) {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+// Self-invoke to continue hitting (bypasses function timeout)
+async function selfContinueHits(
+  chatId: number,
+  phone: string,
+  batch: number,
+  delay: number,
+  totalRounds: number,
+  totalSuccess: number,
+  totalFail: number,
+  statusMsgId: number,
+  nextApiIndex: number,
+) {
+  const backendUrl = Deno.env.get('SUPABASE_URL') ?? '';
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+
   try {
-    await fetch(`${supabaseUrl}/functions/v1/telegram-bot`, {
+    await fetch(`${backendUrl}/functions/v1/telegram-bot`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
       body: JSON.stringify({
         _internal_continue: true,
-        chatId, phone, batch, delay, totalRounds, totalSuccess, totalFail, statusMsgId,
+        chatId,
+        phone,
+        batch,
+        delay,
+        totalRounds,
+        totalSuccess,
+        totalFail,
+        statusMsgId,
+        nextApiIndex,
       }),
     });
   } catch (e) {
@@ -326,7 +355,19 @@ async function selfContinueHits(chatId: number, phone: string, batch: number, de
   }
 }
 
-async function runHitsForPhone(chatId: number, phone: string, rounds = 1, batch = 5, delay = 2, isContinuous = false, prevRounds = 0, prevSuccess = 0, prevFail = 0, statusMsgId = 0) {
+async function runHitsForPhone(
+  chatId: number,
+  phone: string,
+  rounds = 1,
+  batch = 5,
+  delay = 2,
+  isContinuous = false,
+  prevRounds = 0,
+  prevSuccess = 0,
+  prevFail = 0,
+  statusMsgId = 0,
+  currentApiIndex = 0,
+) {
   const apis = await getEnabledApis();
   if (apis.length === 0) {
     await sendMessage(chatId, '❌ <b>No APIs configured!</b>');
@@ -336,74 +377,24 @@ async function runHitsForPhone(chatId: number, phone: string, rounds = 1, batch 
   const proxyMode = await getHitProxyMode();
   const modeLabel = proxyMode === 'cloudflare' ? '☁️ CF Worker' : '⚡ Edge Fn';
 
-  // First invocation: send single status message
+  // First invocation: create one status message only once
   if (!isContinuous) {
-    await setBotState(chatId, { running: true, phone, batch, delay });
+    await setBotState(chatId, { running: true, waiting_phone: false, phone, batch, delay });
     const statusText = makeStatusMessage(phone, batch, delay, modeLabel, 0, 0, 0, true);
     const result = await sendMessage(chatId, statusText, {
-      inline_keyboard: [[{ text: '🛑 STOP NOW', callback_data: 'stop_hit' }]]
+      inline_keyboard: [[{ text: '🛑 STOP NOW', callback_data: 'stop_hit' }]],
     });
     statusMsgId = result?.result?.message_id || 0;
+    currentApiIndex = 0;
   }
 
-  let successCount = prevSuccess, failCount = prevFail;
+  let successCount = prevSuccess;
+  let failCount = prevFail;
   let roundsDone = prevRounds;
-  const MAX_ROUNDS_PER_INVOCATION = 3;
-  let roundsThisInvocation = 0;
-  let stopped = false;
 
-  while (roundsThisInvocation < MAX_ROUNDS_PER_INVOCATION) {
-    // Check if stopped BEFORE each round
-    const state = await getBotState(chatId);
-    if (!state?.running) { stopped = true; break; }
-
-    roundsDone++;
-    roundsThisInvocation++;
-
-    if (roundsThisInvocation > 1) await new Promise(r => setTimeout(r, delay * 1000));
-
-    for (let i = 0; i < apis.length; i += batch) {
-      // Check stop before each batch for INSTANT stop
-      const midState = await getBotState(chatId);
-      if (!midState?.running) { stopped = true; break; }
-
-      const batchApis = apis.slice(i, i + batch);
-      const workerUrl = proxyMode === 'cloudflare' ? await getNextWorker() : null;
-
-      const batchResults = await Promise.allSettled(
-        batchApis.map(api => hitSingleApi(api, phone, workerUrl))
-      );
-
-      for (const r of batchResults) {
-        if (r.status === 'fulfilled') {
-          if (r.value.success) successCount++;
-          else failCount++;
-        } else {
-          failCount++;
-        }
-      }
-
-      if (i + batch < apis.length) await new Promise(r => setTimeout(r, 500));
-    }
-
-    if (stopped) break;
-
-    // Edit the single status message with updated stats
-    if (statusMsgId) {
-      try {
-        const statusText = makeStatusMessage(phone, batch, delay, modeLabel, roundsDone, successCount, failCount, true);
-        await editMessage(chatId, statusMsgId, statusText, {
-          inline_keyboard: [[{ text: '🛑 STOP NOW', callback_data: 'stop_hit' }]]
-        });
-      } catch {}
-    }
-  }
-
-  await incrementUsage(chatId);
-  await incrementGlobalHits(successCount - prevSuccess + failCount - prevFail);
-
-  if (stopped) {
-    // Final stopped message - edit the same message
+  // Stop check before any work
+  const stateBefore = await getBotState(chatId);
+  if (!stateBefore?.running) {
     if (statusMsgId) {
       try {
         const finalText = makeStatusMessage(phone, batch, delay, modeLabel, roundsDone, successCount, failCount, false);
@@ -411,18 +402,55 @@ async function runHitsForPhone(chatId: number, phone: string, rounds = 1, batch 
           inline_keyboard: [[
             { text: '🔄 Start Again', callback_data: `hit_again:${phone}:1:${batch}:${delay}` },
             { text: '🏠 Main Menu', callback_data: 'main_menu' },
-          ]]
+          ]],
         });
       } catch {}
     }
     return;
   }
 
-  // Check again before self-continuing
-  const finalState = await getBotState(chatId);
-  if (finalState?.running) {
-    selfContinueHits(chatId, phone, batch, delay, roundsDone, successCount, failCount, statusMsgId);
-  } else {
+  // Delay only when a NEW round starts (except very first round)
+  if (currentApiIndex === 0 && roundsDone > 0) {
+    await new Promise((r) => setTimeout(r, delay * 1000));
+  }
+
+  // Process only ONE batch per invocation (fast stop responsiveness)
+  const batchApis = apis.slice(currentApiIndex, currentApiIndex + batch);
+  const workerUrl = proxyMode === 'cloudflare' ? await getNextWorker() : null;
+
+  const batchResults = await Promise.allSettled(batchApis.map((api) => hitSingleApi(api, phone, workerUrl)));
+  for (const r of batchResults) {
+    if (r.status === 'fulfilled') {
+      if (r.value.success) successCount++;
+      else failCount++;
+    } else {
+      failCount++;
+    }
+  }
+
+  // Advance cursor; when full list finished, increment round
+  let nextApiIndex = currentApiIndex + batch;
+  if (nextApiIndex >= apis.length) {
+    nextApiIndex = 0;
+    roundsDone++;
+  }
+
+  // Update the same status message
+  if (statusMsgId) {
+    try {
+      const statusText = makeStatusMessage(phone, batch, delay, modeLabel, roundsDone, successCount, failCount, true);
+      await editMessage(chatId, statusMsgId, statusText, {
+        inline_keyboard: [[{ text: '🛑 STOP NOW', callback_data: 'stop_hit' }]],
+      });
+    } catch {}
+  }
+
+  await incrementUsage(chatId);
+  await incrementGlobalHits(successCount - prevSuccess + failCount - prevFail);
+
+  // Stop check after one batch
+  const stateAfter = await getBotState(chatId);
+  if (!stateAfter?.running) {
     if (statusMsgId) {
       try {
         const finalText = makeStatusMessage(phone, batch, delay, modeLabel, roundsDone, successCount, failCount, false);
@@ -430,11 +458,25 @@ async function runHitsForPhone(chatId: number, phone: string, rounds = 1, batch 
           inline_keyboard: [[
             { text: '🔄 Start Again', callback_data: `hit_again:${phone}:1:${batch}:${delay}` },
             { text: '🏠 Main Menu', callback_data: 'main_menu' },
-          ]]
+          ]],
         });
       } catch {}
     }
+    return;
   }
+
+  // Continue with next batch
+  selfContinueHits(
+    chatId,
+    phone,
+    batch,
+    delay,
+    roundsDone,
+    successCount,
+    failCount,
+    statusMsgId,
+    nextApiIndex,
+  );
 }
 
 // ===== Main Menu Keyboard =====
