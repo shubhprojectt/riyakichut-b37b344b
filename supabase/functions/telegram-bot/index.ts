@@ -1005,7 +1005,8 @@ serve(async (req) => {
         const config = await getBotConfig();
         const prem = await isPremium(chatId);
         const global = await getGlobalStats();
-        await sendMessage(chatId, `📊 <b>Stats</b>\n\n👤 Today: ${usage.today} | Total: ${usage.total}\n💎 Plan: ${prem.isPremium ? prem.plan : 'Free'}\n📈 Limit: ${prem.isPremium ? '♾️' : config.dailyLimit}\n\n🌐 Global Hits: ${global.totalHits} | Users: ${global.totalUsers}`);
+        const todayHitsDisplay = (prem.isPremium || admin) ? usage.today : Math.min(usage.today, config.dailyLimit);
+        await sendMessage(chatId, `📊 <b>Stats</b>\n\n👤 Today: ${todayHitsDisplay} | Total: ${usage.total}\n💎 Plan: ${prem.isPremium ? prem.plan : 'Free'}\n📈 Limit: ${prem.isPremium ? '♾️' : config.dailyLimit}\n\n🌐 Global Hits: ${global.totalHits} | Users: ${global.totalUsers}`);
         return new Response('OK', { headers: corsHeaders });
       }
 
