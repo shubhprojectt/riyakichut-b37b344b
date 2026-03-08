@@ -235,25 +235,25 @@ export default function QuickHitEngine({
 
         {/* Proxy Mode Toggle */}
         <div className="flex gap-1.5 rounded-xl glass-card p-1">
-          <button onClick={() => setProxyMode('edge')}
+          <button onClick={() => onProxyModeChange?.('edge')}
             className={`flex-1 py-2 rounded-lg text-[9px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 ${
-              proxyMode === 'edge'
+              hitProxyMode === 'edge'
                 ? 'bg-primary/15 border border-primary/25 text-primary'
                 : 'text-muted-foreground/50 hover:text-muted-foreground'
             }`}>
             <Cloud className="w-3 h-3" /> Edge Function
           </button>
-          <button onClick={() => setProxyMode('cloudflare')}
+          <button onClick={() => onProxyModeChange?.('cloudflare')}
             disabled={!cloudflareProxyUrl}
             className={`flex-1 py-2 rounded-lg text-[9px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 disabled:opacity-30 ${
-              proxyMode === 'cloudflare'
+              hitProxyMode === 'cloudflare'
                 ? 'bg-amber-500/15 border border-amber-500/25 text-amber-400'
                 : 'text-muted-foreground/50 hover:text-muted-foreground'
             }`}>
             <Globe className="w-3 h-3" /> CF Worker
           </button>
         </div>
-        {proxyMode === 'cloudflare' && !cloudflareProxyUrl && (
+        {hitProxyMode === 'cloudflare' && !cloudflareProxyUrl && (
           <p className="text-[9px] text-destructive/60 text-center font-mono">⚠️ Admin Settings me Cloudflare Worker URL daalo pehle</p>
         )}
 
