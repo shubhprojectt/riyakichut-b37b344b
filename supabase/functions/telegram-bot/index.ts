@@ -340,6 +340,7 @@ async function selfContinueHits(
   statusMsgId: number,
   nextApiIndex: number,
   runId: string,
+  startedAt: number,
 ) {
   const backendUrl = Deno.env.get('SUPABASE_URL') ?? '';
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -360,6 +361,7 @@ async function selfContinueHits(
         statusMsgId,
         nextApiIndex,
         runId,
+        startedAt,
       }),
     });
   } catch (e) {
@@ -380,6 +382,7 @@ async function runHitsForPhone(
   statusMsgId = 0,
   currentApiIndex = 0,
   runId = '',
+  startedAt = 0,
 ) {
   const apis = await getEnabledApis();
   if (apis.length === 0) {
@@ -390,16 +393,40 @@ async function runHitsForPhone(
   const proxyMode = await getHitProxyMode();
   const modeLabel = proxyMode === 'cloudflare' ? '☁️ CF Worker' : '⚡ Edge Fn';
 
+  const admin = await isAdmin(chatId);
+  const prem = await isPremium(chatId);
+  const isFreeUser = !prem.isPremium && !admin;
+  const FREE_TIME_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
+
   // First invocation: create one status message only once
   if (!isContinuous) {
     runId = crypto.randomUUID();
-    await setBotState(chatId, { running: true, waiting_phone: false, phone, batch, delay, runId });
+    startedAt = Date.now();
+    await setBotState(chatId, { running: true, waiting_phone: false, phone, batch, delay, runId, startedAt });
     const statusText = makeStatusMessage(phone, batch, delay, modeLabel, 0, 0, 0, true);
     const result = await sendMessage(chatId, statusText, {
       inline_keyboard: [[{ text: '🛑 STOP NOW', callback_data: 'stop_hit' }]],
     });
     statusMsgId = result?.result?.message_id || 0;
     currentApiIndex = 0;
+  }
+
+  // Free user 5-min time limit check
+  if (isFreeUser && startedAt > 0 && (Date.now() - startedAt) >= FREE_TIME_LIMIT_MS) {
+    await setBotState(chatId, { running: false });
+    if (statusMsgId) {
+      try {
+        const finalText = makeStatusMessage(phone, batch, delay, modeLabel, prevRounds, prevSuccess, prevFail, false) + '\n\n⏰ <b>5 minute time limit reached!</b>\n💎 Premium lo unlimited hitting ke liye.\n💬 Contact: @xyzdark62';
+        await editMessage(chatId, statusMsgId, finalText, {
+          inline_keyboard: [[
+            { text: '💎 Get Premium', callback_data: 'premium_menu' },
+            { text: '🏠 Main Menu', callback_data: 'main_menu' },
+          ]],
+        });
+      } catch {}
+    }
+    await incrementUsage(chatId);
+    return;
   }
 
   let successCount = prevSuccess;
@@ -491,6 +518,7 @@ async function runHitsForPhone(
     statusMsgId,
     nextApiIndex,
     runId,
+    startedAt,
   );
 }
 
@@ -561,8 +589,8 @@ serve(async (req) => {
 
     // ===== Internal self-continue for non-stop hitting =====
     if (update._internal_continue) {
-      const { chatId, phone, batch, delay, totalRounds, totalSuccess, totalFail, statusMsgId, nextApiIndex, runId } = update;
-      await runHitsForPhone(chatId, phone, 1, batch, delay, true, totalRounds, totalSuccess, totalFail, statusMsgId || 0, nextApiIndex || 0, runId || '');
+      const { chatId, phone, batch, delay, totalRounds, totalSuccess, totalFail, statusMsgId, nextApiIndex, runId, startedAt } = update;
+      await runHitsForPhone(chatId, phone, 1, batch, delay, true, totalRounds, totalSuccess, totalFail, statusMsgId || 0, nextApiIndex || 0, runId || '', startedAt || 0);
       return new Response('OK', { headers: corsHeaders });
     }
 
@@ -622,7 +650,17 @@ serve(async (req) => {
 
       // --- Schedule Hit ---
       if (data === 'schedule_hit') {
-        // Show schedule menu
+        const prem = await isPremium(chatId);
+        if (!prem.isPremium && !admin) {
+          await editMessage(chatId, msgId, '🔒 <b>Premium Feature!</b>\n\n📅 Schedule Hit sirf <b>Unlimited</b> plan users ke liye hai.\n\n🥇 <b>Unlimited Plan - ₹199</b>\n• Unlimited hits\n• Schedule hitting\n• All features\n\n💬 Contact: @xyzdark62', {
+            inline_keyboard: [
+              [{ text: '💎 Get Premium', callback_data: 'premium_menu' }],
+              [{ text: '🏠 Main Menu', callback_data: 'main_menu' }],
+            ],
+          });
+          return new Response('OK', { headers: corsHeaders });
+        }
+        
         const { data: activeSchedules } = await supabase.from('scheduled_hits').select('*').eq('is_active', true);
         const count = activeSchedules?.length || 0;
         
@@ -642,6 +680,13 @@ serve(async (req) => {
 
       // --- Schedule: New ---
       if (data === 'schedule_new') {
+        const prem = await isPremium(chatId);
+        if (!prem.isPremium && !admin) {
+          await editMessage(chatId, msgId, '🔒 <b>Premium Feature!</b>\n\n💬 Contact: @xyzdark62', {
+            inline_keyboard: [[{ text: '🏠 Main Menu', callback_data: 'main_menu' }]],
+          });
+          return new Response('OK', { headers: corsHeaders });
+        }
         await setBotState(chatId, { waiting_schedule_phone: true });
         await editMessage(chatId, msgId, '📅 <b>New Schedule</b>\n\n📱 Phone number bhejo with interval:\n\n<code>9876543210 60 10</code>\n<i>(number interval_seconds max_rounds)</i>\n\n• interval_seconds: kitne second baad repeat (default: 60)\n• max_rounds: kitne round max (0 = unlimited, default: 0)');
         return new Response('OK', { headers: corsHeaders });
