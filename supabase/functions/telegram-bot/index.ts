@@ -649,7 +649,8 @@ serve(async (req) => {
         if (prem.isPremium || admin) {
           menuText += '💎 <b>Unlimited</b> access\n';
         } else {
-          menuText += `📊 Daily Limit: <b>${usage.today}/${config.dailyLimit}</b>\n`;
+          const usedToday = Math.min(usage.today, config.dailyLimit);
+          menuText += `📊 Daily Limit: <b>${usedToday}/${config.dailyLimit}</b>\n`;
         }
         menuText += '\nSelect an option:';
         await editMessage(chatId, msgId, menuText, await getMainMenuKeyboard(admin, chatId));
