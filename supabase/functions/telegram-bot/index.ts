@@ -9,56 +9,175 @@ const corsHeaders = {
 const BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN')!;
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
-// In-memory state for active users (maps chatId -> { waiting: boolean, running: boolean, phone: string })
-// Note: Edge functions are stateless per invocation, so we use Supabase for persistence
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 );
 
-// ---- Telegram helpers ----
+// ===== Telegram Helpers =====
 async function sendMessage(chatId: number, text: string, replyMarkup?: any) {
   const body: any = { chat_id: chatId, text, parse_mode: 'HTML' };
   if (replyMarkup) body.reply_markup = replyMarkup;
-  
   const res = await fetch(`${TELEGRAM_API}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
   return res.json();
 }
 
-async function answerCallbackQuery(callbackQueryId: string, text?: string) {
+async function answerCallbackQuery(id: string, text?: string) {
   await fetch(`${TELEGRAM_API}/answerCallbackQuery`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ callback_query_id: callbackQueryId, text }),
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ callback_query_id: id, text }),
   });
 }
 
 async function editMessage(chatId: number, messageId: number, text: string, replyMarkup?: any) {
   const body: any = { chat_id: chatId, message_id: messageId, text, parse_mode: 'HTML' };
   if (replyMarkup) body.reply_markup = replyMarkup;
-  
   await fetch(`${TELEGRAM_API}/editMessageText`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
 }
 
-// ---- Hit APIs logic ----
-async function getEnabledApis() {
-  const { data, error } = await supabase
-    .from('hit_apis')
-    .select('*')
-    .eq('enabled', true);
-  
-  if (error) {
-    console.error('Error fetching APIs:', error);
-    return [];
+// ===== Settings helpers =====
+async function getSetting(key: string): Promise<any> {
+  const { data } = await supabase.from('app_settings').select('setting_value').eq('setting_key', key).single();
+  return data?.setting_value ?? null;
+}
+
+async function setSetting(key: string, value: any) {
+  const { data: existing } = await supabase.from('app_settings').select('id').eq('setting_key', key).maybeSingle();
+  if (existing?.id) {
+    await supabase.from('app_settings').update({ setting_value: value }).eq('id', existing.id);
+  } else {
+    await supabase.from('app_settings').insert({ setting_key: key, setting_value: value });
   }
+}
+
+// ===== Bot State =====
+async function getBotState(chatId: number): Promise<any> {
+  return (await getSetting(`tgbot_state_${chatId}`)) || {};
+}
+
+async function setBotState(chatId: number, state: any) {
+  await setSetting(`tgbot_state_${chatId}`, state);
+}
+
+// ===== Admin Check =====
+async function getAdminIds(): Promise<number[]> {
+  const val = await getSetting('tgbot_admin_ids');
+  if (Array.isArray(val)) return val;
+  return [];
+}
+
+async function isAdmin(chatId: number): Promise<boolean> {
+  const admins = await getAdminIds();
+  return admins.includes(chatId);
+}
+
+// ===== Bot Config =====
+async function getBotConfig(): Promise<{
+  dailyLimit: number; defaultRounds: number; defaultBatch: number; defaultDelay: number;
+}> {
+  const val = await getSetting('tgbot_config');
+  return {
+    dailyLimit: val?.dailyLimit ?? 5,
+    defaultRounds: val?.defaultRounds ?? 1,
+    defaultBatch: val?.defaultBatch ?? 5,
+    defaultDelay: val?.defaultDelay ?? 2,
+    ...val,
+  };
+}
+
+// ===== CF Workers =====
+async function getCfWorkers(): Promise<string[]> {
+  const val = await getSetting('tgbot_cf_workers');
+  if (Array.isArray(val)) return val;
+  return [];
+}
+
+let workerIndex = 0;
+async function getNextWorker(): Promise<string | null> {
+  const workers = await getCfWorkers();
+  if (workers.length === 0) return null;
+  const worker = workers[workerIndex % workers.length];
+  workerIndex++;
+  return worker;
+}
+
+// ===== Premium =====
+async function getPremiumUsers(): Promise<Record<string, { plan: string; expiresAt: string; userId: number }>> {
+  const val = await getSetting('tgbot_premium_users');
+  return (val && typeof val === 'object') ? val : {};
+}
+
+async function isPremium(chatId: number): Promise<{ isPremium: boolean; plan: string | null }> {
+  const users = await getPremiumUsers();
+  const entry = users[String(chatId)];
+  if (!entry) return { isPremium: false, plan: null };
+  if (new Date(entry.expiresAt) < new Date()) {
+    // Expired
+    delete users[String(chatId)];
+    await setSetting('tgbot_premium_users', users);
+    return { isPremium: false, plan: null };
+  }
+  return { isPremium: true, plan: entry.plan };
+}
+
+// ===== User Usage Tracking =====
+async function getUserUsage(chatId: number): Promise<{ today: number; total: number }> {
+  const val = await getSetting(`tgbot_usage_${chatId}`);
+  const today = new Date().toISOString().slice(0, 10);
+  if (!val || val.date !== today) return { today: 0, total: val?.total || 0 };
+  return { today: val.today || 0, total: val.total || 0 };
+}
+
+async function incrementUsage(chatId: number) {
+  const today = new Date().toISOString().slice(0, 10);
+  const val = await getSetting(`tgbot_usage_${chatId}`);
+  const current = (val && val.date === today) ? val : { date: today, today: 0, total: val?.total || 0 };
+  current.today += 1;
+  current.total += 1;
+  current.date = today;
+  await setSetting(`tgbot_usage_${chatId}`, current);
+}
+
+// ===== Stats =====
+async function getGlobalStats(): Promise<{ totalHits: number; totalUsers: number }> {
+  const val = await getSetting('tgbot_global_stats');
+  return { totalHits: val?.totalHits || 0, totalUsers: val?.totalUsers || 0 };
+}
+
+async function incrementGlobalHits(count: number) {
+  const stats = await getGlobalStats();
+  stats.totalHits += count;
+  await setSetting('tgbot_global_stats', stats);
+}
+
+async function trackUser(chatId: number) {
+  const key = 'tgbot_all_users';
+  const val = await getSetting(key);
+  const users: number[] = Array.isArray(val) ? val : [];
+  if (!users.includes(chatId)) {
+    users.push(chatId);
+    await setSetting(key, users);
+    const stats = await getGlobalStats();
+    stats.totalUsers = users.length;
+    await setSetting('tgbot_global_stats', stats);
+  }
+}
+
+// ===== Access Keys =====
+async function getAccessKeys(): Promise<string[]> {
+  const val = await getSetting('tgbot_access_keys');
+  return Array.isArray(val) ? val : [];
+}
+
+// ===== Hit APIs =====
+async function getEnabledApis() {
+  const { data } = await supabase.from('hit_apis').select('*').eq('enabled', true);
   return data || [];
 }
 
@@ -66,19 +185,26 @@ function replacePlaceholders(text: string, phone: string): string {
   return text.replace(/\{PHONE\}/gi, phone);
 }
 
-async function hitSingleApi(api: any, phone: string): Promise<{ name: string; success: boolean; status: number | null; time: number; error?: string }> {
+function replaceInObj(obj: Record<string, unknown>, phone: string): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (typeof v === 'string') result[k] = replacePlaceholders(v, phone);
+    else if (typeof v === 'object' && v !== null && !Array.isArray(v)) result[k] = replaceInObj(v as Record<string, unknown>, phone);
+    else result[k] = v;
+  }
+  return result;
+}
+
+async function hitSingleApi(api: any, phone: string, workerUrl?: string | null): Promise<{ name: string; success: boolean; status: number | null; time: number; error?: string }> {
   const url = replacePlaceholders(api.url, phone);
   const method = api.method || 'GET';
-  
-  // Build headers
   const headers: Record<string, string> = {};
   if (api.headers && typeof api.headers === 'object') {
     for (const [k, v] of Object.entries(api.headers)) {
       headers[replacePlaceholders(k, phone)] = replacePlaceholders(String(v), phone);
     }
   }
-  
-  // Build body
+
   let body: string | undefined;
   const bodyType = api.body_type || 'none';
   if (bodyType !== 'none' && api.body) {
@@ -88,13 +214,47 @@ async function hitSingleApi(api: any, phone: string): Promise<{ name: string; su
     if (bodyType === 'form-urlencoded' && !headers['Content-Type']) headers['Content-Type'] = 'application/x-www-form-urlencoded';
   }
 
+  // Add query params
+  let finalUrl = url;
+  const qp = api.query_params || {};
+  if (Object.keys(qp).length > 0) {
+    try {
+      const u = new URL(url);
+      for (const [k, v] of Object.entries(qp)) {
+        u.searchParams.set(replacePlaceholders(k, phone), replacePlaceholders(String(v), phone));
+      }
+      finalUrl = u.toString();
+    } catch {}
+  }
+
   const start = Date.now();
+
+  // If CF worker is available, use it as proxy
+  if (workerUrl) {
+    try {
+      const proxyBody: any = { url: finalUrl, method, headers };
+      if (body && !['GET', 'DELETE'].includes(method)) {
+        proxyBody.body = body;
+        proxyBody.bodyType = bodyType;
+      }
+      const res = await fetch(workerUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(proxyBody),
+      });
+      const data = await res.json();
+      return { name: api.name, success: data?.success ?? false, status: data?.status_code ?? null, time: data?.response_time ?? (Date.now() - start) };
+    } catch (err) {
+      return { name: api.name, success: false, status: null, time: Date.now() - start, error: err instanceof Error ? err.message : 'Unknown' };
+    }
+  }
+
+  // Direct hit
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 10000);
-    const res = await fetch(url, {
-      method,
-      headers,
+    const res = await fetch(finalUrl, {
+      method, headers,
       body: ['GET', 'DELETE'].includes(method) ? undefined : body,
       signal: controller.signal,
     });
@@ -106,181 +266,641 @@ async function hitSingleApi(api: any, phone: string): Promise<{ name: string; su
   }
 }
 
-async function runHitsForPhone(chatId: number, phone: string) {
+async function runHitsForPhone(chatId: number, phone: string, rounds = 1, batch = 5, delay = 2) {
   const apis = await getEnabledApis();
-  
   if (apis.length === 0) {
-    await sendMessage(chatId, '❌ <b>No APIs configured!</b>\nAdmin panel me APIs add karo pehle.');
+    await sendMessage(chatId, '❌ <b>No APIs configured!</b>');
     return;
   }
 
-  await sendMessage(chatId, `🚀 <b>Hitting ${apis.length} APIs for:</b> <code>${phone}</code>\n⏳ Please wait...`);
+  await sendMessage(chatId, `🚀 <b>Hitting ${apis.length} APIs</b>\n📱 Number: <code>${phone}</code>\n🔄 Rounds: ${rounds} | Batch: ${batch} | Delay: ${delay}s\n⏳ Please wait...`);
 
-  let successCount = 0;
-  let failCount = 0;
+  let successCount = 0, failCount = 0;
   const results: string[] = [];
 
-  for (const api of apis) {
-    const result = await hitSingleApi(api, phone);
-    if (result.success) {
-      successCount++;
-      results.push(`✅ ${result.name} → ${result.status} (${result.time}ms)`);
-    } else {
-      failCount++;
-      results.push(`❌ ${result.name} → ${result.status || 'ERR'} (${result.error || ''})`);
+  for (let round = 1; round <= rounds; round++) {
+    if (round > 1) await new Promise(r => setTimeout(r, delay * 1000));
+
+    for (let i = 0; i < apis.length; i += batch) {
+      const batchApis = apis.slice(i, i + batch);
+      const workerUrl = await getNextWorker();
+
+      const batchResults = await Promise.allSettled(
+        batchApis.map(api => hitSingleApi(api, phone, workerUrl))
+      );
+
+      for (const r of batchResults) {
+        if (r.status === 'fulfilled') {
+          const res = r.value;
+          if (res.success) { successCount++; results.push(`✅ ${res.name} → ${res.status} (${res.time}ms)`); }
+          else { failCount++; results.push(`❌ ${res.name} → ${res.status || 'ERR'} ${res.error ? `(${res.error})` : ''}`); }
+        } else {
+          failCount++;
+          results.push(`❌ Unknown → ERR`);
+        }
+      }
+
+      if (i + batch < apis.length) await new Promise(r => setTimeout(r, 1000));
     }
   }
 
-  const summary = `📊 <b>Results:</b>\n\n` +
-    `✅ Success: <b>${successCount}</b>\n` +
-    `❌ Failed: <b>${failCount}</b>\n` +
-    `📱 Number: <code>${phone}</code>\n\n` +
-    results.slice(0, 30).join('\n') +
-    (results.length > 30 ? `\n... and ${results.length - 30} more` : '');
+  await incrementUsage(chatId);
+  await incrementGlobalHits(successCount + failCount);
+
+  const summary = `📊 <b>Results:</b>\n\n✅ Success: <b>${successCount}</b>\n❌ Failed: <b>${failCount}</b>\n📱 Number: <code>${phone}</code>\n🔄 Rounds: ${rounds}\n\n` +
+    results.slice(0, 25).join('\n') +
+    (results.length > 25 ? `\n... +${results.length - 25} more` : '');
 
   await sendMessage(chatId, summary, {
     inline_keyboard: [[
-      { text: '🔄 Hit Again', callback_data: `hit_again:${phone}` },
+      { text: '🔄 Hit Again', callback_data: `hit_again:${phone}:${rounds}:${batch}:${delay}` },
       { text: '🏠 Main Menu', callback_data: 'main_menu' },
     ]]
   });
 }
 
-// ---- Main handler ----
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+// ===== Main Menu Keyboard =====
+function getMainMenuKeyboard(admin: boolean) {
+  const keyboard: any[][] = [
+    [{ text: '🚀 Start', callback_data: 'start_hit' }, { text: '🛑 Stop', callback_data: 'stop_hit' }],
+    [{ text: '📅 Schedule Hit', callback_data: 'schedule_hit' }],
+  ];
+
+  if (admin) {
+    keyboard.push(
+      [{ text: '💎 Premium', callback_data: 'premium_menu' }],
+      [{ text: '📊 Stats', callback_data: 'stats' }, { text: '⚙️ Settings', callback_data: 'settings' }],
+      [{ text: '🥉 Give Basic', callback_data: 'give_basic' }, { text: '🥈 Give Pro', callback_data: 'give_pro' }, { text: '🥇 Give Ultimate', callback_data: 'give_ultimate' }],
+      [{ text: '🗑️ Remove Premium', callback_data: 'remove_premium_prompt' }],
+      [{ text: '📢 Broadcast', callback_data: 'broadcast_prompt' }, { text: '☁️ Workers', callback_data: 'workers' }],
+      [{ text: '📊 Set Limit', callback_data: 'set_limit_prompt' }],
+      [{ text: '🔐 Admin Panel', callback_data: 'admin_panel' }],
+    );
+  } else {
+    keyboard.push(
+      [{ text: '💎 Premium', callback_data: 'premium_menu' }],
+      [{ text: '📊 Stats', callback_data: 'stats' }, { text: '⚙️ Settings', callback_data: 'settings' }],
+    );
   }
 
-  // Handle GET for webhook setup info
+  return { inline_keyboard: keyboard };
+}
+
+// ===== MAIN HANDLER =====
+serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+
   if (req.method === 'GET') {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const webhookUrl = `${supabaseUrl}/functions/v1/telegram-bot`;
-    return new Response(JSON.stringify({ 
-      message: 'Telegram Bot webhook endpoint',
-      webhook_url: webhookUrl,
-      setup: `Set webhook: ${TELEGRAM_API}/setWebhook?url=${encodeURIComponent(webhookUrl)}`
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    const url = new URL(req.url);
+    if (url.searchParams.get('action') === 'setwebhook') {
+      const res = await fetch(`${TELEGRAM_API}/setWebhook`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: webhookUrl }),
+      });
+      const data = await res.json();
+      return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    return new Response(JSON.stringify({ webhook_url: webhookUrl }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
   try {
     const update = await req.json();
-    console.log('Telegram update:', JSON.stringify(update).slice(0, 500));
-
-    // Handle /setwebhook command via query param
     const url = new URL(req.url);
     if (url.searchParams.get('action') === 'setwebhook') {
       const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
       const webhookUrl = `${supabaseUrl}/functions/v1/telegram-bot`;
       const res = await fetch(`${TELEGRAM_API}/setWebhook`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: webhookUrl }),
       });
-      const data = await res.json();
-      return new Response(JSON.stringify(data), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return new Response(JSON.stringify(await res.json()), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Handle callback queries (button clicks)
+    // ========== CALLBACK QUERIES ==========
     if (update.callback_query) {
       const cb = update.callback_query;
       const chatId = cb.message.chat.id;
+      const msgId = cb.message.message_id;
       const data = cb.data;
-      const messageId = cb.message.message_id;
+      const admin = await isAdmin(chatId);
 
       await answerCallbackQuery(cb.id);
+      await trackUser(chatId);
 
+      // --- Main Menu ---
+      if (data === 'main_menu') {
+        await editMessage(chatId, msgId, '🔥 <b>Hit API Bot</b>\n\nSelect an option:', getMainMenuKeyboard(admin));
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- Start Hit ---
       if (data === 'start_hit') {
-        // Save state - waiting for phone
-        await supabase.from('app_settings').upsert({
-          setting_key: `tgbot_state_${chatId}`,
-          setting_value: { waiting_phone: true },
-        }, { onConflict: 'setting_key' });
-
-        await editMessage(chatId, messageId, '📱 <b>Please send phone number</b>\n\nExample: <code>9876543210</code>\n\nNumber bhejo with or without country code.');
-      } 
-      else if (data === 'stop_hit') {
-        await supabase.from('app_settings').upsert({
-          setting_key: `tgbot_state_${chatId}`,
-          setting_value: { waiting_phone: false },
-        }, { onConflict: 'setting_key' });
-
-        await editMessage(chatId, messageId, '🛑 <b>Stopped!</b>\n\nDobara start karne ke liye /start bhejo.');
+        await setBotState(chatId, { waiting_phone: true });
+        await editMessage(chatId, msgId, '📱 <b>Phone number bhejo</b>\n\nFormat: <code>9876543210</code>\n\nParams ke saath: <code>9876543210 5 10 3</code>\n<i>(number rounds batch delay)</i>');
+        return new Response('OK', { headers: corsHeaders });
       }
-      else if (data === 'main_menu') {
-        await editMessage(chatId, messageId, 
-          '🔥 <b>Hit API Bot</b>\n\nSelect an option:', {
-          inline_keyboard: [[
-            { text: '▶️ Start', callback_data: 'start_hit' },
-            { text: '⏹️ Stop', callback_data: 'stop_hit' },
-          ]]
-        });
+
+      // --- Stop ---
+      if (data === 'stop_hit') {
+        await setBotState(chatId, { waiting_phone: false });
+        await editMessage(chatId, msgId, '🛑 <b>Stopped!</b>\n\n/start bhejo dobara shuru karne ke liye.');
+        return new Response('OK', { headers: corsHeaders });
       }
-      else if (data.startsWith('hit_again:')) {
-        const phone = data.split(':')[1];
-        await editMessage(chatId, messageId, `🔄 <b>Re-hitting for:</b> <code>${phone}</code>...`);
-        await runHitsForPhone(chatId, phone);
+
+      // --- Schedule Hit ---
+      if (data === 'schedule_hit') {
+        await editMessage(chatId, msgId, '📅 <b>Schedule Hit</b>\n\nSchedule karne ke liye web panel ka use karo.\nYa /start se manual hit karo.');
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- Stats ---
+      if (data === 'stats') {
+        const usage = await getUserUsage(chatId);
+        const config = await getBotConfig();
+        const prem = await isPremium(chatId);
+        const global = await getGlobalStats();
+        const apis = await getEnabledApis();
+        const workers = await getCfWorkers();
+
+        let statsText = `📊 <b>Statistics</b>\n\n`;
+        statsText += `👤 <b>Your Stats:</b>\n`;
+        statsText += `• Today: ${usage.today} hits\n`;
+        statsText += `• Total: ${usage.total} hits\n`;
+        statsText += `• Plan: ${prem.isPremium ? `💎 ${prem.plan}` : '🆓 Free'}\n`;
+        statsText += `• Daily Limit: ${prem.isPremium ? '♾️ Unlimited' : config.dailyLimit}\n\n`;
+        statsText += `🌐 <b>Global Stats:</b>\n`;
+        statsText += `• Total Hits: ${global.totalHits}\n`;
+        statsText += `• Total Users: ${global.totalUsers}\n`;
+        statsText += `• Active APIs: ${apis.length}\n`;
+        statsText += `• CF Workers: ${workers.length}`;
+
+        await editMessage(chatId, msgId, statsText, { inline_keyboard: [[{ text: '🏠 Main Menu', callback_data: 'main_menu' }]] });
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- Settings ---
+      if (data === 'settings') {
+        const config = await getBotConfig();
+        let text = `⚙️ <b>Settings</b>\n\n`;
+        text += `📊 Default Rounds: ${config.defaultRounds}\n`;
+        text += `📦 Default Batch: ${config.defaultBatch}\n`;
+        text += `⏱️ Default Delay: ${config.defaultDelay}s\n`;
+        text += `📈 Daily Limit (Free): ${config.dailyLimit}\n\n`;
+        text += `<b>Change settings:</b>\n`;
+        text += `/setsettings R B D - Change defaults\n`;
+        text += `Example: <code>/setsettings 5 10 3</code>`;
+
+        await editMessage(chatId, msgId, text, { inline_keyboard: [[{ text: '🏠 Main Menu', callback_data: 'main_menu' }]] });
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- Premium Menu ---
+      if (data === 'premium_menu') {
+        const prem = await isPremium(chatId);
+        let text = `💎 <b>Premium</b>\n\n`;
+        if (prem.isPremium) {
+          text += `✅ You have <b>${prem.plan}</b> plan!\n\n`;
+        } else {
+          text += `You're on the <b>Free</b> plan.\n\n`;
+        }
+        text += `<b>Plans:</b>\n`;
+        text += `🥉 Basic - Extended limits\n`;
+        text += `🥈 Pro - Higher limits + priority\n`;
+        text += `🥇 Ultimate - Unlimited + all features\n\n`;
+        text += `Contact admin for premium access.`;
+
+        await editMessage(chatId, msgId, text, { inline_keyboard: [[{ text: '🏠 Main Menu', callback_data: 'main_menu' }]] });
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- Workers ---
+      if (data === 'workers') {
+        const workers = await getCfWorkers();
+        let text = `☁️ <b>CF Workers (${workers.length})</b>\n\n`;
+        if (workers.length === 0) {
+          text += `No custom workers. Default worker active.\n\n`;
+        } else {
+          workers.forEach((w, i) => { text += `${i + 1}. <code>${w}</code>\n`; });
+          text += `\n`;
+        }
+        text += `📝 <b>Commands:</b>\n`;
+        text += `/addworker URL - Add worker\n`;
+        text += `/delworker URL - Remove\n`;
+        text += `/clearworkers - Reset\n\n`;
+        text += `💡 Multiple workers = load balancing!\n`;
+        text += `${workers.length || 1} workers = ${(workers.length || 1) * 100}k req/day`;
+
+        await editMessage(chatId, msgId, text, { inline_keyboard: [[{ text: '🏠 Main Menu', callback_data: 'main_menu' }]] });
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- Admin Panel ---
+      if (data === 'admin_panel' && admin) {
+        let text = `🔐 <b>Admin Panel</b>\n\n`;
+        text += `/apis - List all APIs\n`;
+        text += `/addapi NAME|URL - Add GET API\n`;
+        text += `/delapi API_ID - Delete API\n`;
+        text += `/toggleapi API_ID - Enable/disable\n`;
+        text += `/keys - List access keys\n`;
+        text += `/addkey PASSWORD - Add key\n`;
+        text += `/delkey PASSWORD - Delete key\n`;
+        text += `/broadcast MSG - Broadcast to all\n`;
+        text += `/setlimit N - Free user daily limit\n`;
+        text += `/setsettings R B D - Change defaults`;
+
+        await editMessage(chatId, msgId, text, { inline_keyboard: [[{ text: '🏠 Main Menu', callback_data: 'main_menu' }]] });
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- Give Premium Prompts ---
+      if (data === 'give_basic' || data === 'give_pro' || data === 'give_ultimate') {
+        if (!admin) { await editMessage(chatId, msgId, '❌ Admin only.'); return new Response('OK', { headers: corsHeaders }); }
+        const plan = data === 'give_basic' ? 'Basic' : data === 'give_pro' ? 'Pro' : 'Ultimate';
+        await setBotState(chatId, { waiting_premium: true, premiumPlan: plan });
+        await editMessage(chatId, msgId, `🎁 <b>Give ${plan} Premium</b>\n\nUser ka Telegram ID bhejo:\n<code>/givepremium USER_ID ${plan} 30</code>\n<i>(ID plan days)</i>`);
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- Remove Premium Prompt ---
+      if (data === 'remove_premium_prompt') {
+        if (!admin) { await editMessage(chatId, msgId, '❌ Admin only.'); return new Response('OK', { headers: corsHeaders }); }
+        await editMessage(chatId, msgId, '🗑️ <b>Remove Premium</b>\n\nUser ka ID bhejo:\n<code>/removepremium USER_ID</code>');
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- Broadcast Prompt ---
+      if (data === 'broadcast_prompt') {
+        if (!admin) { await editMessage(chatId, msgId, '❌ Admin only.'); return new Response('OK', { headers: corsHeaders }); }
+        await setBotState(chatId, { waiting_broadcast: true });
+        await editMessage(chatId, msgId, '📢 <b>Broadcast</b>\n\nMessage bhejo jo sabko jayega:\n<code>/broadcast Your message here</code>');
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- Set Limit Prompt ---
+      if (data === 'set_limit_prompt') {
+        if (!admin) { await editMessage(chatId, msgId, '❌ Admin only.'); return new Response('OK', { headers: corsHeaders }); }
+        await editMessage(chatId, msgId, '📊 <b>Set Daily Limit</b>\n\n<code>/setlimit 10</code>\n<i>(Free users ke liye daily limit)</i>');
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- Hit Again ---
+      if (data.startsWith('hit_again:')) {
+        const parts = data.split(':');
+        const phone = parts[1];
+        const rounds = parseInt(parts[2]) || 1;
+        const batch = parseInt(parts[3]) || 5;
+        const delay = parseInt(parts[4]) || 2;
+        await editMessage(chatId, msgId, `🔄 <b>Re-hitting...</b>`);
+        await runHitsForPhone(chatId, phone, rounds, batch, delay);
+        return new Response('OK', { headers: corsHeaders });
       }
 
       return new Response('OK', { headers: corsHeaders });
     }
 
-    // Handle regular messages
+    // ========== TEXT MESSAGES ==========
     if (update.message) {
       const msg = update.message;
       const chatId = msg.chat.id;
       const text = (msg.text || '').trim();
+      const admin = await isAdmin(chatId);
+      await trackUser(chatId);
 
-      // /start command
+      // --- /start ---
       if (text === '/start') {
-        await sendMessage(chatId, 
-          '🔥 <b>Hit API Bot</b>\n\n' +
-          'Ye bot enabled APIs ko phone number pe hit karega.\n\n' +
-          'Select an option:', {
-          inline_keyboard: [[
-            { text: '▶️ Start', callback_data: 'start_hit' },
-            { text: '⏹️ Stop', callback_data: 'stop_hit' },
-          ]]
-        });
+        await sendMessage(chatId, '🔥 <b>Hit API Bot</b>\n\nSelect an option:', getMainMenuKeyboard(admin));
         return new Response('OK', { headers: corsHeaders });
       }
 
-      // Check if bot is waiting for phone number
-      const { data: stateData } = await supabase
-        .from('app_settings')
-        .select('setting_value')
-        .eq('setting_key', `tgbot_state_${chatId}`)
-        .single();
+      // --- /help ---
+      if (text === '/help') {
+        let helpText = `📖 <b>Bot Commands</b>\n\n<b>General:</b>\n`;
+        helpText += `/start - Main menu\n`;
+        helpText += `/stats - View statistics\n`;
+        helpText += `/settings - Hit settings guide\n`;
+        helpText += `/help - This help\n\n`;
+        helpText += `<b>Hit API:</b>\n`;
+        helpText += `Send phone number: <code>1234567890</code>\n`;
+        helpText += `With params: <code>1234567890 5 10 3</code>\n`;
+        helpText += `(number rounds batch delay)\n`;
 
-      const state = stateData?.setting_value as any;
+        if (admin) {
+          helpText += `\n🔐 <b>Admin Commands:</b>\n`;
+          helpText += `/setlimit N - Free user daily limit\n`;
+          helpText += `/setsettings R B D - Change defaults\n`;
+          helpText += `/apis - List all APIs\n`;
+          helpText += `/addapi NAME|URL - Add GET API\n`;
+          helpText += `/delapi API_ID - Delete API\n`;
+          helpText += `/toggleapi API_ID - Enable/disable\n`;
+          helpText += `/keys - List access keys\n`;
+          helpText += `/addkey PASSWORD - Add key\n`;
+          helpText += `/delkey PASSWORD - Delete key\n`;
+          helpText += `/givepremium ID PLAN DAYS - Give premium\n`;
+          helpText += `/removepremium ID - Remove premium\n`;
+          helpText += `/premium - List premium users\n`;
+          helpText += `/broadcast MSG - Broadcast to all\n`;
+          helpText += `/workers - List CF workers\n`;
+          helpText += `/addworker URL - Add CF worker\n`;
+          helpText += `/delworker URL - Remove worker\n`;
+          helpText += `/clearworkers - Reset workers\n`;
+          helpText += `/logout - Logout admin`;
+        }
 
-      if (state?.waiting_phone) {
-        // Validate phone number
-        const cleanPhone = text.replace(/[\s\-\(\)]/g, '');
+        await sendMessage(chatId, helpText);
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- /stats ---
+      if (text === '/stats') {
+        const usage = await getUserUsage(chatId);
+        const config = await getBotConfig();
+        const prem = await isPremium(chatId);
+        const global = await getGlobalStats();
+        await sendMessage(chatId, `📊 <b>Stats</b>\n\n👤 Today: ${usage.today} | Total: ${usage.total}\n💎 Plan: ${prem.isPremium ? prem.plan : 'Free'}\n📈 Limit: ${prem.isPremium ? '♾️' : config.dailyLimit}\n\n🌐 Global Hits: ${global.totalHits} | Users: ${global.totalUsers}`);
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- /settings ---
+      if (text === '/settings') {
+        const config = await getBotConfig();
+        await sendMessage(chatId, `⚙️ <b>Settings</b>\n\nRounds: ${config.defaultRounds} | Batch: ${config.defaultBatch} | Delay: ${config.defaultDelay}s\nDaily Limit: ${config.dailyLimit}\n\nChange: <code>/setsettings R B D</code>`);
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // === ADMIN COMMANDS ===
+
+      // --- /setlimit ---
+      if (text.startsWith('/setlimit') && admin) {
+        const num = parseInt(text.split(' ')[1]);
+        if (isNaN(num) || num < 1) { await sendMessage(chatId, '❌ Usage: <code>/setlimit 10</code>'); return new Response('OK', { headers: corsHeaders }); }
+        const config = await getBotConfig();
+        config.dailyLimit = num;
+        await setSetting('tgbot_config', config);
+        await sendMessage(chatId, `✅ Daily limit set to <b>${num}</b>`);
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- /setsettings ---
+      if (text.startsWith('/setsettings') && admin) {
+        const parts = text.split(/\s+/).slice(1);
+        if (parts.length < 3) { await sendMessage(chatId, '❌ Usage: <code>/setsettings 5 10 3</code> (rounds batch delay)'); return new Response('OK', { headers: corsHeaders }); }
+        const config = await getBotConfig();
+        config.defaultRounds = parseInt(parts[0]) || 1;
+        config.defaultBatch = parseInt(parts[1]) || 5;
+        config.defaultDelay = parseInt(parts[2]) || 2;
+        await setSetting('tgbot_config', config);
+        await sendMessage(chatId, `✅ Settings updated!\nRounds: ${config.defaultRounds} | Batch: ${config.defaultBatch} | Delay: ${config.defaultDelay}s`);
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- /apis ---
+      if (text === '/apis' && admin) {
+        const apis = await getEnabledApis();
+        const { data: allApis } = await supabase.from('hit_apis').select('id, name, url, enabled');
+        if (!allApis || allApis.length === 0) { await sendMessage(chatId, '📝 No APIs found.'); return new Response('OK', { headers: corsHeaders }); }
+        let apiText = `📝 <b>APIs (${allApis.length})</b>\n\n`;
+        allApis.forEach((a, i) => {
+          apiText += `${i + 1}. ${a.enabled ? '✅' : '❌'} <b>${a.name}</b>\nID: <code>${a.id}</code>\n${a.url.slice(0, 50)}...\n\n`;
+        });
+        await sendMessage(chatId, apiText);
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- /addapi ---
+      if (text.startsWith('/addapi') && admin) {
+        const rest = text.slice(7).trim();
+        const [name, ...urlParts] = rest.split('|');
+        const apiUrl = urlParts.join('|').trim();
+        if (!name || !apiUrl) { await sendMessage(chatId, '❌ Usage: <code>/addapi Name|URL</code>'); return new Response('OK', { headers: corsHeaders }); }
+        await supabase.from('hit_apis').insert({ name: name.trim(), url: apiUrl, method: 'GET', enabled: true });
+        await sendMessage(chatId, `✅ API added: <b>${name.trim()}</b>`);
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- /delapi ---
+      if (text.startsWith('/delapi') && admin) {
+        const id = text.split(' ')[1]?.trim();
+        if (!id) { await sendMessage(chatId, '❌ Usage: <code>/delapi API_ID</code>'); return new Response('OK', { headers: corsHeaders }); }
+        await supabase.from('hit_apis').delete().eq('id', id);
+        await sendMessage(chatId, `✅ API deleted: <code>${id}</code>`);
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- /toggleapi ---
+      if (text.startsWith('/toggleapi') && admin) {
+        const id = text.split(' ')[1]?.trim();
+        if (!id) { await sendMessage(chatId, '❌ Usage: <code>/toggleapi API_ID</code>'); return new Response('OK', { headers: corsHeaders }); }
+        const { data: api } = await supabase.from('hit_apis').select('enabled').eq('id', id).single();
+        if (!api) { await sendMessage(chatId, '❌ API not found.'); return new Response('OK', { headers: corsHeaders }); }
+        await supabase.from('hit_apis').update({ enabled: !api.enabled }).eq('id', id);
+        await sendMessage(chatId, `✅ API ${!api.enabled ? 'enabled' : 'disabled'}`);
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- /keys ---
+      if (text === '/keys' && admin) {
+        const keys = await getAccessKeys();
+        if (keys.length === 0) { await sendMessage(chatId, '🔑 No access keys set.'); return new Response('OK', { headers: corsHeaders }); }
+        await sendMessage(chatId, `🔑 <b>Access Keys (${keys.length})</b>\n\n` + keys.map((k, i) => `${i + 1}. <code>${k}</code>`).join('\n'));
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- /addkey ---
+      if (text.startsWith('/addkey') && admin) {
+        const key = text.split(' ').slice(1).join(' ').trim();
+        if (!key) { await sendMessage(chatId, '❌ Usage: <code>/addkey PASSWORD</code>'); return new Response('OK', { headers: corsHeaders }); }
+        const keys = await getAccessKeys();
+        if (!keys.includes(key)) keys.push(key);
+        await setSetting('tgbot_access_keys', keys);
+        await sendMessage(chatId, `✅ Key added: <code>${key}</code>`);
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- /delkey ---
+      if (text.startsWith('/delkey') && admin) {
+        const key = text.split(' ').slice(1).join(' ').trim();
+        if (!key) { await sendMessage(chatId, '❌ Usage: <code>/delkey PASSWORD</code>'); return new Response('OK', { headers: corsHeaders }); }
+        const keys = await getAccessKeys();
+        const filtered = keys.filter(k => k !== key);
+        await setSetting('tgbot_access_keys', filtered);
+        await sendMessage(chatId, `✅ Key removed: <code>${key}</code>`);
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- /givepremium ---
+      if (text.startsWith('/givepremium') && admin) {
+        const parts = text.split(/\s+/).slice(1);
+        if (parts.length < 3) { await sendMessage(chatId, '❌ Usage: <code>/givepremium USER_ID PLAN DAYS</code>\nPlans: Basic, Pro, Ultimate'); return new Response('OK', { headers: corsHeaders }); }
+        const userId = parseInt(parts[0]);
+        const plan = parts[1];
+        const days = parseInt(parts[2]) || 30;
+        if (isNaN(userId)) { await sendMessage(chatId, '❌ Invalid user ID'); return new Response('OK', { headers: corsHeaders }); }
+        const users = await getPremiumUsers();
+        const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+        users[String(userId)] = { plan, expiresAt, userId };
+        await setSetting('tgbot_premium_users', users);
+        await sendMessage(chatId, `✅ Premium <b>${plan}</b> given to <code>${userId}</code> for ${days} days`);
+        // Notify user
+        try { await sendMessage(userId, `🎉 You've been given <b>${plan}</b> premium for ${days} days!`); } catch {}
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- /removepremium ---
+      if (text.startsWith('/removepremium') && admin) {
+        const userId = text.split(' ')[1]?.trim();
+        if (!userId) { await sendMessage(chatId, '❌ Usage: <code>/removepremium USER_ID</code>'); return new Response('OK', { headers: corsHeaders }); }
+        const users = await getPremiumUsers();
+        delete users[userId];
+        await setSetting('tgbot_premium_users', users);
+        await sendMessage(chatId, `✅ Premium removed for <code>${userId}</code>`);
+        try { await sendMessage(parseInt(userId), '⚠️ Your premium has been removed.'); } catch {}
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- /premium ---
+      if (text === '/premium' && admin) {
+        const users = await getPremiumUsers();
+        const entries = Object.entries(users);
+        if (entries.length === 0) { await sendMessage(chatId, '💎 No premium users.'); return new Response('OK', { headers: corsHeaders }); }
+        let t = `💎 <b>Premium Users (${entries.length})</b>\n\n`;
+        entries.forEach(([id, info]: [string, any]) => {
+          const exp = new Date(info.expiresAt);
+          const remaining = Math.max(0, Math.ceil((exp.getTime() - Date.now()) / (24 * 60 * 60 * 1000)));
+          t += `• <code>${id}</code> - ${info.plan} (${remaining}d left)\n`;
+        });
+        await sendMessage(chatId, t);
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- /broadcast ---
+      if (text.startsWith('/broadcast') && admin) {
+        const message = text.slice(10).trim();
+        if (!message) { await sendMessage(chatId, '❌ Usage: <code>/broadcast Your message</code>'); return new Response('OK', { headers: corsHeaders }); }
+        const allUsers = (await getSetting('tgbot_all_users')) || [];
+        let sent = 0, failed = 0;
+        for (const uid of allUsers) {
+          try {
+            await sendMessage(uid, `📢 <b>Broadcast</b>\n\n${message}`);
+            sent++;
+          } catch { failed++; }
+        }
+        await sendMessage(chatId, `✅ Broadcast sent!\n✅ Delivered: ${sent}\n❌ Failed: ${failed}`);
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- /workers ---
+      if (text === '/workers') {
+        const workers = await getCfWorkers();
+        let t = `☁️ <b>CF Workers (${workers.length})</b>\n\n`;
+        if (workers.length === 0) t += `No custom workers. Default worker active.\n\n`;
+        else workers.forEach((w, i) => { t += `${i + 1}. <code>${w}</code>\n`; });
+        t += `\n📝 <b>Commands:</b>\n/addworker URL - Add worker\n/delworker URL - Remove\n/clearworkers - Reset\n\n`;
+        t += `💡 Multiple workers = load balancing!\n${workers.length || 1} workers = ${(workers.length || 1) * 100}k req/day`;
+        await sendMessage(chatId, t);
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- /addworker ---
+      if (text.startsWith('/addworker') && admin) {
+        const workerUrl = text.split(' ').slice(1).join(' ').trim();
+        if (!workerUrl || !workerUrl.startsWith('http')) { await sendMessage(chatId, '❌ Usage: <code>/addworker https://worker.example.workers.dev</code>'); return new Response('OK', { headers: corsHeaders }); }
+        const workers = await getCfWorkers();
+        if (!workers.includes(workerUrl)) workers.push(workerUrl);
+        await setSetting('tgbot_cf_workers', workers);
+        await sendMessage(chatId, `✅ Worker added!\n☁️ Total: ${workers.length} workers = ${workers.length * 100}k req/day`);
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- /delworker ---
+      if (text.startsWith('/delworker') && admin) {
+        const workerUrl = text.split(' ').slice(1).join(' ').trim();
+        if (!workerUrl) { await sendMessage(chatId, '❌ Usage: <code>/delworker URL</code>'); return new Response('OK', { headers: corsHeaders }); }
+        const workers = await getCfWorkers();
+        const filtered = workers.filter(w => w !== workerUrl);
+        await setSetting('tgbot_cf_workers', filtered);
+        await sendMessage(chatId, `✅ Worker removed! Remaining: ${filtered.length}`);
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- /clearworkers ---
+      if (text === '/clearworkers' && admin) {
+        await setSetting('tgbot_cf_workers', []);
+        await sendMessage(chatId, '✅ All workers cleared!');
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- /setadmin (first-time setup) ---
+      if (text === '/setadmin') {
+        const admins = await getAdminIds();
+        if (admins.length === 0) {
+          await setSetting('tgbot_admin_ids', [chatId]);
+          await sendMessage(chatId, `✅ You are now admin! ID: <code>${chatId}</code>`);
+        } else if (admin) {
+          await sendMessage(chatId, `✅ You're already admin!`);
+        } else {
+          await sendMessage(chatId, '❌ Admin already set. Contact existing admin.');
+        }
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- /addadmin ---
+      if (text.startsWith('/addadmin') && admin) {
+        const newId = parseInt(text.split(' ')[1]);
+        if (isNaN(newId)) { await sendMessage(chatId, '❌ Usage: <code>/addadmin USER_ID</code>'); return new Response('OK', { headers: corsHeaders }); }
+        const admins = await getAdminIds();
+        if (!admins.includes(newId)) admins.push(newId);
+        await setSetting('tgbot_admin_ids', admins);
+        await sendMessage(chatId, `✅ Admin added: <code>${newId}</code>`);
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- /logout ---
+      if (text === '/logout' && admin) {
+        const admins = await getAdminIds();
+        const filtered = admins.filter((id: number) => id !== chatId);
+        await setSetting('tgbot_admin_ids', filtered);
+        await sendMessage(chatId, '✅ Logged out from admin!');
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // ===== Phone Number Handling =====
+      const state = await getBotState(chatId);
+
+      if (state?.waiting_phone || /^\+?\d{10,15}(\s+\d+)*$/.test(text)) {
+        const parts = text.split(/\s+/);
+        const phone = parts[0].replace(/[^0-9+]/g, '');
         const phoneRegex = /^\+?[0-9]{10,15}$/;
 
-        if (!phoneRegex.test(cleanPhone)) {
-          await sendMessage(chatId, '❌ <b>Invalid phone number!</b>\n\nSahi format me bhejo:\n<code>9876543210</code> ya <code>+919876543210</code>');
+        if (!phoneRegex.test(phone)) {
+          await sendMessage(chatId, '❌ <b>Invalid number!</b>\n\n<code>9876543210</code> ya <code>+919876543210</code>');
           return new Response('OK', { headers: corsHeaders });
         }
 
-        // Clear waiting state
-        await supabase.from('app_settings').upsert({
-          setting_key: `tgbot_state_${chatId}`,
-          setting_value: { waiting_phone: false },
-        }, { onConflict: 'setting_key' });
+        // Check daily limit
+        const prem = await isPremium(chatId);
+        if (!prem.isPremium && !admin) {
+          const config = await getBotConfig();
+          const usage = await getUserUsage(chatId);
+          if (usage.today >= config.dailyLimit) {
+            await sendMessage(chatId, `❌ <b>Daily limit reached!</b> (${config.dailyLimit}/day)\n\n💎 Premium le lo unlimited access ke liye.`);
+            return new Response('OK', { headers: corsHeaders });
+          }
+        }
 
-        // Run hits
-        await runHitsForPhone(chatId, cleanPhone);
+        const config = await getBotConfig();
+        const rounds = parseInt(parts[1]) || config.defaultRounds;
+        const batch = parseInt(parts[2]) || config.defaultBatch;
+        const delay = parseInt(parts[3]) || config.defaultDelay;
+
+        await setBotState(chatId, { waiting_phone: false });
+        await runHitsForPhone(chatId, phone, Math.min(rounds, 50), Math.min(batch, 20), Math.min(delay, 60));
         return new Response('OK', { headers: corsHeaders });
       }
 
-      // Default response
-      await sendMessage(chatId, '👋 <b>/start</b> bhejo shuru karne ke liye!');
+      // Default
+      await sendMessage(chatId, '👋 /start bhejo ya /help dekho!');
     }
 
     return new Response('OK', { headers: corsHeaders });
