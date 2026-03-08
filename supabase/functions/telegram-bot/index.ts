@@ -149,16 +149,25 @@ async function isPremium(chatId: number): Promise<{ isPremium: boolean; plan: st
   return { isPremium: true, plan: entry.plan };
 }
 
+// ===== IST Date Helper =====
+function getISTDate(): string {
+  const now = new Date();
+  // IST = UTC + 5:30
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const ist = new Date(now.getTime() + istOffset);
+  return ist.toISOString().slice(0, 10);
+}
+
 // ===== User Usage Tracking =====
 async function getUserUsage(chatId: number): Promise<{ today: number; total: number }> {
   const val = await getSetting(`tgbot_usage_${chatId}`);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getISTDate();
   if (!val || val.date !== today) return { today: 0, total: val?.total || 0 };
   return { today: val.today || 0, total: val.total || 0 };
 }
 
 async function incrementUsage(chatId: number) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getISTDate();
   const val = await getSetting(`tgbot_usage_${chatId}`);
   const current = (val && val.date === today) ? val : { date: today, today: 0, total: val?.total || 0 };
   current.today += 1;
