@@ -256,11 +256,17 @@ async function hitSingleApi(api: any, phone: string, workerUrl?: string | null):
         proxyBody.body = body;
         proxyBody.bodyType = bodyType;
       }
+
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 12000);
       const res = await fetch(workerUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(proxyBody),
+        signal: controller.signal,
       });
+      clearTimeout(timer);
+
       const data = await res.json();
       return { name: api.name, success: data?.success ?? false, status: data?.status_code ?? null, time: data?.response_time ?? (Date.now() - start) };
     } catch (err) {
