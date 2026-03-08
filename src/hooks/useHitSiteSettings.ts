@@ -22,6 +22,7 @@ export interface HitSiteSettings {
   adminPassword: string;
   residentialProxyUrl: string;
   uaRotationEnabled: boolean;
+  cloudflareProxyUrl: string;
   // New customizable labels
   enterNumberLabel: string;
   apisActiveText: string;
