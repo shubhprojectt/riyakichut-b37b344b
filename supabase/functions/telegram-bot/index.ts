@@ -622,7 +622,17 @@ serve(async (req) => {
 
       // --- Schedule Hit ---
       if (data === 'schedule_hit') {
-        // Show schedule menu
+        const prem = await isPremium(chatId);
+        if (!prem.isPremium && !admin) {
+          await editMessage(chatId, msgId, '🔒 <b>Premium Feature!</b>\n\n📅 Schedule Hit sirf <b>Unlimited</b> plan users ke liye hai.\n\n🥇 <b>Unlimited Plan - ₹199</b>\n• Unlimited hits\n• Schedule hitting\n• All features\n\n💬 Contact: @xyzdark62', {
+            inline_keyboard: [
+              [{ text: '💎 Get Premium', callback_data: 'premium_menu' }],
+              [{ text: '🏠 Main Menu', callback_data: 'main_menu' }],
+            ],
+          });
+          return new Response('OK', { headers: corsHeaders });
+        }
+        
         const { data: activeSchedules } = await supabase.from('scheduled_hits').select('*').eq('is_active', true);
         const count = activeSchedules?.length || 0;
         
@@ -642,6 +652,13 @@ serve(async (req) => {
 
       // --- Schedule: New ---
       if (data === 'schedule_new') {
+        const prem = await isPremium(chatId);
+        if (!prem.isPremium && !admin) {
+          await editMessage(chatId, msgId, '🔒 <b>Premium Feature!</b>\n\n💬 Contact: @xyzdark62', {
+            inline_keyboard: [[{ text: '🏠 Main Menu', callback_data: 'main_menu' }]],
+          });
+          return new Response('OK', { headers: corsHeaders });
+        }
         await setBotState(chatId, { waiting_schedule_phone: true });
         await editMessage(chatId, msgId, '📅 <b>New Schedule</b>\n\n📱 Phone number bhejo with interval:\n\n<code>9876543210 60 10</code>\n<i>(number interval_seconds max_rounds)</i>\n\n• interval_seconds: kitne second baad repeat (default: 60)\n• max_rounds: kitne round max (0 = unlimited, default: 0)');
         return new Response('OK', { headers: corsHeaders });
