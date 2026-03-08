@@ -170,8 +170,19 @@ async function incrementUsage(chatId: number) {
   const today = getISTDate();
   const val = await getSetting(`tgbot_usage_${chatId}`);
   const current = (val && val.date === today) ? val : { date: today, today: 0, total: val?.total || 0 };
-  current.today += 1;
-  current.total += 1;
+
+  const admin = await isAdmin(chatId);
+  const prem = await isPremium(chatId);
+  const isFreeUser = !prem.isPremium && !admin;
+
+  if (isFreeUser) {
+    const config = await getBotConfig();
+    current.today = Math.min((current.today || 0) + 1, config.dailyLimit);
+  } else {
+    current.today = (current.today || 0) + 1;
+  }
+
+  current.total = (current.total || 0) + 1;
   current.date = today;
   await setSetting(`tgbot_usage_${chatId}`, current);
 }
