@@ -495,13 +495,25 @@ async function runHitsForPhone(
 }
 
 // ===== Main Menu Keyboard =====
-async function getMainMenuKeyboard(admin: boolean) {
+async function getMainMenuKeyboard(admin: boolean, chatId?: number) {
   const mode = await getHitProxyMode();
   const modeIcon = mode === 'cloudflare' ? '☁️' : '⚡';
   const modeText = mode === 'cloudflare' ? 'CF Worker' : 'Edge Fn';
   
+  // Check if hitting is active — show Stop only when running
+  let isHitting = false;
+  if (chatId) {
+    const state = await getBotState(chatId);
+    isHitting = !!state?.running;
+  }
+  
+  const topRow: any[] = [{ text: '🚀 Start', callback_data: 'start_hit' }];
+  if (isHitting) {
+    topRow.push({ text: '🛑 Stop', callback_data: 'stop_hit' });
+  }
+  
   const keyboard: any[][] = [
-    [{ text: '🚀 Start', callback_data: 'start_hit' }, { text: '🛑 Stop', callback_data: 'stop_hit' }],
+    topRow,
     [{ text: `${modeIcon} Mode: ${modeText}`, callback_data: 'toggle_mode' }, { text: '📅 Schedule', callback_data: 'schedule_hit' }],
   ];
 
