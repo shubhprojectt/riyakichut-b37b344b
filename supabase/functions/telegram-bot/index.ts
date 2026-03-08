@@ -335,6 +335,7 @@ async function selfContinueHits(
   totalFail: number,
   statusMsgId: number,
   nextApiIndex: number,
+  runId: string,
 ) {
   const backendUrl = Deno.env.get('SUPABASE_URL') ?? '';
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -354,6 +355,7 @@ async function selfContinueHits(
         totalFail,
         statusMsgId,
         nextApiIndex,
+        runId,
       }),
     });
   } catch (e) {
@@ -373,6 +375,7 @@ async function runHitsForPhone(
   prevFail = 0,
   statusMsgId = 0,
   currentApiIndex = 0,
+  runId = '',
 ) {
   const apis = await getEnabledApis();
   if (apis.length === 0) {
@@ -385,7 +388,8 @@ async function runHitsForPhone(
 
   // First invocation: create one status message only once
   if (!isContinuous) {
-    await setBotState(chatId, { running: true, waiting_phone: false, phone, batch, delay });
+    runId = crypto.randomUUID();
+    await setBotState(chatId, { running: true, waiting_phone: false, phone, batch, delay, runId });
     const statusText = makeStatusMessage(phone, batch, delay, modeLabel, 0, 0, 0, true);
     const result = await sendMessage(chatId, statusText, {
       inline_keyboard: [[{ text: '🛑 STOP NOW', callback_data: 'stop_hit' }]],
@@ -398,9 +402,9 @@ async function runHitsForPhone(
   let failCount = prevFail;
   let roundsDone = prevRounds;
 
-  // Stop check before any work
+  // Hard-stop gate before any work
   const stateBefore = await getBotState(chatId);
-  if (!stateBefore?.running) {
+  if (!stateBefore?.running || !stateBefore?.runId || stateBefore.runId !== runId) {
     if (statusMsgId) {
       try {
         const finalText = makeStatusMessage(phone, batch, delay, modeLabel, roundsDone, successCount, failCount, false);
@@ -454,9 +458,9 @@ async function runHitsForPhone(
   await incrementUsage(chatId);
   await incrementGlobalHits(successCount - prevSuccess + failCount - prevFail);
 
-  // Stop check after one batch
+  // Hard-stop gate after one batch
   const stateAfter = await getBotState(chatId);
-  if (!stateAfter?.running) {
+  if (!stateAfter?.running || !stateAfter?.runId || stateAfter.runId !== runId) {
     if (statusMsgId) {
       try {
         const finalText = makeStatusMessage(phone, batch, delay, modeLabel, roundsDone, successCount, failCount, false);
@@ -482,6 +486,7 @@ async function runHitsForPhone(
     failCount,
     statusMsgId,
     nextApiIndex,
+    runId,
   );
 }
 
@@ -540,8 +545,8 @@ serve(async (req) => {
 
     // ===== Internal self-continue for non-stop hitting =====
     if (update._internal_continue) {
-      const { chatId, phone, batch, delay, totalRounds, totalSuccess, totalFail, statusMsgId, nextApiIndex } = update;
-      await runHitsForPhone(chatId, phone, 1, batch, delay, true, totalRounds, totalSuccess, totalFail, statusMsgId || 0, nextApiIndex || 0);
+      const { chatId, phone, batch, delay, totalRounds, totalSuccess, totalFail, statusMsgId, nextApiIndex, runId } = update;
+      await runHitsForPhone(chatId, phone, 1, batch, delay, true, totalRounds, totalSuccess, totalFail, statusMsgId || 0, nextApiIndex || 0, runId || '');
       return new Response('OK', { headers: corsHeaders });
     }
 
