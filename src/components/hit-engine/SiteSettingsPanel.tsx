@@ -186,10 +186,18 @@ export default function SiteSettingsPanel({ settings, onUpdate, onReset }: SiteS
 
         <AccordionItem value="proxy" className="border border-border/30 rounded-xl px-3 glass-card">
           <AccordionTrigger className="text-xs font-semibold text-muted-foreground py-3 hover:no-underline">
-            <span className="flex items-center gap-2"><Home className="w-4 h-4" /> Residential Proxy</span>
+            <span className="flex items-center gap-2"><Home className="w-4 h-4" /> Proxy Settings</span>
           </AccordionTrigger>
-          <AccordionContent className="pb-3">
-            <Input value={localSettings.residentialProxyUrl} onChange={e => update('residentialProxyUrl', e.target.value)} className={inputClass} placeholder="http://user:pass@host:port" />
+          <AccordionContent className="pb-3 space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-muted-foreground/50">Cloudflare Worker URL (CORS Proxy)</label>
+              <Input value={localSettings.cloudflareProxyUrl} onChange={e => update('cloudflareProxyUrl', e.target.value)} className={inputClass} placeholder="https://your-worker.workers.dev" />
+              <p className="text-[9px] text-muted-foreground/40">Blank = Supabase edge function use hoga. URL daaloge to Cloudflare proxy use hoga.</p>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-muted-foreground/50">Residential Proxy URL</label>
+              <Input value={localSettings.residentialProxyUrl} onChange={e => update('residentialProxyUrl', e.target.value)} className={inputClass} placeholder="http://user:pass@host:port" />
+            </div>
           </AccordionContent>
         </AccordionItem>
       </Accordion>
