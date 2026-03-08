@@ -419,7 +419,18 @@ serve(async (req) => {
 
       // --- Main Menu ---
       if (data === 'main_menu') {
-        await editMessage(chatId, msgId, '🔥 <b>Hit API Bot</b>\n\nSelect an option:', getMainMenuKeyboard(admin));
+        await editMessage(chatId, msgId, '🔥 <b>Hit API Bot</b>\n\nSelect an option:', await getMainMenuKeyboard(admin));
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- Toggle Mode ---
+      if (data === 'toggle_mode') {
+        if (!admin) { await answerCallbackQuery(cb.id, '❌ Admin only!'); return new Response('OK', { headers: corsHeaders }); }
+        const currentMode = await getHitProxyMode();
+        const newMode = currentMode === 'edge' ? 'cloudflare' : 'edge';
+        await setHitProxyMode(newMode);
+        const modeLabel = newMode === 'cloudflare' ? '☁️ CF Worker' : '⚡ Edge Function';
+        await editMessage(chatId, msgId, `🔄 <b>Mode Changed!</b>\n\n🌐 Now using: <b>${modeLabel}</b>\n\n<i>Website aur bot dono isi mode se hit karenge.</i>`, await getMainMenuKeyboard(admin));
         return new Response('OK', { headers: corsHeaders });
       }
 
