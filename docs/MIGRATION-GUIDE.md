@@ -431,7 +431,7 @@ supabase link --project-ref YOUR_PROJECT_ID
 ### 4.4 Edge Functions Deploy Karo
 
 ```bash
-# Sab functions ek saath deploy (v4.2 - 12 functions)
+# Sab functions ek saath deploy (v5.1 - 13 functions)
 supabase functions deploy auth-login
 supabase functions deploy auth-verify
 supabase functions deploy credits-deduct
@@ -444,6 +444,7 @@ supabase functions deploy hit-api
 supabase functions deploy image-to-info
 supabase functions deploy execute-scheduled-hits
 supabase functions deploy fast-hit-all
+supabase functions deploy telegram-bot
 ```
 
 ### 4.5 Edge Function Secrets Set Karo
