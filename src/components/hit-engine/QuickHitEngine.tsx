@@ -181,7 +181,7 @@ export default function QuickHitEngine({
       if (stopRef2.current) break;
     }
     setIsRunning2(false);
-  }, [enabledApis, onLog, uaRotation, phone2]);
+  }, [enabledApis, onLog, uaRotation, cloudflareProxyUrl, phone2]);
 
   const currentPhone = activeMode === 'sequential' ? phone1 : phone2;
   const setCurrentPhone = activeMode === 'sequential' ? setPhone1 : setPhone2;
