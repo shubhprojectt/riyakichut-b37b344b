@@ -517,7 +517,7 @@ ON CONFLICT (setting_key) DO NOTHING;
 -- =====================================================
 -- EDGE FUNCTIONS LIST (deploy from supabase/functions/)
 -- =====================================================
--- Version 5.1 Edge Functions:
+-- Version 5.2 Edge Functions:
 -- [LEGACY - no longer used by app]:
 -- 1.  auth-login              - (LEGACY) User login with credit password
 -- 2.  auth-verify             - (LEGACY) Verify session token & get credits
@@ -533,55 +533,23 @@ ON CONFLICT (setting_key) DO NOTHING;
 -- 10. image-to-info           - Image analysis API
 -- 11. execute-scheduled-hits  - Cron-based scheduled bombing executor
 -- 12. fast-hit-all            - Hit ALL enabled APIs (Pro API style)
--- 13. telegram-bot            - Telegram Bot webhook handler (v5.1)
+-- 13. telegram-bot            - Telegram Bot webhook handler (v5.2)
+--
+-- IMPORTANT CHANGES in v5.2:
+-- - Premium system simplified: Only "Unlimited" plan (₹199)
+-- - Daily limit counter uses IST timezone (UTC+5:30) for reset
+-- - Free users: 5 daily hits (configurable), 5-min time limit per session
+-- - Usage counter capped at dailyLimit for free users (no 85/5 bug)
+-- - incrementUsage called once at session start (not per round)
+-- - Schedule Hit locked to premium users only
+-- - Daily limit display: "2/5" format on /start, main_menu, stats
+-- - Contact admin: @xyzdark62
 --
 -- IMPORTANT CHANGES in v4.4:
--- - CORS FIX: All edge functions now include extended CORS headers:
---   Access-Control-Allow-Headers includes:
---   authorization, x-client-info, apikey, content-type,
---   x-supabase-client-platform, x-supabase-client-platform-version,
---   x-supabase-client-runtime, x-supabase-client-runtime-version
---   This fixes login/API failures on Vercel deployments with newer
---   @supabase/supabase-js versions that send additional headers.
+-- - CORS FIX: All edge functions now include extended CORS headers
 -- - Quick Hit Engine: All UI labels now customizable via admin settings
---   (Enter Number, APIs Active, Sequential/Parallel/Schedule,
---    Round/Hits/OK/Fail, Hitting APIs, Copyright text)
 -- - hit_site_settings added to app_settings for Hit Engine label sync
 -- - Image to Info tab added to default tab config
---
--- IMPORTANT CHANGES in v4.3:
--- - fast-hit-all API restructured to match professional API style
--- - New parameters: phone, rounds, batch, delay (seconds), timeout (seconds)
---   Example: ?phone=9876543210&rounds=5&batch=5&delay=2&timeout=15
--- - Per-API 15s timeout (customizable 3-30s) — slow API won't block others
--- - Auto-retry (1 time) with 500ms delay on timeout/5xx errors
--- - Browser-like headers (Origin, Referer, Cache-Control, Accept) auto-added
--- - Non-blocking logging — response returned first, logs saved in background
--- - cURL copy button added in dashboard alongside POST & GET
--- - Settings sync architecture: all admin settings stored in app_settings DB
--- - Password protection fixed: waits for backend before showing lock screen
--- - /page3 route now protected with ProtectedRoute wrapper
---
--- IMPORTANT CHANGES in v4.2:
--- - fast-hit-all Edge Function: Hits all enabled APIs with single POST call
--- - Batch processing (5 APIs per batch) to avoid edge function timeout
--- - Secret key authentication via URL parameter (?key=YOUR_SECRET_KEY)
--- - Configurable rounds (max 50), {PHONE} placeholder replacement
--- - Rate limiting: 5 requests per IP per minute
--- - Admin panel: FastApiKeyManager for secret key + copy POST URL
---
--- IMPORTANT CHANGES in v4.1:
--- - Full Neon Theme: pure black background, neon glow effects
--- - Header: rainbow running border + color-cycling logo text
--- - Tab grid: color-changing running border animation
--- - Feature cards: neon color-specific glow variants
--- - Logs panel: terminal-style neon green/red logs
--- - All components: neon text-shadow, backdrop-blur effects
---
--- IMPORTANT CHANGES in v4.0:
--- - scheduled_hits table for cron-based automated API hitting
--- - execute-scheduled-hits edge function for background execution
--- - pg_cron + pg_net integration for server-side scheduling
 -- =====================================================
 
 -- =====================================================
@@ -610,7 +578,7 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 CREATE EXTENSION IF NOT EXISTS pg_net;
 
 -- Create cron job that calls execute-scheduled-hits every minute
--- REPLACE <YOUR-PROJECT-REF> with your Supabase project ref (e.g., abcdefghijklmnop)
+-- REPLACE <YOUR-PROJECT-REF> with your Supabase project ref
 -- REPLACE <YOUR-ANON-KEY> with your Supabase anon/public key
 SELECT cron.schedule(
   'execute-scheduled-hits-every-minute',
@@ -640,13 +608,6 @@ SELECT cron.schedule(
 -- | delay   | float  | 2       | 0-60   | Seconds between rounds         |
 -- | timeout | float  | 15      | 3-30   | Per-API timeout in seconds     |
 -- | key     | string | -       | -      | Secret key (if configured)     |
---
--- Features:
--- - Auto-retry (1x) on timeout or 5xx errors with 500ms delay
--- - Browser-like headers (Origin, Referer, Cache-Control, Accept)
--- - User-Agent rotation across 5 browser profiles
--- - Non-blocking logging (response returns immediately)
--- - Rate limit: 5 requests per IP per minute
 
 -- =====================================================
 -- QUICK REFERENCE: Tables & Their Purpose
@@ -665,8 +626,8 @@ SELECT cron.schedule(
 --                     - tgbot_global_stats: totalHits, totalUsers counters
 --                     - tgbot_all_users: All user chat IDs for broadcast (array)
 --                     - tgbot_access_keys: Access key passwords (array)
---                     - tgbot_state_{chatId}: Per-user bot state (running, phone, runId, etc.)
---                     - tgbot_usage_{chatId}: Per-user daily/total usage counters
+--                     - tgbot_state_{chatId}: Per-user bot state (running, phone, runId, startedAt, etc.)
+--                     - tgbot_usage_{chatId}: Per-user daily/total usage counters (IST timezone reset)
 -- captured_photos   : Camera capture photo metadata + device info
 -- captured_videos   : Video capture metadata & URLs
 -- search_history    : All search queries log
@@ -678,10 +639,11 @@ SELECT cron.schedule(
 --                     - phone_number, start_time, interval_seconds
 --                     - max_rounds, is_active, total_hits
 --                     - Executed by pg_cron + execute-scheduled-hits
+--                     - Locked to premium users only
 -- =====================================================
 --
 -- =====================================================
--- TELEGRAM BOT SETUP (v5.1)
+-- TELEGRAM BOT SETUP (v5.2)
 -- =====================================================
 -- 1. Set TELEGRAM_BOT_TOKEN in Edge Function Secrets
 -- 2. Deploy: supabase functions deploy telegram-bot
@@ -692,16 +654,20 @@ SELECT cron.schedule(
 -- - Non-stop API hitting with CF Worker proxy + load balancing
 -- - runId-based session locking (instant stop via button or /stop)
 -- - Self-continue architecture (bypasses edge function timeout)
--- - Premium system (Basic/Pro/Ultimate with expiry)
--- - Daily limit for free users (configurable via /setlimit)
+-- - Premium system: Single "Unlimited" plan (₹199)
+-- - Daily limit for free users: 5 hits/day (IST timezone reset at midnight)
+-- - Free user time limit: 5 minutes per session (auto-stop with upsell)
+-- - Usage counter capped at dailyLimit (prevents 85/5 display bug)
+-- - Schedule Hit: Premium-only feature
 -- - Admin panel: manage APIs, keys, workers, premium, broadcast
 -- - Mode toggle: Edge Function ↔ CF Worker (synced with website)
 -- - Progress bar + live status message (single message, edited in-place)
+-- - Daily limit display: "2/5" format everywhere
 --
 -- Bot Commands:
--- /start - Main menu
+-- /start - Main menu (shows daily limit for free users)
 -- /stop - Stop current hitting
--- /stats - View statistics
+-- /stats - View statistics (capped display)
 -- /settings - View/change settings
 -- /help - All commands
 -- /setadmin - First-time admin setup
@@ -712,5 +678,6 @@ SELECT cron.schedule(
 -- /broadcast MSG - Broadcast to all (admin)
 -- /setmode edge|cf - Change proxy mode (admin)
 -- /setlimit N - Set free user daily limit (admin)
--- /givepremium ID PLAN DAYS - Give premium (admin)
+-- /givepremium ID unlimited DAYS - Give premium (admin)
+-- /removepremium ID - Remove premium (admin)
 -- =====================================================
