@@ -546,8 +546,8 @@ serve(async (req) => {
       // --- Stop ---
       if (data === 'stop_hit') {
         await setBotState(chatId, { running: false, waiting_phone: false });
-        await answerCallbackQuery(cb.id, '🛑 Stopping...');
-        await editMessage(chatId, msgId, '🛑 <b>Stop signal sent!</b>\n\n<i>Hitting will stop after current round completes...</i>');
+        await answerCallbackQuery(cb.id, '🛑 Stopped!');
+        // Don't edit here - the running loop will detect stop and edit the status message itself
         return new Response('OK', { headers: corsHeaders });
       }
 
