@@ -910,7 +910,17 @@ serve(async (req) => {
 
       // --- /start ---
       if (text === '/start') {
-        await sendMessage(chatId, '🔥 <b>Hit API Bot</b>\n\nSelect an option:', await getMainMenuKeyboard(admin, chatId));
+        const prem = await isPremium(chatId);
+        const config = await getBotConfig();
+        const usage = await getUserUsage(chatId);
+        let greeting = '🔥 <b>Hit API Bot</b>\n\n';
+        if (prem.isPremium || admin) {
+          greeting += '💎 <b>Unlimited</b> access\n';
+        } else {
+          greeting += `📊 Daily Limit: <b>${usage.today}/${config.dailyLimit}</b>\n`;
+        }
+        greeting += '\nSelect an option:';
+        await sendMessage(chatId, greeting, await getMainMenuKeyboard(admin, chatId));
         return new Response('OK', { headers: corsHeaders });
       }
 
