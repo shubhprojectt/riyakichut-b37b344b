@@ -60,6 +60,7 @@ const defaultSettings: HitSiteSettings = {
   residentialProxyUrl: '',
   uaRotationEnabled: true,
   cloudflareProxyUrl: '',
+  hitProxyMode: 'edge',
   // New customizable labels
   enterNumberLabel: 'Enter Number:',
   apisActiveText: 'APIs Active',
