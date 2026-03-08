@@ -3,7 +3,7 @@
 -- =====================================================
 -- Run this SQL in your new Supabase project's SQL Editor
 -- Last Updated: 2026-03-08
--- Version: 5.1 (Telegram Bot Integration + CF Worker Proxy)
+-- Version: 5.2 (Premium System + IST Daily Limits)
 -- =====================================================
 -- NOTE: Credit system has been REMOVED. Authentication is now
 -- handled by simple site password (stored in app_settings).
