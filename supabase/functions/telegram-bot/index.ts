@@ -344,10 +344,14 @@ async function runHitsForPhone(chatId: number, phone: string, rounds = 1, batch 
 }
 
 // ===== Main Menu Keyboard =====
-function getMainMenuKeyboard(admin: boolean) {
+async function getMainMenuKeyboard(admin: boolean) {
+  const mode = await getHitProxyMode();
+  const modeIcon = mode === 'cloudflare' ? '☁️' : '⚡';
+  const modeText = mode === 'cloudflare' ? 'CF Worker' : 'Edge Fn';
+  
   const keyboard: any[][] = [
     [{ text: '🚀 Start', callback_data: 'start_hit' }, { text: '🛑 Stop', callback_data: 'stop_hit' }],
-    [{ text: '📅 Schedule Hit', callback_data: 'schedule_hit' }],
+    [{ text: `${modeIcon} Mode: ${modeText}`, callback_data: 'toggle_mode' }, { text: '📅 Schedule', callback_data: 'schedule_hit' }],
   ];
 
   if (admin) {
