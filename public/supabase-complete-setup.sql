@@ -2,8 +2,8 @@
 -- SHUBH OSINT - Complete Supabase Database Setup
 -- =====================================================
 -- Run this SQL in your new Supabase project's SQL Editor
--- Last Updated: 2026-03-03
--- Version: 5.0 (Credit System Removed - Simple Site Password Only)
+-- Last Updated: 2026-03-08
+-- Version: 5.1 (Telegram Bot Integration + CF Worker Proxy)
 -- =====================================================
 -- NOTE: Credit system has been REMOVED. Authentication is now
 -- handled by simple site password (stored in app_settings).
@@ -517,7 +517,7 @@ ON CONFLICT (setting_key) DO NOTHING;
 -- =====================================================
 -- EDGE FUNCTIONS LIST (deploy from supabase/functions/)
 -- =====================================================
--- Version 5.0 Edge Functions:
+-- Version 5.1 Edge Functions:
 -- [LEGACY - no longer used by app]:
 -- 1.  auth-login              - (LEGACY) User login with credit password
 -- 2.  auth-verify             - (LEGACY) Verify session token & get credits
@@ -533,6 +533,7 @@ ON CONFLICT (setting_key) DO NOTHING;
 -- 10. image-to-info           - Image analysis API
 -- 11. execute-scheduled-hits  - Cron-based scheduled bombing executor
 -- 12. fast-hit-all            - Hit ALL enabled APIs (Pro API style)
+-- 13. telegram-bot            - Telegram Bot webhook handler (v5.1)
 --
 -- IMPORTANT CHANGES in v4.4:
 -- - CORS FIX: All edge functions now include extended CORS headers:
@@ -650,13 +651,22 @@ SELECT cron.schedule(
 -- =====================================================
 -- QUICK REFERENCE: Tables & Their Purpose
 -- =====================================================
--- access_passwords  : Stores login credentials with credit info
--- user_sessions     : Active login sessions tracking
--- credit_usage      : Logs all credit deductions
+-- access_passwords  : [LEGACY] Stores login credentials with credit info
+-- user_sessions     : [LEGACY] Active login sessions tracking
+-- credit_usage      : [LEGACY] Logs all credit deductions
 -- app_settings      : Global app configuration (JSON)
 --                     - main_settings: All admin settings synced across devices
 --                     - hit_site_settings: Quick Hit Engine customizable labels
 --                     - fast_api_secret_key: for fast-hit-all auth
+--                     - tgbot_admin_ids: Telegram bot admin user IDs (array)
+--                     - tgbot_config: Bot defaults (dailyLimit, defaultRounds, defaultBatch, defaultDelay)
+--                     - tgbot_cf_workers: CF Worker URLs for load-balanced proxy (array)
+--                     - tgbot_premium_users: Premium user plans + expiry (object)
+--                     - tgbot_global_stats: totalHits, totalUsers counters
+--                     - tgbot_all_users: All user chat IDs for broadcast (array)
+--                     - tgbot_access_keys: Access key passwords (array)
+--                     - tgbot_state_{chatId}: Per-user bot state (running, phone, runId, etc.)
+--                     - tgbot_usage_{chatId}: Per-user daily/total usage counters
 -- captured_photos   : Camera capture photo metadata + device info
 -- captured_videos   : Video capture metadata & URLs
 -- search_history    : All search queries log
@@ -668,4 +678,39 @@ SELECT cron.schedule(
 --                     - phone_number, start_time, interval_seconds
 --                     - max_rounds, is_active, total_hits
 --                     - Executed by pg_cron + execute-scheduled-hits
+-- =====================================================
+--
+-- =====================================================
+-- TELEGRAM BOT SETUP (v5.1)
+-- =====================================================
+-- 1. Set TELEGRAM_BOT_TOKEN in Edge Function Secrets
+-- 2. Deploy: supabase functions deploy telegram-bot
+-- 3. Set webhook: GET https://<PROJECT>.supabase.co/functions/v1/telegram-bot?action=setwebhook
+-- 4. First user to send /setadmin becomes admin
+--
+-- Bot Features:
+-- - Non-stop API hitting with CF Worker proxy + load balancing
+-- - runId-based session locking (instant stop via button or /stop)
+-- - Self-continue architecture (bypasses edge function timeout)
+-- - Premium system (Basic/Pro/Ultimate with expiry)
+-- - Daily limit for free users (configurable via /setlimit)
+-- - Admin panel: manage APIs, keys, workers, premium, broadcast
+-- - Mode toggle: Edge Function ↔ CF Worker (synced with website)
+-- - Progress bar + live status message (single message, edited in-place)
+--
+-- Bot Commands:
+-- /start - Main menu
+-- /stop - Stop current hitting
+-- /stats - View statistics
+-- /settings - View/change settings
+-- /help - All commands
+-- /setadmin - First-time admin setup
+-- /apis - List APIs (admin)
+-- /addapi NAME|URL - Add API (admin)
+-- /workers - List CF workers
+-- /addworker URL - Add worker (admin)
+-- /broadcast MSG - Broadcast to all (admin)
+-- /setmode edge|cf - Change proxy mode (admin)
+-- /setlimit N - Set free user daily limit (admin)
+-- /givepremium ID PLAN DAYS - Give premium (admin)
 -- =====================================================

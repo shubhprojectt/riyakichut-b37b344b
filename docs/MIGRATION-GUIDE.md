@@ -1,7 +1,7 @@
 # 🚀 Complete Migration Guide: Apna Supabase + Vercel Deployment
 
-**Last Updated:** 2026-02-22  
-**Version:** 4.2 (Fast Hit All API + Batch Processing)
+**Last Updated:** 2026-03-08  
+**Version:** 5.1 (Telegram Bot Integration + CF Worker Proxy)
 
 ---
 
@@ -431,7 +431,7 @@ supabase link --project-ref YOUR_PROJECT_ID
 ### 4.4 Edge Functions Deploy Karo
 
 ```bash
-# Sab functions ek saath deploy (v4.2 - 12 functions)
+# Sab functions ek saath deploy (v5.1 - 13 functions)
 supabase functions deploy auth-login
 supabase functions deploy auth-verify
 supabase functions deploy credits-deduct
@@ -444,6 +444,7 @@ supabase functions deploy hit-api
 supabase functions deploy image-to-info
 supabase functions deploy execute-scheduled-hits
 supabase functions deploy fast-hit-all
+supabase functions deploy telegram-bot
 ```
 
 ### 4.5 Edge Function Secrets Set Karo
@@ -454,6 +455,7 @@ Supabase Dashboard → **Settings** → **Edge Functions** → **Secrets**
 |-------------|-------|
 | `MY_SUPABASE_URL` | `https://YOUR_PROJECT_ID.supabase.co` |
 | `MY_SERVICE_ROLE_KEY` | Service Role Key |
+| `TELEGRAM_BOT_TOKEN` | Telegram Bot Token (@BotFather se) |
 
 ### 4.6 Scheduled Hits Cron Setup (Optional)
 
@@ -497,14 +499,14 @@ GitHub repo connect karke deploy karo.
 
 ---
 
-## 📁 Edge Functions Reference (v4.1)
+## 📁 Edge Functions Reference (v5.1)
 
 | Function | Purpose | Method |
 |----------|---------|--------|
-| `auth-login` | User login with password | POST |
-| `auth-verify` | Verify session & get credits | POST |
-| `credits-deduct` | Deduct credits for search | POST |
-| `admin-passwords` | Admin CRUD operations | POST |
+| `auth-login` | (LEGACY) User login with password | POST |
+| `auth-verify` | (LEGACY) Verify session & get credits | POST |
+| `credits-deduct` | (LEGACY) Deduct credits for search | POST |
+| `admin-passwords` | (LEGACY) Admin CRUD operations | POST |
 | `aadhar-search` | Aadhar lookup | POST |
 | `numinfo-v2` | Phone number info | POST |
 | `telegram-osint` | Telegram OSINT API | POST |
@@ -512,7 +514,32 @@ GitHub repo connect karke deploy karo.
 | `hit-api` | API Hit Engine + UA rotation | POST |
 | `image-to-info` | Image analysis API | POST |
 | `execute-scheduled-hits` | Cron scheduled bombing | POST |
-| `fast-hit-all` | Hit ALL enabled APIs at once | POST |
+| `fast-hit-all` | Hit ALL enabled APIs at once | POST/GET |
+| `telegram-bot` | Telegram Bot webhook handler | POST/GET |
+
+---
+
+## 🔄 Version 5.1 Changes
+
+### Telegram Bot Integration
+- ✅ `telegram-bot` edge function — full-featured Telegram bot for API hitting
+- ✅ Non-stop hitting with self-continue architecture (bypasses edge function timeout)
+- ✅ CF Worker proxy support with load balancing (multiple workers)
+- ✅ runId-based session locking for instant stop (STOP button + /stop command)
+- ✅ Premium system: Basic/Pro/Ultimate plans with expiry dates
+- ✅ Daily limit for free users (configurable via /setlimit)
+- ✅ Admin panel: manage APIs, keys, workers, premium, broadcast
+- ✅ Mode toggle: Edge Function ↔ CF Worker (synced with website hit_site_settings)
+- ✅ Progress bar + live status message (single message, edited in-place)
+- ✅ Bot state stored in app_settings (tgbot_state_*, tgbot_config, etc.)
+- ✅ Webhook setup: `GET /functions/v1/telegram-bot?action=setwebhook`
+
+### Telegram Bot Setup Steps
+1. Create bot via @BotFather on Telegram
+2. Set `TELEGRAM_BOT_TOKEN` in Edge Function Secrets
+3. Deploy: `supabase functions deploy telegram-bot`
+4. Set webhook: `GET https://PROJECT.supabase.co/functions/v1/telegram-bot?action=setwebhook`
+5. Send `/setadmin` to bot to become first admin
 
 ---
 
@@ -657,7 +684,7 @@ supabase functions deploy function-name
 | `access_passwords` | Login credentials | Restrictive (Edge only) | ❌ |
 | `user_sessions` | Active sessions | Restrictive (Edge only) | ❌ |
 | `credit_usage` | Credit logs | Restrictive (Edge only) | ❌ |
-| `app_settings` | Global config | Public read/write | ❌ |
+| `app_settings` | Global config + bot state | Public read/write | ❌ |
 | `captured_photos` | Photo metadata | Public (Permissive) | ❌ |
 | `captured_videos` | Video metadata | Public (Permissive) | ❌ |
 | `search_history` | Search logs | Public | ❌ |
@@ -670,16 +697,20 @@ supabase functions deploy function-name
 
 - [ ] Supabase project created
 - [ ] API keys noted
-- [ ] SQL script executed (v4.1)
+- [ ] SQL script executed (v5.1)
 - [ ] Storage buckets created
-- [ ] Edge functions deployed (12 functions)
-- [ ] Secrets configured
+- [ ] Edge functions deployed (13 functions including telegram-bot)
+- [ ] Secrets configured (including TELEGRAM_BOT_TOKEN)
+- [ ] Telegram bot webhook set
+- [ ] Bot admin set (/setadmin)
 - [ ] pg_cron + pg_net enabled (for scheduled hits)
 - [ ] Cron job created for execute-scheduled-hits
 - [ ] fast-hit-all secret key configured (optional)
+- [ ] CF Workers added via /addworker (optional)
 - [ ] Vercel env vars set
 - [ ] Site tested
 - [ ] Hit Engine tested
+- [ ] Telegram Bot tested
 - [ ] Fast Hit All API tested
 - [ ] Scheduled Hits tested
 - [ ] Neon theme verified
