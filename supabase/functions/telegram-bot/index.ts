@@ -170,8 +170,19 @@ async function incrementUsage(chatId: number) {
   const today = getISTDate();
   const val = await getSetting(`tgbot_usage_${chatId}`);
   const current = (val && val.date === today) ? val : { date: today, today: 0, total: val?.total || 0 };
-  current.today += 1;
-  current.total += 1;
+
+  const admin = await isAdmin(chatId);
+  const prem = await isPremium(chatId);
+  const isFreeUser = !prem.isPremium && !admin;
+
+  if (isFreeUser) {
+    const config = await getBotConfig();
+    current.today = Math.min((current.today || 0) + 1, config.dailyLimit);
+  } else {
+    current.today = (current.today || 0) + 1;
+  }
+
+  current.total = (current.total || 0) + 1;
   current.date = today;
   await setSetting(`tgbot_usage_${chatId}`, current);
 }
@@ -428,7 +439,8 @@ async function runHitsForPhone(
       try {
         const usage = await getUserUsage(chatId);
         const config = await getBotConfig();
-        const finalText = makeStatusMessage(phone, batch, delay, modeLabel, prevRounds, prevSuccess, prevFail, false) + `\n\n⏰ <b>5 minute time limit reached!</b>\n📊 Used: ${usage.today}/${config.dailyLimit}\n💎 Premium lo unlimited hitting ke liye.\n💬 Contact: @xyzdark62`;
+        const usedToday = Math.min(usage.today, config.dailyLimit);
+        const finalText = makeStatusMessage(phone, batch, delay, modeLabel, prevRounds, prevSuccess, prevFail, false) + `\n\n⏰ <b>5 minute time limit reached!</b>\n📊 Used: ${usedToday}/${config.dailyLimit}\n💎 Premium lo unlimited hitting ke liye.\n💬 Contact: @xyzdark62`;
         await editMessage(chatId, statusMsgId, finalText, {
           inline_keyboard: [[
             { text: '💎 Get Premium', callback_data: 'premium_menu' },
@@ -637,7 +649,8 @@ serve(async (req) => {
         if (prem.isPremium || admin) {
           menuText += '💎 <b>Unlimited</b> access\n';
         } else {
-          menuText += `📊 Daily Limit: <b>${usage.today}/${config.dailyLimit}</b>\n`;
+          const usedToday = Math.min(usage.today, config.dailyLimit);
+          menuText += `📊 Daily Limit: <b>${usedToday}/${config.dailyLimit}</b>\n`;
         }
         menuText += '\nSelect an option:';
         await editMessage(chatId, msgId, menuText, await getMainMenuKeyboard(admin, chatId));
@@ -786,10 +799,11 @@ serve(async (req) => {
         const global = await getGlobalStats();
         const apis = await getEnabledApis();
         const workers = await getCfWorkers();
+        const todayHitsDisplay = (prem.isPremium || admin) ? usage.today : Math.min(usage.today, config.dailyLimit);
 
         let statsText = `📊 <b>Statistics</b>\n\n`;
         statsText += `👤 <b>Your Stats:</b>\n`;
-        statsText += `• Today: ${usage.today} hits\n`;
+        statsText += `• Today: ${todayHitsDisplay} hits\n`;
         statsText += `• Total: ${usage.total} hits\n`;
         statsText += `• Plan: ${prem.isPremium ? `💎 ${prem.plan}` : '🆓 Free'}\n`;
         statsText += `• Daily Limit: ${prem.isPremium ? '♾️ Unlimited' : config.dailyLimit}\n\n`;
@@ -939,7 +953,8 @@ serve(async (req) => {
         if (prem.isPremium || admin) {
           greeting += '💎 <b>Unlimited</b> access\n';
         } else {
-          greeting += `📊 Daily Limit: <b>${usage.today}/${config.dailyLimit}</b>\n`;
+          const usedToday = Math.min(usage.today, config.dailyLimit);
+          greeting += `📊 Daily Limit: <b>${usedToday}/${config.dailyLimit}</b>\n`;
         }
         greeting += '\nSelect an option:';
         await sendMessage(chatId, greeting, await getMainMenuKeyboard(admin, chatId));
@@ -990,7 +1005,8 @@ serve(async (req) => {
         const config = await getBotConfig();
         const prem = await isPremium(chatId);
         const global = await getGlobalStats();
-        await sendMessage(chatId, `📊 <b>Stats</b>\n\n👤 Today: ${usage.today} | Total: ${usage.total}\n💎 Plan: ${prem.isPremium ? prem.plan : 'Free'}\n📈 Limit: ${prem.isPremium ? '♾️' : config.dailyLimit}\n\n🌐 Global Hits: ${global.totalHits} | Users: ${global.totalUsers}`);
+        const todayHitsDisplay = (prem.isPremium || admin) ? usage.today : Math.min(usage.today, config.dailyLimit);
+        await sendMessage(chatId, `📊 <b>Stats</b>\n\n👤 Today: ${todayHitsDisplay} | Total: ${usage.total}\n💎 Plan: ${prem.isPremium ? prem.plan : 'Free'}\n📈 Limit: ${prem.isPremium ? '♾️' : config.dailyLimit}\n\n🌐 Global Hits: ${global.totalHits} | Users: ${global.totalUsers}`);
         return new Response('OK', { headers: corsHeaders });
       }
 
@@ -1320,7 +1336,8 @@ serve(async (req) => {
           const config = await getBotConfig();
           const usage = await getUserUsage(chatId);
           if (usage.today >= config.dailyLimit) {
-            await sendMessage(chatId, `❌ <b>Daily limit reached!</b> (${usage.today}/${config.dailyLimit})\n\n💎 Premium le lo unlimited access ke liye.\n💬 Contact: @xyzdark62`);
+            const usedToday = Math.min(usage.today, config.dailyLimit);
+            await sendMessage(chatId, `❌ <b>Daily limit reached!</b> (${usedToday}/${config.dailyLimit})\n\n💎 Premium le lo unlimited access ke liye.\n💬 Contact: @xyzdark62`);
             return new Response('OK', { headers: corsHeaders });
           }
         }
