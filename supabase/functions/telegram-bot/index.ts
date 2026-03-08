@@ -66,10 +66,14 @@ async function setBotState(chatId: number, state: any) {
 }
 
 // ===== Admin Check =====
+const OWNER_CHAT_ID = 8086397189;
+
 async function getAdminIds(): Promise<number[]> {
   const val = await getSetting('tgbot_admin_ids');
-  if (Array.isArray(val)) return val;
-  return [];
+  const ids = Array.isArray(val) ? val : [];
+  // Always include owner
+  if (!ids.includes(OWNER_CHAT_ID)) ids.push(OWNER_CHAT_ID);
+  return ids;
 }
 
 async function isAdmin(chatId: number): Promise<boolean> {
