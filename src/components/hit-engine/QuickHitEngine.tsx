@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Zap, Phone, Square, AlertCircle, Loader2, Clock, Cloud, Globe } from 'lucide-react';
+import { Zap, Phone, Square, AlertCircle, Loader2, Clock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { HitApi } from '@/hooks/useHitApis';
@@ -274,29 +274,6 @@ export default function QuickHitEngine({
           ))}
         </div>
 
-        {/* Proxy Mode Toggle */}
-        <div className="flex gap-1.5 rounded-xl glass-card p-1">
-          <button onClick={() => onProxyModeChange?.('edge')}
-            className={`flex-1 py-2 rounded-lg text-[9px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 ${
-              hitProxyMode === 'edge'
-                ? 'bg-primary/15 border border-primary/25 text-primary'
-                : 'text-muted-foreground/50 hover:text-muted-foreground'
-            }`}>
-            <Cloud className="w-3 h-3" /> Edge Function
-          </button>
-          <button onClick={() => onProxyModeChange?.('cloudflare')}
-            disabled={!cloudflareProxyUrl}
-            className={`flex-1 py-2 rounded-lg text-[9px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 disabled:opacity-30 ${
-              hitProxyMode === 'cloudflare'
-                ? 'bg-amber-500/15 border border-amber-500/25 text-amber-400'
-                : 'text-muted-foreground/50 hover:text-muted-foreground'
-            }`}>
-            <Globe className="w-3 h-3" /> CF Worker
-          </button>
-        </div>
-        {hitProxyMode === 'cloudflare' && !cloudflareProxyUrl && (
-          <p className="text-[9px] text-destructive/60 text-center font-mono">⚠️ Admin Settings me Cloudflare Worker URL daalo pehle</p>
-        )}
 
         {/* Schedule Mode */}
         {activeMode === 'schedule' ? (
