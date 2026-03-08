@@ -493,8 +493,9 @@ serve(async (req) => {
 
       // --- Stop ---
       if (data === 'stop_hit') {
-        await setBotState(chatId, { waiting_phone: false });
-        await editMessage(chatId, msgId, '🛑 <b>Stopped!</b>\n\n/start bhejo dobara shuru karne ke liye.');
+        await setBotState(chatId, { running: false, waiting_phone: false });
+        await answerCallbackQuery(cb.id, '🛑 Stopping...');
+        await editMessage(chatId, msgId, '🛑 <b>Stop signal sent!</b>\n\n<i>Hitting will stop after current round completes...</i>');
         return new Response('OK', { headers: corsHeaders });
       }
 
