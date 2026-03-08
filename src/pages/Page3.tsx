@@ -55,6 +55,7 @@ const Page3 = () => {
             phoneLabel={settings.phoneLabel} phonePlaceholder={settings.phonePlaceholder}
             hitButtonText={settings.hitButtonText} stopButtonText={settings.stopButtonText}
             noApisWarning={settings.noApisWarning} uaRotation={settings.uaRotationEnabled}
+            cloudflareProxyUrl={settings.cloudflareProxyUrl}
             enterNumberLabel={settings.enterNumberLabel}
             apisActiveText={settings.apisActiveText}
             sequentialLabel={settings.sequentialLabel}

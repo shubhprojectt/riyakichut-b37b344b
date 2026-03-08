@@ -495,6 +495,7 @@ const SearchPanel = ({ theme = "cyber-grid" }: { theme?: string }) => {
             stopButtonText={hitSettings.stopButtonText}
             noApisWarning={hitSettings.noApisWarning}
             uaRotation={hitSettings.uaRotationEnabled}
+            cloudflareProxyUrl={hitSettings.cloudflareProxyUrl}
           />
           <LogsPanel logs={logs} onClear={clearLogs} />
         </div>
