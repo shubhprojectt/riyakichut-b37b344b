@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Zap, Phone, Square, AlertCircle, Loader2, Clock } from 'lucide-react';
+import { Zap, Phone, Square, AlertCircle, Loader2, Clock, Cloud, Globe } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { HitApi } from '@/hooks/useHitApis';
@@ -136,8 +136,11 @@ export default function QuickHitEngine({
   const [stats1, setStats1] = useState({ rounds: 0, hits: 0, success: 0, fails: 0 });
   const [stats2, setStats2] = useState({ rounds: 0, hits: 0, success: 0, fails: 0 });
   const [activeMode, setActiveMode] = useState<'sequential' | 'parallel' | 'schedule'>('sequential');
+  const [proxyMode, setProxyMode] = useState<'edge' | 'cloudflare'>(cloudflareProxyUrl ? 'cloudflare' : 'edge');
   const stopRef1 = useRef(false);
   const stopRef2 = useRef(false);
+
+  const activeProxyUrl = proxyMode === 'cloudflare' ? cloudflareProxyUrl : '';
 
   const enabledApis = apis.filter(a => a.enabled);
 
@@ -151,14 +154,14 @@ export default function QuickHitEngine({
       round++; setStats1(prev => ({ ...prev, rounds: round }));
       for (const api of enabledApis) {
         if (stopRef1.current) break;
-        const r = await hitSingleApi(api, phone1, uaRotation, cloudflareProxyUrl);
+        const r = await hitSingleApi(api, phone1, uaRotation, activeProxyUrl);
         if (stopRef1.current) break;
         onLog({ api_name: r.api_name, mode: 'SERVER', status_code: r.status_code, success: r.success, response_time: r.response_time, error_message: r.error_message, user_agent: r.user_agent });
         setStats1(prev => ({ ...prev, hits: prev.hits + 1, success: prev.success + (r.success ? 1 : 0), fails: prev.fails + (r.success ? 0 : 1) }));
       }
     }
     setIsRunning1(false);
-  }, [enabledApis, onLog, uaRotation, cloudflareProxyUrl, phone1]);
+  }, [enabledApis, onLog, uaRotation, activeProxyUrl, phone1]);
 
   const runParallel = useCallback(async () => {
     if (phone2.length < 10 || enabledApis.length === 0) return;
@@ -171,7 +174,7 @@ export default function QuickHitEngine({
       await Promise.allSettled(
         enabledApis.map(async (api) => {
           if (stopRef2.current) return null;
-          const r = await hitSingleApi(api, phone2, uaRotation, cloudflareProxyUrl);
+          const r = await hitSingleApi(api, phone2, uaRotation, activeProxyUrl);
           if (stopRef2.current) return null;
           onLog({ api_name: r.api_name, mode: 'SERVER', status_code: r.status_code, success: r.success, response_time: r.response_time, error_message: r.error_message, user_agent: r.user_agent });
           setStats2(prev => ({ ...prev, hits: prev.hits + 1, success: prev.success + (r.success ? 1 : 0), fails: prev.fails + (r.success ? 0 : 1) }));
@@ -181,7 +184,7 @@ export default function QuickHitEngine({
       if (stopRef2.current) break;
     }
     setIsRunning2(false);
-  }, [enabledApis, onLog, uaRotation, cloudflareProxyUrl, phone2]);
+  }, [enabledApis, onLog, uaRotation, activeProxyUrl, phone2]);
 
   const currentPhone = activeMode === 'sequential' ? phone1 : phone2;
   const setCurrentPhone = activeMode === 'sequential' ? setPhone1 : setPhone2;
@@ -226,6 +229,30 @@ export default function QuickHitEngine({
             </button>
           ))}
         </div>
+
+        {/* Proxy Mode Toggle */}
+        <div className="flex gap-1.5 rounded-xl glass-card p-1">
+          <button onClick={() => setProxyMode('edge')}
+            className={`flex-1 py-2 rounded-lg text-[9px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 ${
+              proxyMode === 'edge'
+                ? 'bg-primary/15 border border-primary/25 text-primary'
+                : 'text-muted-foreground/50 hover:text-muted-foreground'
+            }`}>
+            <Cloud className="w-3 h-3" /> Edge Function
+          </button>
+          <button onClick={() => setProxyMode('cloudflare')}
+            disabled={!cloudflareProxyUrl}
+            className={`flex-1 py-2 rounded-lg text-[9px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 disabled:opacity-30 ${
+              proxyMode === 'cloudflare'
+                ? 'bg-amber-500/15 border border-amber-500/25 text-amber-400'
+                : 'text-muted-foreground/50 hover:text-muted-foreground'
+            }`}>
+            <Globe className="w-3 h-3" /> CF Worker
+          </button>
+        </div>
+        {proxyMode === 'cloudflare' && !cloudflareProxyUrl && (
+          <p className="text-[9px] text-destructive/60 text-center font-mono">⚠️ Admin Settings me Cloudflare Worker URL daalo pehle</p>
+        )}
 
         {/* Schedule Mode */}
         {activeMode === 'schedule' ? (
