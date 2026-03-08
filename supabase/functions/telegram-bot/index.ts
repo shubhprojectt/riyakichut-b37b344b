@@ -495,13 +495,25 @@ async function runHitsForPhone(
 }
 
 // ===== Main Menu Keyboard =====
-async function getMainMenuKeyboard(admin: boolean) {
+async function getMainMenuKeyboard(admin: boolean, chatId?: number) {
   const mode = await getHitProxyMode();
   const modeIcon = mode === 'cloudflare' ? '☁️' : '⚡';
   const modeText = mode === 'cloudflare' ? 'CF Worker' : 'Edge Fn';
   
+  // Check if hitting is active — show Stop only when running
+  let isHitting = false;
+  if (chatId) {
+    const state = await getBotState(chatId);
+    isHitting = !!state?.running;
+  }
+  
+  const topRow: any[] = [{ text: '🚀 Start', callback_data: 'start_hit' }];
+  if (isHitting) {
+    topRow.push({ text: '🛑 Stop', callback_data: 'stop_hit' });
+  }
+  
   const keyboard: any[][] = [
-    [{ text: '🚀 Start', callback_data: 'start_hit' }, { text: '🛑 Stop', callback_data: 'stop_hit' }],
+    topRow,
     [{ text: `${modeIcon} Mode: ${modeText}`, callback_data: 'toggle_mode' }, { text: '📅 Schedule', callback_data: 'schedule_hit' }],
   ];
 
@@ -578,7 +590,7 @@ serve(async (req) => {
 
       // --- Main Menu ---
       if (data === 'main_menu') {
-        await editMessage(chatId, msgId, '🔥 <b>Hit API Bot</b>\n\nSelect an option:', await getMainMenuKeyboard(admin));
+        await editMessage(chatId, msgId, '🔥 <b>Hit API Bot</b>\n\nSelect an option:', await getMainMenuKeyboard(admin, chatId));
         return new Response('OK', { headers: corsHeaders });
       }
 
@@ -589,7 +601,7 @@ serve(async (req) => {
         const newMode = currentMode === 'edge' ? 'cloudflare' : 'edge';
         await setHitProxyMode(newMode);
         const modeLabel = newMode === 'cloudflare' ? '☁️ CF Worker' : '⚡ Edge Function';
-        await editMessage(chatId, msgId, `🔄 <b>Mode Changed!</b>\n\n🌐 Now using: <b>${modeLabel}</b>\n\n<i>Website aur bot dono isi mode se hit karenge.</i>`, await getMainMenuKeyboard(admin));
+        await editMessage(chatId, msgId, `🔄 <b>Mode Changed!</b>\n\n🌐 Now using: <b>${modeLabel}</b>\n\n<i>Website aur bot dono isi mode se hit karenge.</i>`, await getMainMenuKeyboard(admin, chatId));
         return new Response('OK', { headers: corsHeaders });
       }
 
@@ -768,7 +780,7 @@ serve(async (req) => {
 
       // --- /start ---
       if (text === '/start') {
-        await sendMessage(chatId, '🔥 <b>Hit API Bot</b>\n\nSelect an option:', await getMainMenuKeyboard(admin));
+        await sendMessage(chatId, '🔥 <b>Hit API Bot</b>\n\nSelect an option:', await getMainMenuKeyboard(admin, chatId));
         return new Response('OK', { headers: corsHeaders });
       }
 
