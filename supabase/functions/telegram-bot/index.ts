@@ -285,8 +285,31 @@ async function hitSingleApi(api: any, phone: string, workerUrl?: string | null):
   }
 }
 
+// ===== Progress Bar Helper =====
+function makeProgressBar(success: number, fail: number, total: number): string {
+  const filled = total > 0 ? Math.round((success / Math.max(total, 1)) * 10) : 0;
+  const empty = 10 - filled;
+  return '▓'.repeat(filled) + '░'.repeat(empty);
+}
+
+function makeStatusMessage(phone: string, batch: number, delay: number, modeLabel: string, round: number, success: number, fail: number, running: boolean): string {
+  const total = success + fail;
+  const bar = makeProgressBar(success, total, total);
+  const status = running ? '⚡ RUNNING...' : '🛑 STOPPED';
+  let text = `🚀 <b>${status}</b>\n\n`;
+  text += `📱 Number: <code>${phone}</code>\n`;
+  text += `🌐 Mode: ${modeLabel} | 📦 Batch: ${batch} | ⏱️ ${delay}s\n\n`;
+  text += `📊 <b>Progress:</b>\n`;
+  text += `${bar} ${total > 0 ? Math.round((success / total) * 100) : 0}%\n\n`;
+  text += `🔄 Rounds: <b>${round}</b>\n`;
+  text += `✅ Success: <b>${success}</b>\n`;
+  text += `❌ Failed: <b>${fail}</b>\n`;
+  text += `📈 Total Hits: <b>${total}</b>`;
+  return text;
+}
+
 // Self-invoke to continue hitting (bypasses edge function timeout)
-async function selfContinueHits(chatId: number, phone: string, batch: number, delay: number, totalRounds: number, totalSuccess: number, totalFail: number) {
+async function selfContinueHits(chatId: number, phone: string, batch: number, delay: number, totalRounds: number, totalSuccess: number, totalFail: number, statusMsgId: number) {
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
   try {
@@ -295,7 +318,7 @@ async function selfContinueHits(chatId: number, phone: string, batch: number, de
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
       body: JSON.stringify({
         _internal_continue: true,
-        chatId, phone, batch, delay, totalRounds, totalSuccess, totalFail,
+        chatId, phone, batch, delay, totalRounds, totalSuccess, totalFail, statusMsgId,
       }),
     });
   } catch (e) {
@@ -303,7 +326,7 @@ async function selfContinueHits(chatId: number, phone: string, batch: number, de
   }
 }
 
-async function runHitsForPhone(chatId: number, phone: string, rounds = 1, batch = 5, delay = 2, isContinuous = false, prevRounds = 0, prevSuccess = 0, prevFail = 0) {
+async function runHitsForPhone(chatId: number, phone: string, rounds = 1, batch = 5, delay = 2, isContinuous = false, prevRounds = 0, prevSuccess = 0, prevFail = 0, statusMsgId = 0) {
   const apis = await getEnabledApis();
   if (apis.length === 0) {
     await sendMessage(chatId, '❌ <b>No APIs configured!</b>');
@@ -311,34 +334,28 @@ async function runHitsForPhone(chatId: number, phone: string, rounds = 1, batch 
   }
 
   const proxyMode = await getHitProxyMode();
-  const modeLabel = proxyMode === 'cloudflare' ? '☁️ CF Worker' : '⚡ Edge Function';
+  const modeLabel = proxyMode === 'cloudflare' ? '☁️ CF Worker' : '⚡ Edge Fn';
 
-  // First invocation: show start message
+  // First invocation: send single status message
   if (!isContinuous) {
     await setBotState(chatId, { running: true, phone, batch, delay });
-    await sendMessage(chatId, `🚀 <b>NON-STOP HITTING STARTED!</b>\n📱 Number: <code>${phone}</code>\n📦 Batch: ${batch} | ⏱️ Delay: ${delay}s\n🌐 Mode: ${modeLabel}\n♾️ Hitting continuously until you press 🛑 STOP\n\n⏳ Running...`, {
+    const statusText = makeStatusMessage(phone, batch, delay, modeLabel, 0, 0, 0, true);
+    const result = await sendMessage(chatId, statusText, {
       inline_keyboard: [[{ text: '🛑 STOP NOW', callback_data: 'stop_hit' }]]
     });
+    statusMsgId = result?.result?.message_id || 0;
   }
 
   let successCount = prevSuccess, failCount = prevFail;
   let roundsDone = prevRounds;
-  const MAX_ROUNDS_PER_INVOCATION = 3; // Do 3 rounds per invocation to stay within timeout
+  const MAX_ROUNDS_PER_INVOCATION = 3;
   let roundsThisInvocation = 0;
+  let stopped = false;
 
   while (roundsThisInvocation < MAX_ROUNDS_PER_INVOCATION) {
-    // Check if stopped
+    // Check if stopped BEFORE each round
     const state = await getBotState(chatId);
-    if (!state?.running) {
-      // User pressed stop
-      await sendMessage(chatId, `🛑 <b>STOPPED!</b>\n\n📊 Total Rounds: <b>${roundsDone}</b>\n✅ Success: <b>${successCount}</b>\n❌ Failed: <b>${failCount}</b>\n📱 Number: <code>${phone}</code>`, {
-        inline_keyboard: [[
-          { text: '🔄 Start Again', callback_data: `hit_again:${phone}:1:${batch}:${delay}` },
-          { text: '🏠 Main Menu', callback_data: 'main_menu' },
-        ]]
-      });
-      return;
-    }
+    if (!state?.running) { stopped = true; break; }
 
     roundsDone++;
     roundsThisInvocation++;
@@ -346,6 +363,10 @@ async function runHitsForPhone(chatId: number, phone: string, rounds = 1, batch 
     if (roundsThisInvocation > 1) await new Promise(r => setTimeout(r, delay * 1000));
 
     for (let i = 0; i < apis.length; i += batch) {
+      // Check stop before each batch for INSTANT stop
+      const midState = await getBotState(chatId);
+      if (!midState?.running) { stopped = true; break; }
+
       const batchApis = apis.slice(i, i + batch);
       const workerUrl = proxyMode === 'cloudflare' ? await getNextWorker() : null;
 
@@ -355,8 +376,7 @@ async function runHitsForPhone(chatId: number, phone: string, rounds = 1, batch 
 
       for (const r of batchResults) {
         if (r.status === 'fulfilled') {
-          const res = r.value;
-          if (res.success) successCount++;
+          if (r.value.success) successCount++;
           else failCount++;
         } else {
           failCount++;
@@ -366,30 +386,54 @@ async function runHitsForPhone(chatId: number, phone: string, rounds = 1, batch 
       if (i + batch < apis.length) await new Promise(r => setTimeout(r, 500));
     }
 
-    // Send periodic update every 3 rounds
-    if (roundsDone % 3 === 0) {
-      await sendMessage(chatId, `⚡ <b>Round ${roundsDone} complete</b>\n✅ ${successCount} | ❌ ${failCount}\n📱 <code>${phone}</code>\n♾️ Still running...`, {
-        inline_keyboard: [[{ text: '🛑 STOP NOW', callback_data: 'stop_hit' }]]
-      });
+    if (stopped) break;
+
+    // Edit the single status message with updated stats
+    if (statusMsgId) {
+      try {
+        const statusText = makeStatusMessage(phone, batch, delay, modeLabel, roundsDone, successCount, failCount, true);
+        await editMessage(chatId, statusMsgId, statusText, {
+          inline_keyboard: [[{ text: '🛑 STOP NOW', callback_data: 'stop_hit' }]]
+        });
+      } catch {}
     }
+  }
+
+  await incrementUsage(chatId);
+  await incrementGlobalHits(successCount - prevSuccess + failCount - prevFail);
+
+  if (stopped) {
+    // Final stopped message - edit the same message
+    if (statusMsgId) {
+      try {
+        const finalText = makeStatusMessage(phone, batch, delay, modeLabel, roundsDone, successCount, failCount, false);
+        await editMessage(chatId, statusMsgId, finalText, {
+          inline_keyboard: [[
+            { text: '🔄 Start Again', callback_data: `hit_again:${phone}:1:${batch}:${delay}` },
+            { text: '🏠 Main Menu', callback_data: 'main_menu' },
+          ]]
+        });
+      } catch {}
+    }
+    return;
   }
 
   // Check again before self-continuing
   const finalState = await getBotState(chatId);
   if (finalState?.running) {
-    await incrementUsage(chatId);
-    await incrementGlobalHits(successCount - prevSuccess + failCount - prevFail);
-    // Self-invoke to continue
-    selfContinueHits(chatId, phone, batch, delay, roundsDone, successCount, failCount);
+    selfContinueHits(chatId, phone, batch, delay, roundsDone, successCount, failCount, statusMsgId);
   } else {
-    await incrementUsage(chatId);
-    await incrementGlobalHits(successCount - prevSuccess + failCount - prevFail);
-    await sendMessage(chatId, `🛑 <b>STOPPED!</b>\n\n📊 Total Rounds: <b>${roundsDone}</b>\n✅ Success: <b>${successCount}</b>\n❌ Failed: <b>${failCount}</b>\n📱 Number: <code>${phone}</code>`, {
-      inline_keyboard: [[
-        { text: '🔄 Start Again', callback_data: `hit_again:${phone}:1:${batch}:${delay}` },
-        { text: '🏠 Main Menu', callback_data: 'main_menu' },
-      ]]
-    });
+    if (statusMsgId) {
+      try {
+        const finalText = makeStatusMessage(phone, batch, delay, modeLabel, roundsDone, successCount, failCount, false);
+        await editMessage(chatId, statusMsgId, finalText, {
+          inline_keyboard: [[
+            { text: '🔄 Start Again', callback_data: `hit_again:${phone}:1:${batch}:${delay}` },
+            { text: '🏠 Main Menu', callback_data: 'main_menu' },
+          ]]
+        });
+      } catch {}
+    }
   }
 }
 
