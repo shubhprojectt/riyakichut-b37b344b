@@ -335,6 +335,7 @@ async function selfContinueHits(
   totalFail: number,
   statusMsgId: number,
   nextApiIndex: number,
+  runId: string,
 ) {
   const backendUrl = Deno.env.get('SUPABASE_URL') ?? '';
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -354,6 +355,7 @@ async function selfContinueHits(
         totalFail,
         statusMsgId,
         nextApiIndex,
+        runId,
       }),
     });
   } catch (e) {
