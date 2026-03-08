@@ -5,6 +5,27 @@ import { supabase } from '@/integrations/supabase/client';
 import { HitApi } from '@/hooks/useHitApis';
 import { HitLog } from '@/hooks/useHitLogs';
 import ScheduledHit from '@/components/ScheduledHit';
+import { toast } from 'sonner';
+
+// Track consecutive fails per API to auto-disable
+const failCountMap = new Map<string, number>();
+const FAIL_THRESHOLD = 3;
+
+async function markApiFailed(apiId: string, apiName: string) {
+  const count = (failCountMap.get(apiId) || 0) + 1;
+  failCountMap.set(apiId, count);
+  if (count >= FAIL_THRESHOLD) {
+    try {
+      await supabase.from('hit_apis').update({ enabled: false }).eq('id', apiId);
+      toast.error(`❌ "${apiName}" auto-disabled (${FAIL_THRESHOLD} fails)`);
+      failCountMap.delete(apiId);
+    } catch {}
+  }
+}
+
+function markApiSuccess(apiId: string) {
+  failCountMap.delete(apiId);
+}
 
 function replacePlaceholders(text: string, phone: string): string {
   return text.replace(/\{PHONE\}/gi, phone);
