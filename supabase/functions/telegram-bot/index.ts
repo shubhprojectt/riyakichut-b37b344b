@@ -380,6 +380,7 @@ async function runHitsForPhone(
   statusMsgId = 0,
   currentApiIndex = 0,
   runId = '',
+  startedAt = 0,
 ) {
   const apis = await getEnabledApis();
   if (apis.length === 0) {
@@ -390,16 +391,40 @@ async function runHitsForPhone(
   const proxyMode = await getHitProxyMode();
   const modeLabel = proxyMode === 'cloudflare' ? '☁️ CF Worker' : '⚡ Edge Fn';
 
+  const admin = await isAdmin(chatId);
+  const prem = await isPremium(chatId);
+  const isFreeUser = !prem.isPremium && !admin;
+  const FREE_TIME_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
+
   // First invocation: create one status message only once
   if (!isContinuous) {
     runId = crypto.randomUUID();
-    await setBotState(chatId, { running: true, waiting_phone: false, phone, batch, delay, runId });
+    startedAt = Date.now();
+    await setBotState(chatId, { running: true, waiting_phone: false, phone, batch, delay, runId, startedAt });
     const statusText = makeStatusMessage(phone, batch, delay, modeLabel, 0, 0, 0, true);
     const result = await sendMessage(chatId, statusText, {
       inline_keyboard: [[{ text: '🛑 STOP NOW', callback_data: 'stop_hit' }]],
     });
     statusMsgId = result?.result?.message_id || 0;
     currentApiIndex = 0;
+  }
+
+  // Free user 5-min time limit check
+  if (isFreeUser && startedAt > 0 && (Date.now() - startedAt) >= FREE_TIME_LIMIT_MS) {
+    await setBotState(chatId, { running: false });
+    if (statusMsgId) {
+      try {
+        const finalText = makeStatusMessage(phone, batch, delay, modeLabel, prevRounds, prevSuccess, prevFail, false) + '\n\n⏰ <b>5 minute time limit reached!</b>\n💎 Premium lo unlimited hitting ke liye.\n💬 Contact: @xyzdark62';
+        await editMessage(chatId, statusMsgId, finalText, {
+          inline_keyboard: [[
+            { text: '💎 Get Premium', callback_data: 'premium_menu' },
+            { text: '🏠 Main Menu', callback_data: 'main_menu' },
+          ]],
+        });
+      } catch {}
+    }
+    await incrementUsage(chatId);
+    return;
   }
 
   let successCount = prevSuccess;
