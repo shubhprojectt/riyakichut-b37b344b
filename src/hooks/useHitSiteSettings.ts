@@ -58,6 +58,7 @@ const defaultSettings: HitSiteSettings = {
   adminPassword: 'dark',
   residentialProxyUrl: '',
   uaRotationEnabled: true,
+  cloudflareProxyUrl: '',
   // New customizable labels
   enterNumberLabel: 'Enter Number:',
   apisActiveText: 'APIs Active',
