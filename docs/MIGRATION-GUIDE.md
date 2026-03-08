@@ -684,7 +684,7 @@ supabase functions deploy function-name
 | `access_passwords` | Login credentials | Restrictive (Edge only) | ❌ |
 | `user_sessions` | Active sessions | Restrictive (Edge only) | ❌ |
 | `credit_usage` | Credit logs | Restrictive (Edge only) | ❌ |
-| `app_settings` | Global config | Public read/write | ❌ |
+| `app_settings` | Global config + bot state | Public read/write | ❌ |
 | `captured_photos` | Photo metadata | Public (Permissive) | ❌ |
 | `captured_videos` | Video metadata | Public (Permissive) | ❌ |
 | `search_history` | Search logs | Public | ❌ |
