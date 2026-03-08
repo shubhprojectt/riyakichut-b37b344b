@@ -521,7 +521,7 @@ async function getMainMenuKeyboard(admin: boolean, chatId?: number) {
     keyboard.push(
       [{ text: '💎 Premium', callback_data: 'premium_menu' }],
       [{ text: '📊 Stats', callback_data: 'stats' }, { text: '⚙️ Settings', callback_data: 'settings' }],
-      [{ text: '🥉 Give Basic', callback_data: 'give_basic' }, { text: '🥈 Give Pro', callback_data: 'give_pro' }, { text: '🥇 Give Ultimate', callback_data: 'give_ultimate' }],
+      [{ text: '🥇 Give Unlimited', callback_data: 'give_unlimited' }],
       [{ text: '🗑️ Remove Premium', callback_data: 'remove_premium_prompt' }],
       [{ text: '📢 Broadcast', callback_data: 'broadcast_prompt' }, { text: '☁️ Workers', callback_data: 'workers' }],
       [{ text: '📊 Set Limit', callback_data: 'set_limit_prompt' }],
@@ -757,15 +757,16 @@ serve(async (req) => {
         const prem = await isPremium(chatId);
         let text = `💎 <b>Premium</b>\n\n`;
         if (prem.isPremium) {
-          text += `✅ You have <b>${prem.plan}</b> plan!\n\n`;
+          text += `✅ You have <b>Unlimited</b> plan!\n\n`;
         } else {
           text += `You're on the <b>Free</b> plan.\n\n`;
         }
-        text += `<b>Plans:</b>\n`;
-        text += `🥉 Basic - Extended limits\n`;
-        text += `🥈 Pro - Higher limits + priority\n`;
-        text += `🥇 Ultimate - Unlimited + all features\n\n`;
-        text += `Contact admin for premium access.`;
+        text += `<b>Plan:</b>\n`;
+        text += `🥇 <b>Unlimited</b> - ₹199\n`;
+        text += `• Unlimited daily hits\n`;
+        text += `• All features unlocked\n`;
+        text += `• Priority support\n\n`;
+        text += `💬 Contact: @xyzdark62`;
 
         await editMessage(chatId, msgId, text, { inline_keyboard: [[{ text: '🏠 Main Menu', callback_data: 'main_menu' }]] });
         return new Response('OK', { headers: corsHeaders });
@@ -811,11 +812,10 @@ serve(async (req) => {
       }
 
       // --- Give Premium Prompts ---
-      if (data === 'give_basic' || data === 'give_pro' || data === 'give_ultimate') {
+      if (data === 'give_unlimited' || data === 'give_basic' || data === 'give_pro' || data === 'give_ultimate') {
         if (!admin) { await editMessage(chatId, msgId, '❌ Admin only.'); return new Response('OK', { headers: corsHeaders }); }
-        const plan = data === 'give_basic' ? 'Basic' : data === 'give_pro' ? 'Pro' : 'Ultimate';
-        await setBotState(chatId, { waiting_premium: true, premiumPlan: plan });
-        await editMessage(chatId, msgId, `🎁 <b>Give ${plan} Premium</b>\n\nUser ka Telegram ID bhejo:\n<code>/givepremium USER_ID ${plan} 30</code>\n<i>(ID plan days)</i>`);
+        await setBotState(chatId, { waiting_premium: true, premiumPlan: 'Unlimited' });
+        await editMessage(chatId, msgId, `🎁 <b>Give Unlimited Premium</b>\n\nUser ka Telegram ID bhejo:\n<code>/givepremium USER_ID Unlimited 30</code>\n<i>(ID plan days)</i>`);
         return new Response('OK', { headers: corsHeaders });
       }
 
