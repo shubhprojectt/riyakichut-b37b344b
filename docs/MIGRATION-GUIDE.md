@@ -499,14 +499,14 @@ GitHub repo connect karke deploy karo.
 
 ---
 
-## 📁 Edge Functions Reference (v4.1)
+## 📁 Edge Functions Reference (v5.1)
 
 | Function | Purpose | Method |
 |----------|---------|--------|
-| `auth-login` | User login with password | POST |
-| `auth-verify` | Verify session & get credits | POST |
-| `credits-deduct` | Deduct credits for search | POST |
-| `admin-passwords` | Admin CRUD operations | POST |
+| `auth-login` | (LEGACY) User login with password | POST |
+| `auth-verify` | (LEGACY) Verify session & get credits | POST |
+| `credits-deduct` | (LEGACY) Deduct credits for search | POST |
+| `admin-passwords` | (LEGACY) Admin CRUD operations | POST |
 | `aadhar-search` | Aadhar lookup | POST |
 | `numinfo-v2` | Phone number info | POST |
 | `telegram-osint` | Telegram OSINT API | POST |
@@ -514,7 +514,8 @@ GitHub repo connect karke deploy karo.
 | `hit-api` | API Hit Engine + UA rotation | POST |
 | `image-to-info` | Image analysis API | POST |
 | `execute-scheduled-hits` | Cron scheduled bombing | POST |
-| `fast-hit-all` | Hit ALL enabled APIs at once | POST |
+| `fast-hit-all` | Hit ALL enabled APIs at once | POST/GET |
+| `telegram-bot` | Telegram Bot webhook handler | POST/GET |
 
 ---
 
