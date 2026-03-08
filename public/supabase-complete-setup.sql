@@ -517,7 +517,7 @@ ON CONFLICT (setting_key) DO NOTHING;
 -- =====================================================
 -- EDGE FUNCTIONS LIST (deploy from supabase/functions/)
 -- =====================================================
--- Version 5.0 Edge Functions:
+-- Version 5.1 Edge Functions:
 -- [LEGACY - no longer used by app]:
 -- 1.  auth-login              - (LEGACY) User login with credit password
 -- 2.  auth-verify             - (LEGACY) Verify session token & get credits
@@ -533,6 +533,7 @@ ON CONFLICT (setting_key) DO NOTHING;
 -- 10. image-to-info           - Image analysis API
 -- 11. execute-scheduled-hits  - Cron-based scheduled bombing executor
 -- 12. fast-hit-all            - Hit ALL enabled APIs (Pro API style)
+-- 13. telegram-bot            - Telegram Bot webhook handler (v5.1)
 --
 -- IMPORTANT CHANGES in v4.4:
 -- - CORS FIX: All edge functions now include extended CORS headers:
