@@ -697,16 +697,20 @@ supabase functions deploy function-name
 
 - [ ] Supabase project created
 - [ ] API keys noted
-- [ ] SQL script executed (v4.1)
+- [ ] SQL script executed (v5.1)
 - [ ] Storage buckets created
-- [ ] Edge functions deployed (12 functions)
-- [ ] Secrets configured
+- [ ] Edge functions deployed (13 functions including telegram-bot)
+- [ ] Secrets configured (including TELEGRAM_BOT_TOKEN)
+- [ ] Telegram bot webhook set
+- [ ] Bot admin set (/setadmin)
 - [ ] pg_cron + pg_net enabled (for scheduled hits)
 - [ ] Cron job created for execute-scheduled-hits
 - [ ] fast-hit-all secret key configured (optional)
+- [ ] CF Workers added via /addworker (optional)
 - [ ] Vercel env vars set
 - [ ] Site tested
 - [ ] Hit Engine tested
+- [ ] Telegram Bot tested
 - [ ] Fast Hit All API tested
 - [ ] Scheduled Hits tested
 - [ ] Neon theme verified
