@@ -292,7 +292,9 @@ async function runHitsForPhone(chatId: number, phone: string, rounds = 1, batch 
     return;
   }
 
-  await sendMessage(chatId, `🚀 <b>Hitting ${apis.length} APIs</b>\n📱 Number: <code>${phone}</code>\n🔄 Rounds: ${rounds} | Batch: ${batch} | Delay: ${delay}s\n⏳ Please wait...`);
+  const proxyMode = await getHitProxyMode();
+  const modeLabel = proxyMode === 'cloudflare' ? '☁️ CF Worker' : '⚡ Edge Function';
+  await sendMessage(chatId, `🚀 <b>Hitting ${apis.length} APIs</b>\n📱 Number: <code>${phone}</code>\n🔄 Rounds: ${rounds} | Batch: ${batch} | Delay: ${delay}s\n🌐 Mode: ${modeLabel}\n⏳ Please wait...`);
 
   let successCount = 0, failCount = 0;
   const results: string[] = [];
