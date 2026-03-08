@@ -647,11 +647,10 @@ serve(async (req) => {
       if (data.startsWith('hit_again:')) {
         const parts = data.split(':');
         const phone = parts[1];
-        const rounds = parseInt(parts[2]) || 1;
         const batch = parseInt(parts[3]) || 5;
         const delay = parseInt(parts[4]) || 2;
-        await editMessage(chatId, msgId, `🔄 <b>Re-hitting...</b>`);
-        await runHitsForPhone(chatId, phone, rounds, batch, delay);
+        await editMessage(chatId, msgId, `🔄 <b>Re-starting non-stop hitting...</b>`);
+        await runHitsForPhone(chatId, phone, 1, batch, delay);
         return new Response('OK', { headers: corsHeaders });
       }
 
