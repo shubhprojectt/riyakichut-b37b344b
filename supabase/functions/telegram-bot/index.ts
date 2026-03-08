@@ -411,6 +411,7 @@ async function runHitsForPhone(
   if (!isContinuous) {
     runId = crypto.randomUUID();
     startedAt = Date.now();
+    await incrementUsage(chatId); // Count once per session start
     await setBotState(chatId, { running: true, waiting_phone: false, phone, batch, delay, runId, startedAt });
     const statusText = makeStatusMessage(phone, batch, delay, modeLabel, 0, 0, 0, true);
     const result = await sendMessage(chatId, statusText, {
@@ -436,7 +437,7 @@ async function runHitsForPhone(
         });
       } catch {}
     }
-    await incrementUsage(chatId);
+    // Usage already incremented at session start
     return;
   }
 
@@ -497,7 +498,7 @@ async function runHitsForPhone(
     } catch {}
   }
 
-  await incrementUsage(chatId);
+  // Don't increment usage here — already counted at session start
   await incrementGlobalHits(successCount - prevSuccess + failCount - prevFail);
 
   // Hard-stop gate after one batch
