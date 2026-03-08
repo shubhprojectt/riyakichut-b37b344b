@@ -119,6 +119,8 @@ export default function QuickHitEngine({
   stopButtonText = 'STOP', noApisWarning = 'Admin me APIs add karo.',
   uaRotation = true,
   cloudflareProxyUrl = '',
+  hitProxyMode = 'edge',
+  onProxyModeChange,
   enterNumberLabel = 'Enter Number:',
   apisActiveText = 'APIs Active',
   sequentialLabel = 'Sequential',
