@@ -197,18 +197,33 @@ export default function QuickHitEngine({
   const currentStopRef = activeMode === 'sequential' ? stopRef1 : stopRef2;
 
   return (
-    <div className="glass-card rounded-3xl overflow-hidden">
-      <div className="p-5 space-y-5">
+    <div className={`glass-card rounded-3xl overflow-hidden relative transition-all duration-700 ${
+      currentIsRunning ? 'ring-1 ring-primary/30 shadow-[0_0_30px_rgba(var(--primary-rgb,200,170,50),0.15)]' : ''
+    }`}>
+      {/* Scanning line animation when running */}
+      {currentIsRunning && (
+        <>
+          <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden rounded-3xl">
+            <div className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-primary/60 to-transparent animate-[scanLine_2s_ease-in-out_infinite]" />
+          </div>
+          <div className="absolute inset-0 pointer-events-none z-10 rounded-3xl animate-[borderPulse_2s_ease-in-out_infinite]" 
+            style={{ boxShadow: '0 0 20px rgba(var(--primary-rgb,200,170,50),0.1), inset 0 0 20px rgba(var(--primary-rgb,200,170,50),0.03)' }} />
+        </>
+      )}
+
+      <div className="p-5 space-y-5 relative z-10">
         {/* Title */}
         <div className="text-center">
-          <div className="inline-flex items-center gap-2">
-            <Zap className="w-5 h-5 text-primary" style={{filter: 'drop-shadow(0 0 8px hsl(var(--primary)))'}} />
+          <div className={`inline-flex items-center gap-2 transition-all duration-500 ${currentIsRunning ? 'scale-110' : ''}`}>
+            <Zap className={`w-5 h-5 text-primary transition-all duration-300 ${currentIsRunning ? 'animate-[zapping_0.5s_ease-in-out_infinite]' : ''}`} style={{filter: 'drop-shadow(0 0 8px hsl(var(--primary)))'}} />
             <h2 className="text-base font-bold tracking-widest uppercase font-mono text-primary text-glow-gold">
               {title}
             </h2>
           </div>
           {enabledApis.length > 0 && (
-            <p className="text-[10px] text-muted-foreground mt-1 font-mono">{enabledApis.length} {apisActiveText}</p>
+            <p className={`text-[10px] mt-1 font-mono transition-colors duration-500 ${currentIsRunning ? 'text-primary/70' : 'text-muted-foreground'}`}>
+              {currentIsRunning ? hittingApisText : `${enabledApis.length} ${apisActiveText}`}
+            </p>
           )}
         </div>
 
@@ -220,7 +235,8 @@ export default function QuickHitEngine({
             { key: 'schedule' as const, label: scheduleLabel, icon: <Clock className="w-3.5 h-3.5" />, color: 'secondary' },
           ]).map(tab => (
             <button key={tab.key} onClick={() => setActiveMode(tab.key)}
-              className={`flex-1 py-3 rounded-2xl text-[10px] font-bold tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-1.5 ${
+              disabled={currentIsRunning}
+              className={`flex-1 py-3 rounded-2xl text-[10px] font-bold tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-1.5 disabled:opacity-50 ${
                 activeMode === tab.key
                   ? `glass-card-warm border-${tab.color}/30 text-${tab.color === 'primary' ? 'primary' : tab.color === 'accent' ? 'accent' : 'secondary'}`
                   : 'glass-card text-muted-foreground'
@@ -269,7 +285,7 @@ export default function QuickHitEngine({
               </div>
             )}
 
-            <div>
+            <div className={`transition-all duration-500 ${currentIsRunning ? 'opacity-50 pointer-events-none scale-[0.98]' : ''}`}>
               <label className="text-xs font-bold text-muted-foreground tracking-wider uppercase mb-2 block flex items-center gap-1.5">
                 <Phone className="w-3.5 h-3.5" /> {enterNumberLabel}
               </label>
@@ -291,24 +307,24 @@ export default function QuickHitEngine({
               </button>
             ) : (
               <button onClick={() => { currentStopRef.current = true; }}
-                className="w-full py-4 rounded-2xl text-sm font-bold tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-2.5 active:scale-[0.98] bg-destructive/15 border border-destructive/20 text-destructive glow-red">
-                <Square className="w-5 h-5" /> {stopButtonText}
+                className="w-full py-4 rounded-2xl text-sm font-bold tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-2.5 active:scale-[0.98] bg-destructive/15 border border-destructive/20 text-destructive glow-red animate-[buttonPulse_1.5s_ease-in-out_infinite]">
+                <Square className="w-5 h-5 animate-pulse" /> {stopButtonText}
               </button>
             )}
 
-            {/* Stats when running */}
+            {/* Stats when running - animated entry */}
             {currentIsRunning && (
-              <div className="space-y-3">
+              <div className="space-y-3 animate-[statsSlideIn_0.5s_ease-out]">
                 <div className="grid grid-cols-4 gap-2 text-center">
                   {[
                     { label: roundLabel, value: currentStats.rounds, color: 'text-accent' },
                     { label: hitsLabel, value: currentStats.hits, color: 'text-neon-blue' },
                     { label: okLabel, value: currentStats.success, color: 'text-neon-green' },
                     { label: failLabel, value: currentStats.fails, color: 'text-destructive' },
-                  ].map(s => (
-                    <div key={s.label} className="py-2 rounded-xl glass-card">
+                  ].map((s, i) => (
+                    <div key={s.label} className="py-2 rounded-xl glass-card animate-[statPop_0.4s_ease-out_both]" style={{ animationDelay: `${i * 100}ms` }}>
                       <p className="text-[8px] text-muted-foreground font-mono uppercase">{s.label}</p>
-                      <p className={`text-sm font-bold font-mono ${s.color}`}>{s.value}</p>
+                      <p className={`text-sm font-bold font-mono ${s.color} transition-all duration-200`}>{s.value}</p>
                     </div>
                   ))}
                 </div>
