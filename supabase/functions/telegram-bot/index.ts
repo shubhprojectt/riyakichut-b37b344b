@@ -799,10 +799,11 @@ serve(async (req) => {
         const global = await getGlobalStats();
         const apis = await getEnabledApis();
         const workers = await getCfWorkers();
+        const todayHitsDisplay = (prem.isPremium || admin) ? usage.today : Math.min(usage.today, config.dailyLimit);
 
         let statsText = `📊 <b>Statistics</b>\n\n`;
         statsText += `👤 <b>Your Stats:</b>\n`;
-        statsText += `• Today: ${usage.today} hits\n`;
+        statsText += `• Today: ${todayHitsDisplay} hits\n`;
         statsText += `• Total: ${usage.total} hits\n`;
         statsText += `• Plan: ${prem.isPremium ? `💎 ${prem.plan}` : '🆓 Free'}\n`;
         statsText += `• Daily Limit: ${prem.isPremium ? '♾️ Unlimited' : config.dailyLimit}\n\n`;
