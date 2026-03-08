@@ -521,7 +521,7 @@ async function getMainMenuKeyboard(admin: boolean, chatId?: number) {
     keyboard.push(
       [{ text: '💎 Premium', callback_data: 'premium_menu' }],
       [{ text: '📊 Stats', callback_data: 'stats' }, { text: '⚙️ Settings', callback_data: 'settings' }],
-      [{ text: '🥉 Give Basic', callback_data: 'give_basic' }, { text: '🥈 Give Pro', callback_data: 'give_pro' }, { text: '🥇 Give Ultimate', callback_data: 'give_ultimate' }],
+      [{ text: '🥇 Give Unlimited', callback_data: 'give_unlimited' }],
       [{ text: '🗑️ Remove Premium', callback_data: 'remove_premium_prompt' }],
       [{ text: '📢 Broadcast', callback_data: 'broadcast_prompt' }, { text: '☁️ Workers', callback_data: 'workers' }],
       [{ text: '📊 Set Limit', callback_data: 'set_limit_prompt' }],
