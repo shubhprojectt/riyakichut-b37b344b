@@ -31,6 +31,7 @@ interface QuickHitEngineProps {
   stopButtonText?: string;
   noApisWarning?: string;
   uaRotation?: boolean;
+  cloudflareProxyUrl?: string;
   enterNumberLabel?: string;
   apisActiveText?: string;
   sequentialLabel?: string;
