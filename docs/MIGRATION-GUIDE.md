@@ -1,7 +1,7 @@
 # 🚀 Complete Migration Guide: Apna Supabase + Vercel Deployment
 
-**Last Updated:** 2026-02-22  
-**Version:** 4.2 (Fast Hit All API + Batch Processing)
+**Last Updated:** 2026-03-08  
+**Version:** 5.1 (Telegram Bot Integration + CF Worker Proxy)
 
 ---
 
