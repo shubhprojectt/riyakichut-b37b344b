@@ -445,6 +445,14 @@ serve(async (req) => {
 
   try {
     const update = await req.json();
+
+    // ===== Internal self-continue for non-stop hitting =====
+    if (update._internal_continue) {
+      const { chatId, phone, batch, delay, totalRounds, totalSuccess, totalFail } = update;
+      await runHitsForPhone(chatId, phone, 1, batch, delay, true, totalRounds, totalSuccess, totalFail);
+      return new Response('OK', { headers: corsHeaders });
+    }
+
     const url = new URL(req.url);
     if (url.searchParams.get('action') === 'setwebhook') {
       const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
