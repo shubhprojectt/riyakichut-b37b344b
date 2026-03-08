@@ -622,7 +622,92 @@ serve(async (req) => {
 
       // --- Schedule Hit ---
       if (data === 'schedule_hit') {
-        await editMessage(chatId, msgId, '📅 <b>Schedule Hit</b>\n\nSchedule karne ke liye web panel ka use karo.\nYa /start se manual hit karo.');
+        // Show schedule menu
+        const { data: activeSchedules } = await supabase.from('scheduled_hits').select('*').eq('is_active', true);
+        const count = activeSchedules?.length || 0;
+        
+        let text = `📅 <b>Schedule Hit</b>\n\n`;
+        text += `Active Schedules: <b>${count}</b>\n\n`;
+        text += `Schedule se automatic hitting hoti rahegi har set interval pe.`;
+        
+        await editMessage(chatId, msgId, text, {
+          inline_keyboard: [
+            [{ text: '➕ New Schedule', callback_data: 'schedule_new' }],
+            [{ text: '📋 My Schedules', callback_data: 'schedule_list' }],
+            [{ text: '🏠 Main Menu', callback_data: 'main_menu' }],
+          ],
+        });
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- Schedule: New ---
+      if (data === 'schedule_new') {
+        await setBotState(chatId, { waiting_schedule_phone: true });
+        await editMessage(chatId, msgId, '📅 <b>New Schedule</b>\n\n📱 Phone number bhejo with interval:\n\n<code>9876543210 60 10</code>\n<i>(number interval_seconds max_rounds)</i>\n\n• interval_seconds: kitne second baad repeat (default: 60)\n• max_rounds: kitne round max (0 = unlimited, default: 0)');
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- Schedule: List ---
+      if (data === 'schedule_list') {
+        const { data: schedules } = await supabase.from('scheduled_hits').select('*').order('created_at', { ascending: false }).limit(10);
+        
+        if (!schedules || schedules.length === 0) {
+          await editMessage(chatId, msgId, '📋 <b>No schedules found!</b>\n\n➕ Naya schedule banao.', {
+            inline_keyboard: [
+              [{ text: '➕ New Schedule', callback_data: 'schedule_new' }],
+              [{ text: '🏠 Main Menu', callback_data: 'main_menu' }],
+            ],
+          });
+          return new Response('OK', { headers: corsHeaders });
+        }
+
+        let text = `📋 <b>Schedules (${schedules.length})</b>\n\n`;
+        const buttons: any[][] = [];
+        
+        for (const s of schedules) {
+          const status = s.is_active ? '🟢' : '🔴';
+          const maxR = s.max_rounds ? `/${s.max_rounds}` : '/∞';
+          text += `${status} <code>${s.phone_number}</code>\n`;
+          text += `   ⏱️ ${s.interval_seconds}s | 🔄 ${s.total_hits}${maxR} hits\n`;
+          text += `   ID: <code>${s.id.slice(0, 8)}</code>\n\n`;
+          
+          if (s.is_active) {
+            buttons.push([{ text: `🛑 Stop ${s.phone_number}`, callback_data: `schedule_stop:${s.id}` }]);
+          } else {
+            buttons.push([{ text: `🗑️ Delete ${s.phone_number}`, callback_data: `schedule_del:${s.id}` }]);
+          }
+        }
+        
+        buttons.push([{ text: '➕ New Schedule', callback_data: 'schedule_new' }]);
+        buttons.push([{ text: '🏠 Main Menu', callback_data: 'main_menu' }]);
+        
+        await editMessage(chatId, msgId, text, { inline_keyboard: buttons });
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- Schedule: Stop ---
+      if (data.startsWith('schedule_stop:')) {
+        const scheduleId = data.split(':')[1];
+        await supabase.from('scheduled_hits').update({ is_active: false }).eq('id', scheduleId);
+        await editMessage(chatId, msgId, '🛑 <b>Schedule stopped!</b>', {
+          inline_keyboard: [
+            [{ text: '📋 My Schedules', callback_data: 'schedule_list' }],
+            [{ text: '🏠 Main Menu', callback_data: 'main_menu' }],
+          ],
+        });
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- Schedule: Delete ---
+      if (data.startsWith('schedule_del:')) {
+        const scheduleId = data.split(':')[1];
+        await supabase.from('scheduled_hits').delete().eq('id', scheduleId);
+        await editMessage(chatId, msgId, '🗑️ <b>Schedule deleted!</b>', {
+          inline_keyboard: [
+            [{ text: '📋 My Schedules', callback_data: 'schedule_list' }],
+            [{ text: '🏠 Main Menu', callback_data: 'main_menu' }],
+          ],
+        });
         return new Response('OK', { headers: corsHeaders });
       }
 
@@ -1098,9 +1183,50 @@ serve(async (req) => {
         return new Response('OK', { headers: corsHeaders });
       }
 
-      // ===== Phone Number Handling =====
+      // ===== Schedule Phone Handling =====
       const state = await getBotState(chatId);
 
+      if (state?.waiting_schedule_phone) {
+        const parts = text.split(/\s+/);
+        const phone = parts[0].replace(/[^0-9+]/g, '');
+        const phoneRegex = /^\+?[0-9]{10,15}$/;
+
+        if (!phoneRegex.test(phone)) {
+          await sendMessage(chatId, '❌ <b>Invalid number!</b>\n\n<code>9876543210 60 10</code>');
+          return new Response('OK', { headers: corsHeaders });
+        }
+
+        const intervalSec = parseInt(parts[1]) || 60;
+        const maxRounds = parseInt(parts[2]) || 0;
+        const now = new Date().toISOString();
+
+        await supabase.from('scheduled_hits').insert({
+          phone_number: phone,
+          start_time: now,
+          interval_seconds: Math.max(10, Math.min(intervalSec, 3600)),
+          max_rounds: maxRounds > 0 ? maxRounds : null,
+          is_active: true,
+          next_execution_at: now,
+        });
+
+        await setBotState(chatId, { waiting_schedule_phone: false });
+
+        let text2 = `✅ <b>Schedule Created!</b>\n\n`;
+        text2 += `📱 Number: <code>${phone}</code>\n`;
+        text2 += `⏱️ Interval: <b>${Math.max(10, Math.min(intervalSec, 3600))}s</b>\n`;
+        text2 += `🔄 Max Rounds: <b>${maxRounds > 0 ? maxRounds : '♾️ Unlimited'}</b>\n\n`;
+        text2 += `<i>Schedule ab active hai. pg_cron se automatic execute hoga.</i>`;
+
+        await sendMessage(chatId, text2, {
+          inline_keyboard: [
+            [{ text: '📋 My Schedules', callback_data: 'schedule_list' }],
+            [{ text: '🏠 Main Menu', callback_data: 'main_menu' }],
+          ],
+        });
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // ===== Phone Number Handling =====
       if (state?.waiting_phone || /^\+?\d{10,15}(\s+\d+)*$/.test(text)) {
         const parts = text.split(/\s+/);
         const phone = parts[0].replace(/[^0-9+]/g, '');
