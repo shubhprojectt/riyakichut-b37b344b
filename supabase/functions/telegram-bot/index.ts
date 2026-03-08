@@ -618,7 +618,17 @@ serve(async (req) => {
 
       // --- Main Menu ---
       if (data === 'main_menu') {
-        await editMessage(chatId, msgId, '🔥 <b>Hit API Bot</b>\n\nSelect an option:', await getMainMenuKeyboard(admin, chatId));
+        const prem = await isPremium(chatId);
+        const config = await getBotConfig();
+        const usage = await getUserUsage(chatId);
+        let menuText = '🔥 <b>Hit API Bot</b>\n\n';
+        if (prem.isPremium || admin) {
+          menuText += '💎 <b>Unlimited</b> access\n';
+        } else {
+          menuText += `📊 Daily Limit: <b>${usage.today}/${config.dailyLimit}</b>\n`;
+        }
+        menuText += '\nSelect an option:';
+        await editMessage(chatId, msgId, menuText, await getMainMenuKeyboard(admin, chatId));
         return new Response('OK', { headers: corsHeaders });
       }
 
