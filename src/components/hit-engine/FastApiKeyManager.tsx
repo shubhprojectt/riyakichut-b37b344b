@@ -1,16 +1,19 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Key, Save, Trash2, Eye, EyeOff, Copy } from 'lucide-react';
+import { Key, Save, Trash2, Eye, EyeOff, Copy, Globe } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { useHitSiteSettings } from '@/hooks/useHitSiteSettings';
 
 export default function FastApiKeyManager() {
   const [secretKey, setSecretKey] = useState('');
   const [inputKey, setInputKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [loading, setLoading] = useState(true);
+  const { settings } = useHitSiteSettings();
 
   const fastHitAllBaseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fast-hit-all`;
+  const cfWorkerUrl = settings.cloudflareProxyUrl?.trim() || '';
 
   const fetchKey = async () => {
     const { data } = await supabase
