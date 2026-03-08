@@ -455,6 +455,7 @@ Supabase Dashboard → **Settings** → **Edge Functions** → **Secrets**
 |-------------|-------|
 | `MY_SUPABASE_URL` | `https://YOUR_PROJECT_ID.supabase.co` |
 | `MY_SERVICE_ROLE_KEY` | Service Role Key |
+| `TELEGRAM_BOT_TOKEN` | Telegram Bot Token (@BotFather se) |
 
 ### 4.6 Scheduled Hits Cron Setup (Optional)
 
