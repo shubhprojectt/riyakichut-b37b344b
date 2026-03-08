@@ -32,6 +32,8 @@ interface QuickHitEngineProps {
   noApisWarning?: string;
   uaRotation?: boolean;
   cloudflareProxyUrl?: string;
+  hitProxyMode?: 'edge' | 'cloudflare';
+  onProxyModeChange?: (mode: 'edge' | 'cloudflare') => void;
   enterNumberLabel?: string;
   apisActiveText?: string;
   sequentialLabel?: string;
