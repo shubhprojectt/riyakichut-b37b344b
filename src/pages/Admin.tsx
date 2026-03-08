@@ -3,7 +3,7 @@ import {
   Settings, Palette, Key, History, LayoutGrid, Database, ArrowLeft, Save,
   Trash2, RefreshCw, Shield, Eye, EyeOff, ExternalLink, Type, Upload, X,
   Image, Send, Camera, Music, Coins, Plus, Power, RotateCcw, Loader2,
-  ChevronDown, ChevronUp, PhoneCall
+  ChevronDown, ChevronUp, PhoneCall, List, Code, Download, Fingerprint, Copy, Zap, Info, LogOut
 } from "lucide-react";
 import * as Icons from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -14,6 +14,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { useSettings } from "@/contexts/SettingsContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useHitApis } from "@/hooks/useHitApis";
+import { useHitLogs } from "@/hooks/useHitLogs";
+import { useHitSiteSettings } from "@/hooks/useHitSiteSettings";
+import HitEngine from "@/components/hit-engine/HitEngine";
+import ApiCard from "@/components/hit-engine/ApiCard";
+import ApiForm from "@/components/hit-engine/ApiForm";
+import ApiImporter from "@/components/hit-engine/ApiImporter";
+import LogsPanel from "@/components/hit-engine/LogsPanel";
+import SiteSettingsPanel from "@/components/hit-engine/SiteSettingsPanel";
+import BulkImporter from "@/components/hit-engine/BulkImporter";
+import FastApiKeyManager from "@/components/hit-engine/FastApiKeyManager";
+import type { HitApi } from "@/hooks/useHitApis";
+import { toast as sonnerToast } from "sonner";
 
 
 const colorOptions = [
@@ -147,6 +160,14 @@ const Admin = () => {
   const [localAllSearchKey, setLocalAllSearchKey] = useState(settings.allSearchAccessKey || "");
   const [localTelegramKey, setLocalTelegramKey] = useState(settings.telegramOsintAccessKey || "");
 
+  // Hit Engine state
+  const { apis, loading: apisLoading, addApi, updateApi, deleteApi, toggleApi, toggleAll } = useHitApis();
+  const { logs, addLog, clearLogs } = useHitLogs();
+  const { settings: hitSettings, updateSettings: updateHitSettings, resetSettings: resetHitSettings } = useHitSiteSettings();
+  const [hitSubTab, setHitSubTab] = useState<'apis' | 'import' | 'settings'>('apis');
+  const [showApiForm, setShowApiForm] = useState(false);
+  const [editingApi, setEditingApi] = useState<HitApi | null>(null);
+  const [allEnabled, setAllEnabled] = useState(true);
 
   useEffect(() => {
     if (isAuthenticated) { fetchSearchHistory(); }
@@ -162,10 +183,11 @@ const Admin = () => {
     if (!error) { setSearchHistory([]); toast({ title: "History Cleared", description: "All search history deleted" }); }
   };
 
-
   const handleAdminLogin = () => {
     if (adminPasswordInput === settings.adminPassword) {
-      setIsAuthenticated(true); toast({ title: "Access Granted", description: "Welcome to Admin Panel" });
+      setIsAuthenticated(true);
+      sessionStorage.setItem('hitAdminAuth', 'true');
+      toast({ title: "Access Granted", description: "Welcome to Admin Panel" });
     } else { toast({ title: "Access Denied", description: "Wrong admin password", variant: "destructive" }); }
   };
 
@@ -173,6 +195,28 @@ const Admin = () => {
     updateSettings({ sitePassword: localSitePassword, adminPassword: localAdminPassword, allSearchAccessKey: localAllSearchKey, telegramOsintAccessKey: localTelegramKey });
     toast({ title: "Saved", description: "Passwords & Access Keys updated successfully" });
   };
+
+  // Hit Engine handlers
+  const handleAddApi = (data: Omit<HitApi, 'id'>) => { addApi(data); setShowApiForm(false); };
+  const handleEditApi = (data: Omit<HitApi, 'id'>) => { if (editingApi) { updateApi(editingApi.id, data); setEditingApi(null); } };
+  const handleImport = (data: Omit<HitApi, 'id'>) => { addApi(data); };
+  const handleBulkImport = async (apiList: Omit<HitApi, 'id'>[]) => {
+    let count = 0;
+    for (const api of apiList) { await addApi(api); count++; }
+    sonnerToast.success(`${count} APIs imported successfully!`);
+  };
+  const handleExportAll = () => {
+    if (apis.length === 0) { sonnerToast.error('No APIs to export'); return; }
+    const exportData = apis.map(({ id, ...rest }) => rest);
+    const json = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `hit-apis-export-${new Date().toISOString().split('T')[0]}.json`; a.click();
+    URL.revokeObjectURL(url);
+    sonnerToast.success(`${apis.length} APIs exported!`);
+  };
+  const handleToggleAll = (enabled: boolean) => { setAllEnabled(enabled); toggleAll(enabled); };
 
   if (!isAuthenticated) {
     return (
@@ -214,7 +258,7 @@ const Admin = () => {
         <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] rounded-full bg-secondary/[0.03] blur-[120px]" />
       </div>
 
-      {/* Header - Glassmorphic */}
+      {/* Header */}
       <div className="sticky top-0 z-50 glass-card border-b border-border/30">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -232,9 +276,10 @@ const Admin = () => {
       <div className="relative z-10 container mx-auto px-4 py-4">
         <Tabs defaultValue="theme" className="w-full">
           <div className="sticky top-[56px] z-40 -mx-4 px-4 pb-3 pt-3 bg-background">
-            <TabsList className="w-full grid grid-cols-3 glass-card rounded-xl h-11">
+            <TabsList className="w-full grid grid-cols-4 glass-card rounded-xl h-11">
               <TabsTrigger value="theme" className="rounded-lg text-xs font-semibold">Theme</TabsTrigger>
               <TabsTrigger value="tools" className="rounded-lg text-xs font-semibold">Tools</TabsTrigger>
+              <TabsTrigger value="hitengine" className="rounded-lg text-xs font-semibold">Hit Engine</TabsTrigger>
               <TabsTrigger value="logs" className="rounded-lg text-xs font-semibold">Logs</TabsTrigger>
             </TabsList>
           </div>
@@ -276,7 +321,7 @@ const Admin = () => {
             </Section>
           </TabsContent>
 
-
+          {/* ── TOOLS TAB ── */}
           <TabsContent value="tools" className="mt-0 space-y-4">
             <Section title="Tab Configuration" icon={LayoutGrid} defaultOpen>
               <div className="space-y-3">
@@ -314,6 +359,119 @@ const Admin = () => {
             </Section>
           </TabsContent>
 
+          {/* ── HIT ENGINE TAB ── */}
+          <TabsContent value="hitengine" className="mt-0 space-y-4">
+            {/* Disclaimer */}
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-primary/5 border border-primary/15">
+              <Info className="w-4 h-4 text-primary/70 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[11px] font-semibold text-primary/80">{hitSettings.disclaimerTitle}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">{hitSettings.disclaimerText}</p>
+              </div>
+            </div>
+
+            {/* Hit Engine Widget */}
+            <HitEngine apis={apis} onLog={addLog} residentialProxyUrl={hitSettings.residentialProxyUrl} uaRotationEnabled={hitSettings.uaRotationEnabled} />
+
+            {/* Sub-tabs for APIs / Import / Settings */}
+            <div className="flex items-center gap-1 p-1 rounded-xl glass-card">
+              {([
+                { key: 'apis' as const, label: 'APIs', icon: List, count: apis.length },
+                { key: 'import' as const, label: 'Import', icon: Code },
+                { key: 'settings' as const, label: 'Settings', icon: Settings },
+              ]).map(tab => (
+                <button key={tab.key} onClick={() => setHitSubTab(tab.key)}
+                  className={`flex-1 h-9 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                    hitSubTab === tab.key
+                      ? 'bg-primary/15 text-primary border border-primary/20'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}>
+                  <tab.icon className="w-3.5 h-3.5" />
+                  {tab.label}
+                  {tab.count !== undefined && <span className="text-[10px] opacity-60">({tab.count})</span>}
+                </button>
+              ))}
+            </div>
+
+            {/* APIs Sub-tab */}
+            {hitSubTab === 'apis' && (
+              <div className="space-y-3 animate-fade-in">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground">{hitSettings.apiListTitle}</span>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 mr-1">
+                      <span className="text-[10px] text-muted-foreground">All</span>
+                      <Switch checked={allEnabled} onCheckedChange={handleToggleAll} />
+                    </div>
+                    <button onClick={() => { setEditingApi(null); setShowApiForm(true); }}
+                      className="h-8 px-3 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold flex items-center gap-1 transition-colors glow-gold">
+                      <Plus className="w-3.5 h-3.5" /> {hitSettings.addApiButtonText}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-xl glass-card">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-neon-purple/10 flex items-center justify-center">
+                      <Fingerprint className="w-4 h-4 text-neon-purple" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-foreground/80">UA Rotation</p>
+                      <p className="text-[10px] text-muted-foreground">Different browser fingerprint per request</p>
+                    </div>
+                  </div>
+                  <Switch checked={hitSettings.uaRotationEnabled} onCheckedChange={(v) => updateHitSettings({ uaRotationEnabled: v })} />
+                </div>
+
+                <FastApiKeyManager />
+
+                <button onClick={handleExportAll}
+                  className="w-full h-9 rounded-xl glass-card text-muted-foreground text-xs font-medium hover:bg-primary/5 hover:text-foreground transition-all flex items-center justify-center gap-1.5">
+                  <Download className="w-3.5 h-3.5" /> Export All ({apis.length})
+                </button>
+
+                {apis.length === 0 ? (
+                  <div className="text-center py-16 rounded-xl glass-card">
+                    <Database className="w-10 h-10 mx-auto mb-3 text-muted-foreground/20" />
+                    <p className="text-sm text-muted-foreground/40">{hitSettings.noApisText}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {apis.map(api => (
+                      <ApiCard key={api.id} api={api}
+                        onToggle={() => toggleApi(api.id)}
+                        onToggleProxy={() => updateApi(api.id, { proxy_enabled: !api.proxy_enabled })}
+                        onToggleResidential={() => updateApi(api.id, { residential_proxy_enabled: !api.residential_proxy_enabled })}
+                        onToggleRotation={() => updateApi(api.id, { rotation_enabled: !api.rotation_enabled })}
+                        onToggleForce={() => updateApi(api.id, { force_proxy: !api.force_proxy })}
+                        onEdit={() => { setEditingApi(api); setShowApiForm(true); }}
+                        onDelete={() => deleteApi(api.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Import Sub-tab */}
+            {hitSubTab === 'import' && (
+              <div className="space-y-4 animate-fade-in">
+                <BulkImporter onBulkImport={handleBulkImport} />
+                <ApiImporter onImport={handleImport} />
+              </div>
+            )}
+
+            {/* Settings Sub-tab */}
+            {hitSubTab === 'settings' && (
+              <div className="space-y-4 animate-fade-in">
+                <SiteSettingsPanel settings={hitSettings} onUpdate={updateHitSettings} onReset={resetHitSettings} />
+              </div>
+            )}
+
+            <LogsPanel logs={logs} onClear={clearLogs} />
+          </TabsContent>
+
+          {/* ── LOGS TAB ── */}
           <TabsContent value="logs" className="mt-0 space-y-4">
             <Section title="Search History" icon={History} defaultOpen>
               <PanelCard title="History" description={`${searchHistory.length} records (latest 100)`}
@@ -571,6 +729,14 @@ const Admin = () => {
           </Section>
         </div>
       </div>
+
+      {/* API Form Dialog */}
+      <ApiForm
+        open={showApiForm}
+        onClose={() => { setShowApiForm(false); setEditingApi(null); }}
+        onSubmit={editingApi ? handleEditApi : handleAddApi}
+        editApi={editingApi}
+      />
     </div>
   );
 };
