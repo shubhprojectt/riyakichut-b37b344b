@@ -519,6 +519,30 @@ GitHub repo connect karke deploy karo.
 
 ---
 
+## 🔄 Version 5.1 Changes
+
+### Telegram Bot Integration
+- ✅ `telegram-bot` edge function — full-featured Telegram bot for API hitting
+- ✅ Non-stop hitting with self-continue architecture (bypasses edge function timeout)
+- ✅ CF Worker proxy support with load balancing (multiple workers)
+- ✅ runId-based session locking for instant stop (STOP button + /stop command)
+- ✅ Premium system: Basic/Pro/Ultimate plans with expiry dates
+- ✅ Daily limit for free users (configurable via /setlimit)
+- ✅ Admin panel: manage APIs, keys, workers, premium, broadcast
+- ✅ Mode toggle: Edge Function ↔ CF Worker (synced with website hit_site_settings)
+- ✅ Progress bar + live status message (single message, edited in-place)
+- ✅ Bot state stored in app_settings (tgbot_state_*, tgbot_config, etc.)
+- ✅ Webhook setup: `GET /functions/v1/telegram-bot?action=setwebhook`
+
+### Telegram Bot Setup Steps
+1. Create bot via @BotFather on Telegram
+2. Set `TELEGRAM_BOT_TOKEN` in Edge Function Secrets
+3. Deploy: `supabase functions deploy telegram-bot`
+4. Set webhook: `GET https://PROJECT.supabase.co/functions/v1/telegram-bot?action=setwebhook`
+5. Send `/setadmin` to bot to become first admin
+
+---
+
 ## 🔄 Version 4.2 Changes
 
 ### Fast Hit All API (External API Endpoint)
