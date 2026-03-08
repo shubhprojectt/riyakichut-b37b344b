@@ -530,7 +530,7 @@ async function getMainMenuKeyboard(admin: boolean, chatId?: number) {
   } else {
     keyboard.push(
       [{ text: '💎 Premium', callback_data: 'premium_menu' }],
-      [{ text: '📊 Stats', callback_data: 'stats' }, { text: '⚙️ Settings', callback_data: 'settings' }],
+      [{ text: '📊 Stats', callback_data: 'stats' }],
     );
   }
 
