@@ -492,8 +492,8 @@ serve(async (req) => {
 
     // ===== Internal self-continue for non-stop hitting =====
     if (update._internal_continue) {
-      const { chatId, phone, batch, delay, totalRounds, totalSuccess, totalFail } = update;
-      await runHitsForPhone(chatId, phone, 1, batch, delay, true, totalRounds, totalSuccess, totalFail);
+      const { chatId, phone, batch, delay, totalRounds, totalSuccess, totalFail, statusMsgId } = update;
+      await runHitsForPhone(chatId, phone, 1, batch, delay, true, totalRounds, totalSuccess, totalFail, statusMsgId || 0);
       return new Response('OK', { headers: corsHeaders });
     }
 
