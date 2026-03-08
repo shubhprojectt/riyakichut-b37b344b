@@ -609,7 +609,7 @@ serve(async (req) => {
 
       // --- /start ---
       if (text === '/start') {
-        await sendMessage(chatId, '🔥 <b>Hit API Bot</b>\n\nSelect an option:', getMainMenuKeyboard(admin));
+        await sendMessage(chatId, '🔥 <b>Hit API Bot</b>\n\nSelect an option:', await getMainMenuKeyboard(admin));
         return new Response('OK', { headers: corsHeaders });
       }
 
