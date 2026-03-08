@@ -158,7 +158,7 @@ export default function QuickHitEngine({
       }
     }
     setIsRunning1(false);
-  }, [enabledApis, onLog, uaRotation, phone1]);
+  }, [enabledApis, onLog, uaRotation, cloudflareProxyUrl, phone1]);
 
   const runParallel = useCallback(async () => {
     if (phone2.length < 10 || enabledApis.length === 0) return;
