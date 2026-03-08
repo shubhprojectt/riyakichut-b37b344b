@@ -9,7 +9,7 @@ import LogsPanel from '@/components/hit-engine/LogsPanel';
 const Page3 = () => {
   const { apis } = useHitApis();
   const { logs, addLog, clearLogs } = useHitLogs();
-  const { settings } = useHitSiteSettings();
+  const { settings, updateSettings } = useHitSiteSettings();
 
   return (
     <div className="min-h-[100dvh] bg-background relative overflow-hidden">
@@ -56,6 +56,8 @@ const Page3 = () => {
             hitButtonText={settings.hitButtonText} stopButtonText={settings.stopButtonText}
             noApisWarning={settings.noApisWarning} uaRotation={settings.uaRotationEnabled}
             cloudflareProxyUrl={settings.cloudflareProxyUrl}
+            hitProxyMode={settings.hitProxyMode || 'edge'}
+            onProxyModeChange={(mode) => updateSettings({ hitProxyMode: mode })}
             enterNumberLabel={settings.enterNumberLabel}
             apisActiveText={settings.apisActiveText}
             sequentialLabel={settings.sequentialLabel}

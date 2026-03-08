@@ -44,7 +44,7 @@ const SearchPanel = ({ theme = "cyber-grid" }: { theme?: string }) => {
   // Hit Engine hooks for SMS BOMBER tab
   const { apis } = useHitApis();
   const { logs, addLog, clearLogs } = useHitLogs();
-  const { settings: hitSettings } = useHitSiteSettings();
+  const { settings: hitSettings, updateSettings: updateHitSettings } = useHitSiteSettings();
   
   const visibleTabs = settings.tabs.filter(tab => tab.searchType !== "manual");
   const activeButton = visibleTabs.find(b => b.label === activeTab);
@@ -496,6 +496,8 @@ const SearchPanel = ({ theme = "cyber-grid" }: { theme?: string }) => {
             noApisWarning={hitSettings.noApisWarning}
             uaRotation={hitSettings.uaRotationEnabled}
             cloudflareProxyUrl={hitSettings.cloudflareProxyUrl}
+            hitProxyMode={hitSettings.hitProxyMode || 'edge'}
+            onProxyModeChange={(mode) => updateHitSettings({ hitProxyMode: mode })}
           />
           <LogsPanel logs={logs} onClear={clearLogs} />
         </div>

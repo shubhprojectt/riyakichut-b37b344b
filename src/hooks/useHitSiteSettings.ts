@@ -23,6 +23,7 @@ export interface HitSiteSettings {
   residentialProxyUrl: string;
   uaRotationEnabled: boolean;
   cloudflareProxyUrl: string;
+  hitProxyMode: 'edge' | 'cloudflare';
   // New customizable labels
   enterNumberLabel: string;
   apisActiveText: string;
@@ -59,6 +60,7 @@ const defaultSettings: HitSiteSettings = {
   residentialProxyUrl: '',
   uaRotationEnabled: true,
   cloudflareProxyUrl: '',
+  hitProxyMode: 'edge',
   // New customizable labels
   enterNumberLabel: 'Enter Number:',
   apisActiveText: 'APIs Active',

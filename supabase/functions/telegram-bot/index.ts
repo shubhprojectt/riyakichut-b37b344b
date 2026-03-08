@@ -107,6 +107,25 @@ async function getNextWorker(): Promise<string | null> {
   return worker;
 }
 
+// ===== Hit Proxy Mode (synced with website) =====
+async function getHitProxyMode(): Promise<'edge' | 'cloudflare'> {
+  // Read from hit_site_settings (same as website)
+  const { data } = await supabase.from('app_settings').select('setting_value').eq('setting_key', 'hit_site_settings').maybeSingle();
+  const settings = data?.setting_value as any;
+  return settings?.hitProxyMode || 'edge';
+}
+
+async function setHitProxyMode(mode: 'edge' | 'cloudflare') {
+  const { data } = await supabase.from('app_settings').select('id, setting_value').eq('setting_key', 'hit_site_settings').maybeSingle();
+  if (data?.id) {
+    const current = (data.setting_value as any) || {};
+    current.hitProxyMode = mode;
+    await supabase.from('app_settings').update({ setting_value: current }).eq('id', data.id);
+  } else {
+    await supabase.from('app_settings').insert({ setting_key: 'hit_site_settings', setting_value: { hitProxyMode: mode } });
+  }
+}
+
 // ===== Premium =====
 async function getPremiumUsers(): Promise<Record<string, { plan: string; expiresAt: string; userId: number }>> {
   const val = await getSetting('tgbot_premium_users');
@@ -273,17 +292,22 @@ async function runHitsForPhone(chatId: number, phone: string, rounds = 1, batch 
     return;
   }
 
-  await sendMessage(chatId, `🚀 <b>Hitting ${apis.length} APIs</b>\n📱 Number: <code>${phone}</code>\n🔄 Rounds: ${rounds} | Batch: ${batch} | Delay: ${delay}s\n⏳ Please wait...`);
+  const proxyMode = await getHitProxyMode();
+  const modeLabel = proxyMode === 'cloudflare' ? '☁️ CF Worker' : '⚡ Edge Function';
+  await sendMessage(chatId, `🚀 <b>Hitting ${apis.length} APIs</b>\n📱 Number: <code>${phone}</code>\n🔄 Rounds: ${rounds} | Batch: ${batch} | Delay: ${delay}s\n🌐 Mode: ${modeLabel}\n⏳ Please wait...`);
 
   let successCount = 0, failCount = 0;
   const results: string[] = [];
+
+  const proxyMode = await getHitProxyMode();
 
   for (let round = 1; round <= rounds; round++) {
     if (round > 1) await new Promise(r => setTimeout(r, delay * 1000));
 
     for (let i = 0; i < apis.length; i += batch) {
       const batchApis = apis.slice(i, i + batch);
-      const workerUrl = await getNextWorker();
+      // Use CF worker only if mode is cloudflare
+      const workerUrl = proxyMode === 'cloudflare' ? await getNextWorker() : null;
 
       const batchResults = await Promise.allSettled(
         batchApis.map(api => hitSingleApi(api, phone, workerUrl))
@@ -320,10 +344,14 @@ async function runHitsForPhone(chatId: number, phone: string, rounds = 1, batch 
 }
 
 // ===== Main Menu Keyboard =====
-function getMainMenuKeyboard(admin: boolean) {
+async function getMainMenuKeyboard(admin: boolean) {
+  const mode = await getHitProxyMode();
+  const modeIcon = mode === 'cloudflare' ? '☁️' : '⚡';
+  const modeText = mode === 'cloudflare' ? 'CF Worker' : 'Edge Fn';
+  
   const keyboard: any[][] = [
     [{ text: '🚀 Start', callback_data: 'start_hit' }, { text: '🛑 Stop', callback_data: 'stop_hit' }],
-    [{ text: '📅 Schedule Hit', callback_data: 'schedule_hit' }],
+    [{ text: `${modeIcon} Mode: ${modeText}`, callback_data: 'toggle_mode' }, { text: '📅 Schedule', callback_data: 'schedule_hit' }],
   ];
 
   if (admin) {
@@ -391,7 +419,18 @@ serve(async (req) => {
 
       // --- Main Menu ---
       if (data === 'main_menu') {
-        await editMessage(chatId, msgId, '🔥 <b>Hit API Bot</b>\n\nSelect an option:', getMainMenuKeyboard(admin));
+        await editMessage(chatId, msgId, '🔥 <b>Hit API Bot</b>\n\nSelect an option:', await getMainMenuKeyboard(admin));
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- Toggle Mode ---
+      if (data === 'toggle_mode') {
+        if (!admin) { await answerCallbackQuery(cb.id, '❌ Admin only!'); return new Response('OK', { headers: corsHeaders }); }
+        const currentMode = await getHitProxyMode();
+        const newMode = currentMode === 'edge' ? 'cloudflare' : 'edge';
+        await setHitProxyMode(newMode);
+        const modeLabel = newMode === 'cloudflare' ? '☁️ CF Worker' : '⚡ Edge Function';
+        await editMessage(chatId, msgId, `🔄 <b>Mode Changed!</b>\n\n🌐 Now using: <b>${modeLabel}</b>\n\n<i>Website aur bot dono isi mode se hit karenge.</i>`, await getMainMenuKeyboard(admin));
         return new Response('OK', { headers: corsHeaders });
       }
 
@@ -570,7 +609,7 @@ serve(async (req) => {
 
       // --- /start ---
       if (text === '/start') {
-        await sendMessage(chatId, '🔥 <b>Hit API Bot</b>\n\nSelect an option:', getMainMenuKeyboard(admin));
+        await sendMessage(chatId, '🔥 <b>Hit API Bot</b>\n\nSelect an option:', await getMainMenuKeyboard(admin));
         return new Response('OK', { headers: corsHeaders });
       }
 
@@ -828,6 +867,22 @@ serve(async (req) => {
       if (text === '/clearworkers' && admin) {
         await setSetting('tgbot_cf_workers', []);
         await sendMessage(chatId, '✅ All workers cleared!');
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- /setmode ---
+      if (text.startsWith('/setmode') && admin) {
+        const mode = text.split(' ')[1]?.trim()?.toLowerCase();
+        if (mode !== 'edge' && mode !== 'cloudflare' && mode !== 'cf') {
+          const currentMode = await getHitProxyMode();
+          const modeLabel = currentMode === 'cloudflare' ? '☁️ CF Worker' : '⚡ Edge Function';
+          await sendMessage(chatId, `🌐 <b>Current Mode:</b> ${modeLabel}\n\n<b>Change:</b>\n<code>/setmode edge</code> - Edge Function\n<code>/setmode cf</code> - CF Worker`);
+          return new Response('OK', { headers: corsHeaders });
+        }
+        const newMode = (mode === 'cf' || mode === 'cloudflare') ? 'cloudflare' : 'edge';
+        await setHitProxyMode(newMode);
+        const modeLabel = newMode === 'cloudflare' ? '☁️ CF Worker' : '⚡ Edge Function';
+        await sendMessage(chatId, `✅ Mode changed to <b>${modeLabel}</b>\n\n<i>Website aur bot dono sync ho gaye!</i>`);
         return new Response('OK', { headers: corsHeaders });
       }
 

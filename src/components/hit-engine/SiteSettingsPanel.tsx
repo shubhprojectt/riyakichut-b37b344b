@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, RotateCw, Save, Image, Type, AlertTriangle, Lock, Home } from 'lucide-react';
+import { Settings, RotateCw, Save, Image, Type, AlertTriangle, Lock, Home, Cloud, Globe } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -189,10 +189,35 @@ export default function SiteSettingsPanel({ settings, onUpdate, onReset }: SiteS
             <span className="flex items-center gap-2"><Home className="w-4 h-4" /> Proxy Settings</span>
           </AccordionTrigger>
           <AccordionContent className="pb-3 space-y-3">
+            {/* Hit Mode Toggle */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-muted-foreground/50">Default Hit Mode</label>
+              <div className="flex gap-1.5 rounded-xl bg-background/30 border border-border/30 p-1">
+                <button
+                  onClick={() => setLocalSettings(prev => ({ ...prev, hitProxyMode: 'edge' }))}
+                  className={`flex-1 py-2.5 rounded-lg text-[10px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 ${
+                    localSettings.hitProxyMode === 'edge'
+                      ? 'bg-primary/15 border border-primary/25 text-primary'
+                      : 'text-muted-foreground/50 hover:text-muted-foreground'
+                  }`}>
+                  <Cloud className="w-3.5 h-3.5" /> Edge Function
+                </button>
+                <button
+                  onClick={() => setLocalSettings(prev => ({ ...prev, hitProxyMode: 'cloudflare' }))}
+                  className={`flex-1 py-2.5 rounded-lg text-[10px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 ${
+                    localSettings.hitProxyMode === 'cloudflare'
+                      ? 'bg-amber-500/15 border border-amber-500/25 text-amber-400'
+                      : 'text-muted-foreground/50 hover:text-muted-foreground'
+                  }`}>
+                  <Globe className="w-3.5 h-3.5" /> CF Worker
+                </button>
+              </div>
+              <p className="text-[9px] text-muted-foreground/40">Website aur Telegram bot dono isi mode se request karenge.</p>
+            </div>
             <div className="space-y-1.5">
               <label className="text-[10px] text-muted-foreground/50">Cloudflare Worker URL (CORS Proxy)</label>
               <Input value={localSettings.cloudflareProxyUrl} onChange={e => update('cloudflareProxyUrl', e.target.value)} className={inputClass} placeholder="https://your-worker.workers.dev" />
-              <p className="text-[9px] text-muted-foreground/40">Blank = Supabase edge function use hoga. URL daaloge to Cloudflare proxy use hoga.</p>
+              <p className="text-[9px] text-muted-foreground/40">CF Worker mode ke liye URL zaroori hai.</p>
             </div>
             <div className="space-y-1.5">
               <label className="text-[10px] text-muted-foreground/50">Residential Proxy URL</label>
