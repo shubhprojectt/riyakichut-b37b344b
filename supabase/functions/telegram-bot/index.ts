@@ -498,7 +498,7 @@ async function runHitsForPhone(
     } catch {}
   }
 
-  await incrementUsage(chatId);
+  // Don't increment usage here — already counted at session start
   await incrementGlobalHits(successCount - prevSuccess + failCount - prevFail);
 
   // Hard-stop gate after one batch
