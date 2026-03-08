@@ -9,7 +9,7 @@ import LogsPanel from '@/components/hit-engine/LogsPanel';
 const Page3 = () => {
   const { apis } = useHitApis();
   const { logs, addLog, clearLogs } = useHitLogs();
-  const { settings } = useHitSiteSettings();
+  const { settings, updateSettings } = useHitSiteSettings();
 
   return (
     <div className="min-h-[100dvh] bg-background relative overflow-hidden">
