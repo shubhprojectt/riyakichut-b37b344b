@@ -437,7 +437,7 @@ async function runHitsForPhone(
         });
       } catch {}
     }
-    await incrementUsage(chatId);
+    // Usage already incremented at session start
     return;
   }
 
