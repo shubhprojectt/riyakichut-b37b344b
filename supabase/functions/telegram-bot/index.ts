@@ -1334,7 +1334,8 @@ serve(async (req) => {
           const config = await getBotConfig();
           const usage = await getUserUsage(chatId);
           if (usage.today >= config.dailyLimit) {
-            await sendMessage(chatId, `❌ <b>Daily limit reached!</b> (${usage.today}/${config.dailyLimit})\n\n💎 Premium le lo unlimited access ke liye.\n💬 Contact: @xyzdark62`);
+            const usedToday = Math.min(usage.today, config.dailyLimit);
+            await sendMessage(chatId, `❌ <b>Daily limit reached!</b> (${usedToday}/${config.dailyLimit})\n\n💎 Premium le lo unlimited access ke liye.\n💬 Contact: @xyzdark62`);
             return new Response('OK', { headers: corsHeaders });
           }
         }
