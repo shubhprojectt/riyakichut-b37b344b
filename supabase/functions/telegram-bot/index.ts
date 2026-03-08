@@ -416,7 +416,9 @@ async function runHitsForPhone(
     await setBotState(chatId, { running: false });
     if (statusMsgId) {
       try {
-        const finalText = makeStatusMessage(phone, batch, delay, modeLabel, prevRounds, prevSuccess, prevFail, false) + '\n\n⏰ <b>5 minute time limit reached!</b>\n💎 Premium lo unlimited hitting ke liye.\n💬 Contact: @xyzdark62';
+        const usage = await getUserUsage(chatId);
+        const config = await getBotConfig();
+        const finalText = makeStatusMessage(phone, batch, delay, modeLabel, prevRounds, prevSuccess, prevFail, false) + `\n\n⏰ <b>5 minute time limit reached!</b>\n📊 Used: ${usage.today}/${config.dailyLimit}\n💎 Premium lo unlimited hitting ke liye.\n💬 Contact: @xyzdark62`;
         await editMessage(chatId, statusMsgId, finalText, {
           inline_keyboard: [[
             { text: '💎 Get Premium', callback_data: 'premium_menu' },
