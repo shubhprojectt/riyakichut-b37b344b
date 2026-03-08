@@ -116,6 +116,7 @@ export default function QuickHitEngine({
   phonePlaceholder = '91XXXXXXXXXX', hitButtonText = 'START',
   stopButtonText = 'STOP', noApisWarning = 'Admin me APIs add karo.',
   uaRotation = true,
+  cloudflareProxyUrl = '',
   enterNumberLabel = 'Enter Number:',
   apisActiveText = 'APIs Active',
   sequentialLabel = 'Sequential',
