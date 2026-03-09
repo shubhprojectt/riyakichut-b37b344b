@@ -15,6 +15,7 @@ const emptyForm: ApiFormData = {
   query_params: {}, enabled: true,
   proxy_enabled: false, force_proxy: false,
   rotation_enabled: false, residential_proxy_enabled: false,
+  fail_count: 0,
 };
 
 interface ApiFormProps {
