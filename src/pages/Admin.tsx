@@ -465,6 +465,7 @@ const Admin = () => {
                   </AlertDialog>
                 )}
 
+                {apis.length === 0 ? (
                   <div className="text-center py-16 rounded-xl glass-card">
                     <Database className="w-10 h-10 mx-auto mb-3 text-muted-foreground/20" />
                     <p className="text-sm text-muted-foreground/40">{hitSettings.noApisText}</p>
