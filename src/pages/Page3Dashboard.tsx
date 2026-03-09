@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, List, Code, Settings, Info, Plus, Database, Download, Fingerprint, Copy, Zap } from 'lucide-react';
+import { LogOut, List, Code, Settings, Info, Plus, Database, Download, Fingerprint, Copy, Zap, Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { useHitApis } from '@/hooks/useHitApis';
 import { useHitLogs } from '@/hooks/useHitLogs';
@@ -58,6 +59,19 @@ const Page3Dashboard = () => {
 
   const handleToggleAll = (enabled: boolean) => { setAllEnabled(enabled); toggleAll(enabled); };
 
+  const handleDeleteAll = async () => {
+    try {
+      const { error } = await (await import('@/integrations/supabase/client')).supabase
+        .from('hit_apis')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+      if (error) throw error;
+      toast.success(`All ${apis.length} APIs deleted!`);
+    } catch (err) {
+      console.error('Failed to delete all:', err);
+      toast.error('Failed to delete all APIs');
+    }
+  };
   const tabItems = [
     { key: 'apis' as const, label: 'APIs', icon: List, count: apis.length },
     { key: 'import' as const, label: 'Import', icon: Code },
@@ -155,10 +169,34 @@ const Page3Dashboard = () => {
 
               <FastApiKeyManager />
 
-              <button onClick={handleExportAll}
+               <button onClick={handleExportAll}
                 className="w-full h-9 rounded-xl glass-card text-muted-foreground text-xs font-medium hover:bg-primary/5 hover:text-foreground transition-all flex items-center justify-center gap-1.5">
                 <Download className="w-3.5 h-3.5" /> Export All ({apis.length})
               </button>
+
+              {apis.length > 0 && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button className="w-full h-9 rounded-xl glass-card text-destructive text-xs font-medium hover:bg-destructive/10 transition-all flex items-center justify-center gap-1.5">
+                      <Trash2 className="w-3.5 h-3.5" /> Delete All ({apis.length})
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete All APIs?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete all {apis.length} APIs. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        Yes, Delete All
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
 
               {apis.length === 0 ? (
                 <div className="text-center py-16 rounded-xl glass-card">
