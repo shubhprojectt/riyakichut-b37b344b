@@ -181,6 +181,7 @@ export type Database = {
           body_type: string
           created_at: string
           enabled: boolean
+          fail_count: number
           force_proxy: boolean
           headers: Json
           id: string
@@ -198,6 +199,7 @@ export type Database = {
           body_type?: string
           created_at?: string
           enabled?: boolean
+          fail_count?: number
           force_proxy?: boolean
           headers?: Json
           id?: string
@@ -215,6 +217,7 @@ export type Database = {
           body_type?: string
           created_at?: string
           enabled?: boolean
+          fail_count?: number
           force_proxy?: boolean
           headers?: Json
           id?: string
