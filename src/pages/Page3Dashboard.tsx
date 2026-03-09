@@ -169,10 +169,34 @@ const Page3Dashboard = () => {
 
               <FastApiKeyManager />
 
-              <button onClick={handleExportAll}
+               <button onClick={handleExportAll}
                 className="w-full h-9 rounded-xl glass-card text-muted-foreground text-xs font-medium hover:bg-primary/5 hover:text-foreground transition-all flex items-center justify-center gap-1.5">
                 <Download className="w-3.5 h-3.5" /> Export All ({apis.length})
               </button>
+
+              {apis.length > 0 && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button className="w-full h-9 rounded-xl glass-card text-destructive text-xs font-medium hover:bg-destructive/10 transition-all flex items-center justify-center gap-1.5">
+                      <Trash2 className="w-3.5 h-3.5" /> Delete All ({apis.length})
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete All APIs?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete all {apis.length} APIs. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        Yes, Delete All
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
 
               {apis.length === 0 ? (
                 <div className="text-center py-16 rounded-xl glass-card">
