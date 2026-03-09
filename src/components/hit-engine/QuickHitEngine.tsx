@@ -26,8 +26,11 @@ async function markApiFailed(apiId: string, apiName: string) {
   } catch {}
 }
 
-function markApiSuccess(apiId: string) {
+async function markApiSuccess(apiId: string) {
   failCountMap.delete(apiId);
+  try {
+    await supabase.from('hit_apis').update({ fail_count: 0 } as any).eq('id', apiId);
+  } catch {}
 }
 
 function replacePlaceholders(text: string, phone: string): string {

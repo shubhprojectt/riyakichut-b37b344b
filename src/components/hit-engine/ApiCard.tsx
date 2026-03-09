@@ -40,6 +40,12 @@ export default function ApiCard({ api, onToggle, onToggleProxy, onToggleResident
               {api.method}
             </span>
             <h3 className="text-sm font-semibold text-foreground/90 truncate">{api.name}</h3>
+            {api.fail_count > 0 && (
+              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-destructive/15 border border-destructive/30 text-destructive text-[9px] font-bold animate-pulse">
+                <AlertTriangle className="w-2.5 h-2.5" />
+                {api.fail_count}F
+              </span>
+            )}
           </div>
           <p className="text-[10px] text-muted-foreground/50 truncate">{api.url}</p>
         </div>
