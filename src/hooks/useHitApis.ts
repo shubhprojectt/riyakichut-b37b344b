@@ -16,6 +16,7 @@ export interface HitApi {
   force_proxy: boolean;
   rotation_enabled: boolean;
   residential_proxy_enabled: boolean;
+  fail_count: number;
 }
 
 export function useHitApis() {
@@ -46,6 +47,7 @@ export function useHitApis() {
         force_proxy: row.force_proxy,
         rotation_enabled: row.rotation_enabled,
         residential_proxy_enabled: row.residential_proxy_enabled,
+        fail_count: (row as any).fail_count ?? 0,
       }));
 
       setApis(mapped);

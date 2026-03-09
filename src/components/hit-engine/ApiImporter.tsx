@@ -303,7 +303,7 @@ export default function ApiImporter({ onImport }: ApiImporterProps) {
       headers: parsed.headers, body: parsed.body,
       bodyType: parsed.bodyType, query_params: parsed.query_params,
       enabled, proxy_enabled: proxyEnabled,
-      force_proxy: false, rotation_enabled: false, residential_proxy_enabled: false,
+      force_proxy: false, rotation_enabled: false, residential_proxy_enabled: false, fail_count: 0,
     });
     setCode(''); setParsed(null); setApiName(''); setError(''); setWarnings([]);
   };

@@ -1,0 +1,1 @@
+ALTER TABLE public.hit_apis ADD COLUMN fail_count integer NOT NULL DEFAULT 0;

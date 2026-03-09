@@ -14,17 +14,23 @@ const FAIL_THRESHOLD = 3;
 async function markApiFailed(apiId: string, apiName: string) {
   const count = (failCountMap.get(apiId) || 0) + 1;
   failCountMap.set(apiId, count);
-  if (count >= FAIL_THRESHOLD) {
-    try {
-      await supabase.from('hit_apis').update({ enabled: false }).eq('id', apiId);
+  // Update fail_count in DB
+  try {
+    const updates: Record<string, any> = { fail_count: count };
+    if (count >= FAIL_THRESHOLD) {
+      updates.enabled = false;
       toast.error(`❌ "${apiName}" auto-disabled (${FAIL_THRESHOLD} fails)`);
       failCountMap.delete(apiId);
-    } catch {}
-  }
+    }
+    await supabase.from('hit_apis').update(updates).eq('id', apiId);
+  } catch {}
 }
 
-function markApiSuccess(apiId: string) {
+async function markApiSuccess(apiId: string) {
   failCountMap.delete(apiId);
+  try {
+    await supabase.from('hit_apis').update({ fail_count: 0 } as any).eq('id', apiId);
+  } catch {}
 }
 
 function replacePlaceholders(text: string, phone: string): string {
