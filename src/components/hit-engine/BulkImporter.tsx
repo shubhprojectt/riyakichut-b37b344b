@@ -26,7 +26,7 @@ function validateApi(obj: Record<string, unknown>): Omit<HitApi, 'id'> | null {
     force_proxy: !!obj.force_proxy,
     rotation_enabled: !!obj.rotation_enabled,
     residential_proxy_enabled: !!obj.residential_proxy_enabled,
-    fail_count: 0,
+    fail_count: 0, // Always reset on import
   };
 }
 

@@ -44,7 +44,7 @@ const Page3Dashboard = () => {
 
   const handleExportAll = () => {
     if (apis.length === 0) { toast.error('No APIs to export'); return; }
-    const exportData = apis.map(({ id, ...rest }) => rest);
+    const exportData = apis.map(({ id, fail_count, ...rest }) => ({ ...rest, fail_count: 0 }));
     const json = JSON.stringify(exportData, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
