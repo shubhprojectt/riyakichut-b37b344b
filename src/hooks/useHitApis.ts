@@ -16,6 +16,7 @@ export interface HitApi {
   force_proxy: boolean;
   rotation_enabled: boolean;
   residential_proxy_enabled: boolean;
+  fail_count: number;
 }
 
 export function useHitApis() {
