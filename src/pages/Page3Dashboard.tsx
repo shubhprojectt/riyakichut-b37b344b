@@ -59,6 +59,19 @@ const Page3Dashboard = () => {
 
   const handleToggleAll = (enabled: boolean) => { setAllEnabled(enabled); toggleAll(enabled); };
 
+  const handleDeleteAll = async () => {
+    try {
+      const { error } = await (await import('@/integrations/supabase/client')).supabase
+        .from('hit_apis')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+      if (error) throw error;
+      toast.success(`All ${apis.length} APIs deleted!`);
+    } catch (err) {
+      console.error('Failed to delete all:', err);
+      toast.error('Failed to delete all APIs');
+    }
+  };
   const tabItems = [
     { key: 'apis' as const, label: 'APIs', icon: List, count: apis.length },
     { key: 'import' as const, label: 'Import', icon: Code },
