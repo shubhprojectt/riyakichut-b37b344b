@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { HitApi } from '@/hooks/useHitApis';
 import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Zap, Globe, Shield, RotateCw, Home, Edit2, Trash2 } from 'lucide-react';
+import { Zap, Globe, Shield, RotateCw, Home, Edit2, Trash2, AlertTriangle } from 'lucide-react';
 
 interface ApiCardProps {
   api: HitApi;
