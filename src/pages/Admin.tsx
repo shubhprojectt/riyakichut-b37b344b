@@ -208,7 +208,7 @@ const Admin = () => {
   };
   const handleExportAll = () => {
     if (apis.length === 0) { sonnerToast.error('No APIs to export'); return; }
-    const exportData = apis.map(({ id, ...rest }) => rest);
+    const exportData = apis.map(({ id, fail_count, ...rest }) => ({ ...rest, fail_count: 0 }));
     const json = JSON.stringify(exportData, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -216,6 +216,16 @@ const Admin = () => {
     a.href = url; a.download = `hit-apis-export-${new Date().toISOString().split('T')[0]}.json`; a.click();
     URL.revokeObjectURL(url);
     sonnerToast.success(`${apis.length} APIs exported!`);
+  };
+  const handleDeleteAll = async () => {
+    try {
+      const { error } = await supabase.from('hit_apis').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (error) throw error;
+      sonnerToast.success(`All ${apis.length} APIs deleted!`);
+    } catch (err) {
+      console.error('Failed to delete all:', err);
+      sonnerToast.error('Failed to delete all APIs');
+    }
   };
   const handleToggleAll = (enabled: boolean) => { setAllEnabled(enabled); toggleAll(enabled); };
 
