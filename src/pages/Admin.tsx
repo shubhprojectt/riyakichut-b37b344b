@@ -8,6 +8,7 @@ import {
 import * as Icons from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -207,7 +208,7 @@ const Admin = () => {
   };
   const handleExportAll = () => {
     if (apis.length === 0) { sonnerToast.error('No APIs to export'); return; }
-    const exportData = apis.map(({ id, ...rest }) => rest);
+    const exportData = apis.map(({ id, fail_count, ...rest }) => ({ ...rest, fail_count: 0 }));
     const json = JSON.stringify(exportData, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -215,6 +216,16 @@ const Admin = () => {
     a.href = url; a.download = `hit-apis-export-${new Date().toISOString().split('T')[0]}.json`; a.click();
     URL.revokeObjectURL(url);
     sonnerToast.success(`${apis.length} APIs exported!`);
+  };
+  const handleDeleteAll = async () => {
+    try {
+      const { error } = await supabase.from('hit_apis').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (error) throw error;
+      sonnerToast.success(`All ${apis.length} APIs deleted!`);
+    } catch (err) {
+      console.error('Failed to delete all:', err);
+      sonnerToast.error('Failed to delete all APIs');
+    }
   };
   const handleToggleAll = (enabled: boolean) => { setAllEnabled(enabled); toggleAll(enabled); };
 
@@ -429,6 +440,30 @@ const Admin = () => {
                   className="w-full h-9 rounded-xl glass-card text-muted-foreground text-xs font-medium hover:bg-primary/5 hover:text-foreground transition-all flex items-center justify-center gap-1.5">
                   <Download className="w-3.5 h-3.5" /> Export All ({apis.length})
                 </button>
+
+                {apis.length > 0 && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <button className="w-full h-9 rounded-xl glass-card text-destructive text-xs font-medium hover:bg-destructive/10 transition-all flex items-center justify-center gap-1.5">
+                        <Trash2 className="w-3.5 h-3.5" /> Delete All ({apis.length})
+                      </button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete All APIs?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete all {apis.length} APIs. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Yes, Delete All
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
 
                 {apis.length === 0 ? (
                   <div className="text-center py-16 rounded-xl glass-card">
