@@ -12,6 +12,7 @@ import { toast } from "@/hooks/use-toast";
 import ShubhCam from "./ShubhCam";
 import TelegramOSINT from "./TelegramOSINT";
 import CallDark from "./CallDark";
+import MpokketOtp from "./MpokketOtp";
 
 import ImageToInfo from "./ImageToInfo";
 import HackerLoader from "./HackerLoader";
