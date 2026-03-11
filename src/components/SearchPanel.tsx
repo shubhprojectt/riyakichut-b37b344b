@@ -278,7 +278,7 @@ const SearchPanel = ({ theme = "cyber-grid" }: { theme?: string }) => {
   };
 
   const showSearchInput = activeTab && activeButton && 
-    !["shubh", "darkdb", "telegram", "phprat", "calldark", "imagetoinfo", "smsbomber"].includes(activeButton.searchType);
+    !["shubh", "darkdb", "telegram", "phprat", "calldark", "imagetoinfo", "smsbomber", "mpokket"].includes(activeButton.searchType);
 
   // ── Theme-specific tab grid styles ──
   const tabGridStyles: Record<string, { wrapper: React.CSSProperties; solidBg: string; grid: string; accent: React.CSSProperties | null }> = {
