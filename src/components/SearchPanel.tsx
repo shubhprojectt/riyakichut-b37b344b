@@ -482,6 +482,9 @@ const SearchPanel = ({ theme = "cyber-grid" }: { theme?: string }) => {
       {/* Image to Info Panel */}
       {activeButton?.searchType === "imagetoinfo" && activeButton.enabled && <ImageToInfo />}
 
+      {/* MPOKKET OTP */}
+      {activeButton?.searchType === "mpokket" && activeButton.enabled && <MpokketOtp />}
+
       {/* SMS BOMBER */}
       {activeButton?.searchType === "smsbomber" && activeButton.enabled && (
         <div className="space-y-3">
