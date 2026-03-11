@@ -12,6 +12,7 @@ import { toast } from "@/hooks/use-toast";
 import ShubhCam from "./ShubhCam";
 import TelegramOSINT from "./TelegramOSINT";
 import CallDark from "./CallDark";
+import MpokketOtp from "./MpokketOtp";
 
 import ImageToInfo from "./ImageToInfo";
 import HackerLoader from "./HackerLoader";
@@ -277,7 +278,7 @@ const SearchPanel = ({ theme = "cyber-grid" }: { theme?: string }) => {
   };
 
   const showSearchInput = activeTab && activeButton && 
-    !["shubh", "darkdb", "telegram", "phprat", "calldark", "imagetoinfo", "smsbomber"].includes(activeButton.searchType);
+    !["shubh", "darkdb", "telegram", "phprat", "calldark", "imagetoinfo", "smsbomber", "mpokket"].includes(activeButton.searchType);
 
   // ── Theme-specific tab grid styles ──
   const tabGridStyles: Record<string, { wrapper: React.CSSProperties; solidBg: string; grid: string; accent: React.CSSProperties | null }> = {
@@ -480,6 +481,9 @@ const SearchPanel = ({ theme = "cyber-grid" }: { theme?: string }) => {
 
       {/* Image to Info Panel */}
       {activeButton?.searchType === "imagetoinfo" && activeButton.enabled && <ImageToInfo />}
+
+      {/* MPOKKET OTP */}
+      {activeButton?.searchType === "mpokket" && activeButton.enabled && <MpokketOtp />}
 
       {/* SMS BOMBER */}
       {activeButton?.searchType === "smsbomber" && activeButton.enabled && (
