@@ -144,6 +144,7 @@ const defaultTabs: TabConfig[] = [
   { id: "smsbomber", label: "SMS BOMBER", icon: "Bomb", color: "orange", placeholder: "", searchType: "smsbomber", apiUrl: "", enabled: true },
   { id: "calldark", label: "CALL DARK", icon: "PhoneCall", color: "red", placeholder: "", searchType: "calldark", apiUrl: "", enabled: true },
   { id: "imagetoinfo", label: "Image to Info", icon: "Camera", color: "pink", placeholder: "", searchType: "imagetoinfo", apiUrl: "", enabled: true },
+  { id: "mpokket", label: "Mpokket", icon: "Phone", color: "yellow", placeholder: "", searchType: "mpokket", apiUrl: "", enabled: true },
 ];
 
 const defaultSettings: AppSettings = {
