@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.telegram-bot]
 verify_jwt = false
+
+[functions.mpokket-otp]
+verify_jwt = false
