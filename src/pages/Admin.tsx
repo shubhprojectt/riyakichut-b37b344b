@@ -153,8 +153,8 @@ const Admin = () => {
   const [showAllSearchKey, setShowAllSearchKey] = useState(false);
   const [showTelegramKey, setShowTelegramKey] = useState(false);
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [adminPasswordInput, setAdminPasswordInput] = useState("");
+
+  const { isAuthenticated, isAdmin: isAdminUser, isLoading: authLoading, user } = useAuth();
 
   const [localSitePassword, setLocalSitePassword] = useState(settings.sitePassword);
   const [localAdminPassword, setLocalAdminPassword] = useState(settings.adminPassword);
@@ -171,8 +171,8 @@ const Admin = () => {
   const [allEnabled, setAllEnabled] = useState(true);
 
   useEffect(() => {
-    if (isAuthenticated) { fetchSearchHistory(); }
-  }, [isAuthenticated]);
+    if (isAdminUser) { fetchSearchHistory(); }
+  }, [isAdminUser]);
 
   const fetchSearchHistory = async () => {
     const { data, error } = await supabase.from("search_history").select("*").order("searched_at", { ascending: false }).limit(100);
@@ -182,14 +182,6 @@ const Admin = () => {
   const clearSearchHistory = async () => {
     const { error } = await supabase.from("search_history").delete().neq("id", "00000000-0000-0000-0000-000000000000");
     if (!error) { setSearchHistory([]); toast({ title: "History Cleared", description: "All search history deleted" }); }
-  };
-
-  const handleAdminLogin = () => {
-    if (adminPasswordInput === settings.adminPassword) {
-      setIsAuthenticated(true);
-      sessionStorage.setItem('hitAdminAuth', 'true');
-      toast({ title: "Access Granted", description: "Welcome to Admin Panel" });
-    } else { toast({ title: "Access Denied", description: "Wrong admin password", variant: "destructive" }); }
   };
 
   const savePasswords = () => {
@@ -229,33 +221,49 @@ const Admin = () => {
   };
   const handleToggleAll = (enabled: boolean) => { setAllEnabled(enabled); toggleAll(enabled); };
 
+  // Auth check - must be admin
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-foreground">Loading...</div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
         <div className="fixed inset-0 pointer-events-none">
           <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] bg-primary/[0.05] rounded-full blur-[120px]" />
-          <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-secondary/[0.04] rounded-full blur-[100px]" />
         </div>
         <div className="w-full max-w-sm relative z-10">
-          <div className="glass-card rounded-3xl p-5">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/25 to-secondary/25 flex items-center justify-center glow-gold">
-                <Shield className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-base font-bold text-foreground">Admin Access</h1>
-                <p className="text-xs text-muted-foreground">Enter admin password</p>
-              </div>
-            </div>
-            <div className="mt-4 space-y-3">
-              <Input type="password" value={adminPasswordInput} onChange={(e) => setAdminPasswordInput(e.target.value)}
-                placeholder="Admin password" className="h-10 bg-background/30 border-primary/15 focus:border-primary/40"
-                onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()} />
-              <Button onClick={handleAdminLogin} className="w-full h-10 bg-gradient-to-r from-primary to-secondary text-primary-foreground glow-gold">Login</Button>
-              <Button variant="outline" onClick={() => navigate("/")} className="w-full h-10 glass-card border-border/30">
-                <ArrowLeft className="w-4 h-4" /> Back
-              </Button>
-            </div>
+          <div className="glass-card rounded-3xl p-5 text-center">
+            <Shield className="w-10 h-10 text-primary mx-auto mb-3" />
+            <h1 className="text-base font-bold text-foreground mb-2">Admin Access</h1>
+            <p className="text-xs text-muted-foreground mb-4">Please login first</p>
+            <Button onClick={() => navigate("/login")} className="w-full h-10 bg-gradient-to-r from-primary to-secondary text-primary-foreground">
+              Go to Login
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdminUser) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
+        <div className="fixed inset-0 pointer-events-none">
+          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] bg-primary/[0.05] rounded-full blur-[120px]" />
+        </div>
+        <div className="w-full max-w-sm relative z-10">
+          <div className="glass-card rounded-3xl p-5 text-center">
+            <Shield className="w-10 h-10 text-red-400 mx-auto mb-3" />
+            <h1 className="text-base font-bold text-foreground mb-2">Access Denied</h1>
+            <p className="text-xs text-muted-foreground mb-4">You don't have admin permissions.<br/>Email: {user?.email}</p>
+            <Button variant="outline" onClick={() => navigate("/")} className="w-full h-10 glass-card border-border/30">
+              <ArrowLeft className="w-4 h-4" /> Back to Home
+            </Button>
           </div>
         </div>
       </div>
