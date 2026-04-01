@@ -1,173 +1,105 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { User, Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
+  user: User | null;
+  session: Session | null;
   isAuthenticated: boolean;
-  credits: number;
-  totalCredits: number;
-  isUnlimited: boolean;
+  isAdmin: boolean;
   isLoading: boolean;
-  login: (password: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
-  deductCredits: (searchType: string, searchQuery?: string) => Promise<{ success: boolean; error?: string; remainingCredits?: number }>;
-  refreshCredits: () => Promise<void>;
+  signUp: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signOut: () => Promise<void>;
 }
-
-const AUTH_SESSION_KEY = 'shubh_session_token';
-const AUTH_DEVICE_KEY = 'shubh_device_id';
-
-// Generate unique device ID
-const getDeviceId = (): string => {
-  let deviceId = localStorage.getItem(AUTH_DEVICE_KEY);
-  if (!deviceId) {
-    deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);
-    localStorage.setItem(AUTH_DEVICE_KEY, deviceId);
-  }
-  return deviceId;
-};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [credits, setCredits] = useState(0);
-  const [totalCredits, setTotalCredits] = useState(0);
-  const [isUnlimited, setIsUnlimited] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Verify session on mount
-  useEffect(() => {
-    const verifySession = async () => {
-      const sessionToken = localStorage.getItem(AUTH_SESSION_KEY);
-      
-      if (!sessionToken) {
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase.functions.invoke('auth-verify', {
-          body: { sessionToken }
-        });
-
-        if (error || !data?.valid) {
-          localStorage.removeItem(AUTH_SESSION_KEY);
-          setIsAuthenticated(false);
-        } else {
-          setIsAuthenticated(true);
-          setCredits(data.credits);
-          setTotalCredits(data.totalCredits);
-          setIsUnlimited(data.isUnlimited || false);
-        }
-      } catch (err) {
-        console.error('Session verification error:', err);
-        localStorage.removeItem(AUTH_SESSION_KEY);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    verifySession();
+  const checkAdminRole = useCallback(async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .maybeSingle();
+      setIsAdmin(!!data);
+    } catch {
+      setIsAdmin(false);
+    }
   }, []);
 
-  const login = async (password: string): Promise<{ success: boolean; error?: string }> => {
+  useEffect(() => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        // Use setTimeout to avoid Supabase deadlock
+        setTimeout(() => checkAdminRole(session.user.id), 0);
+      } else {
+        setIsAdmin(false);
+      }
+      setIsLoading(false);
+    });
+
+    // Then get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        checkAdminRole(session.user.id);
+      }
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [checkAdminRole]);
+
+  const signUp = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      const deviceId = getDeviceId();
-
-      const { data, error } = await supabase.functions.invoke('auth-login', {
-        body: { password, deviceId }
-      });
-
-      if (error) {
-        return { success: false, error: error.message || 'Login failed' };
-      }
-
-      if (!data?.success) {
-        return { success: false, error: data?.error || 'Invalid password' };
-      }
-
-      localStorage.setItem(AUTH_SESSION_KEY, data.sessionToken);
-      setIsAuthenticated(true);
-      setCredits(data.credits);
-      setTotalCredits(data.totalCredits);
-
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) return { success: false, error: error.message };
       return { success: true };
     } catch (err: any) {
-      console.error('Login error:', err);
+      return { success: false, error: err.message || 'Signup failed' };
+    }
+  };
+
+  const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
       return { success: false, error: err.message || 'Login failed' };
     }
   };
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(AUTH_SESSION_KEY);
-    setIsAuthenticated(false);
-    setCredits(0);
-    setTotalCredits(0);
-    setIsUnlimited(false);
-  }, []);
-
-  const deductCredits = async (searchType: string, searchQuery?: string): Promise<{ success: boolean; error?: string; remainingCredits?: number }> => {
-    const sessionToken = localStorage.getItem(AUTH_SESSION_KEY);
-    
-    if (!sessionToken) {
-      return { success: false, error: 'Not authenticated' };
-    }
-
-    try {
-      const { data, error } = await supabase.functions.invoke('credits-deduct', {
-        body: { sessionToken, searchType, searchQuery }
-      });
-
-      if (error) {
-        return { success: false, error: error.message || 'Failed to deduct credits' };
-      }
-
-      if (!data?.success) {
-        if (data?.error === 'Insufficient credits') {
-          setCredits(data.credits || 0);
-        }
-        return { success: false, error: data?.error || 'Failed to deduct credits' };
-      }
-
-      setCredits(data.remainingCredits);
-      return { success: true, remainingCredits: data.remainingCredits };
-    } catch (err: any) {
-      console.error('Deduct credits error:', err);
-      return { success: false, error: err.message || 'Failed to deduct credits' };
-    }
-  };
-
-  const refreshCredits = async () => {
-    const sessionToken = localStorage.getItem(AUTH_SESSION_KEY);
-    
-    if (!sessionToken) return;
-
-    try {
-      const { data, error } = await supabase.functions.invoke('auth-verify', {
-        body: { sessionToken }
-      });
-
-      if (!error && data?.valid) {
-        setCredits(data.credits);
-        setTotalCredits(data.totalCredits);
-        setIsUnlimited(data.isUnlimited || false);
-      }
-    } catch (err) {
-      console.error('Refresh credits error:', err);
-    }
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    setIsAdmin(false);
   };
 
   return (
     <AuthContext.Provider value={{
-      isAuthenticated,
-      credits,
-      totalCredits,
-      isUnlimited,
+      user,
+      session,
+      isAuthenticated: !!session,
+      isAdmin,
       isLoading,
-      login,
-      logout,
-      deductCredits,
-      refreshCredits
+      signUp,
+      signIn,
+      signOut,
     }}>
       {children}
     </AuthContext.Provider>

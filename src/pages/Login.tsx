@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Lock, Crown, Sparkles } from "lucide-react";
+import { Loader2, Lock, Crown, Sparkles, Mail, UserPlus, LogIn } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,10 +9,12 @@ import { toast } from "@/hooks/use-toast";
 import HackerLoader from "@/components/HackerLoader";
 
 const Login = () => {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showLoader, setShowLoader] = useState(true);
-  const { login } = useAuth();
+  const [isSignUp, setIsSignUp] = useState(false);
+  const { signIn, signUp, isAuthenticated } = useAuth();
   const { settings } = useSettings();
   const navigate = useNavigate();
 
@@ -21,21 +23,24 @@ const Login = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    if (isAuthenticated) navigate("/");
+  }, [isAuthenticated, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!password.trim()) {
-      toast({ title: "Error", description: "Please enter a password", variant: "destructive" });
+    if (!email.trim() || !password.trim()) {
+      toast({ title: "Error", description: "Email aur password dono daalo", variant: "destructive" });
       return;
     }
     setIsLoading(true);
     try {
-      const result = await login(password);
+      const result = isSignUp ? await signUp(email, password) : await signIn(email, password);
       if (result.success) {
-        toast({ title: "Welcome Back", description: "Access granted successfully" });
+        toast({ title: isSignUp ? "Account Created!" : "Welcome Back!", description: isSignUp ? "Signup successful, logged in!" : "Access granted" });
         navigate("/");
       } else {
-        toast({ title: "Access Denied", description: result.error || "Invalid credentials", variant: "destructive" });
-        setPassword("");
+        toast({ title: "Error", description: result.error || "Authentication failed", variant: "destructive" });
       }
     } catch {
       toast({ title: "Error", description: "Authentication failed", variant: "destructive" });
@@ -44,7 +49,7 @@ const Login = () => {
     }
   };
 
-  if (showLoader || isLoading) return <HackerLoader />;
+  if (showLoader) return <HackerLoader />;
 
   return (
     <div className="min-h-[100dvh] flex items-center justify-center p-4 overflow-hidden" style={{ background: 'hsl(var(--background))' }}>
@@ -59,12 +64,10 @@ const Login = () => {
         }} />
       </div>
 
-      {/* Login Card */}
-      <div className="relative w-full max-w-[280px]">
-        {/* Glow */}
+      {/* Card */}
+      <div className="relative w-full max-w-[300px]">
         <div className="absolute -inset-2 rounded-2xl blur-xl opacity-30" style={{ background: 'linear-gradient(135deg, hsl(var(--neon-gold)), hsl(var(--neon-pink)), hsl(var(--neon-purple)))' }} />
         
-        {/* Animated border */}
         <div className="absolute -inset-[1.5px] rounded-2xl overflow-hidden">
           <div className="absolute inset-0 animate-gradient-flow" style={{
             background: 'linear-gradient(90deg, hsl(var(--neon-gold)), hsl(var(--neon-pink)), hsl(var(--neon-purple)), hsl(var(--neon-cyan)), hsl(var(--neon-gold)))',
@@ -104,18 +107,18 @@ const Login = () => {
               </span>
             </h1>
             <p className="text-[10px] mt-1 font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
-              Enter your access key
+              {isSignUp ? "Create your account" : "Login to continue"}
             </p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-3">
             <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value.toUpperCase())}
-              placeholder="••••••••"
-              className="h-10 text-center text-sm rounded-xl transition-all"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email address"
+              className="h-10 text-sm rounded-xl transition-all"
               style={{
                 background: 'rgba(255,255,255,0.03)',
                 border: '1.5px solid rgba(255,200,100,0.15)',
@@ -125,9 +128,23 @@ const Login = () => {
               autoFocus
             />
 
+            <Input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="h-10 text-sm rounded-xl transition-all"
+              style={{
+                background: 'rgba(255,255,255,0.03)',
+                border: '1.5px solid rgba(255,200,100,0.15)',
+                color: 'hsl(var(--foreground))'
+              }}
+              disabled={isLoading}
+            />
+
             <Button
               type="submit"
-              disabled={isLoading || !password.trim()}
+              disabled={isLoading || !email.trim() || !password.trim()}
               className="w-full h-10 rounded-xl text-xs font-bold tracking-wider transition-all duration-300 active:scale-[0.98]"
               style={{
                 background: 'linear-gradient(135deg, hsl(var(--neon-gold)), hsl(var(--neon-orange)))',
@@ -137,16 +154,30 @@ const Login = () => {
             >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
+              ) : isSignUp ? (
+                <>
+                  <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+                  SIGN UP
+                </>
               ) : (
                 <>
-                  <Lock className="w-3.5 h-3.5 mr-1.5" />
-                  AUTHENTICATE
+                  <LogIn className="w-3.5 h-3.5 mr-1.5" />
+                  LOGIN
                 </>
               )}
             </Button>
           </form>
 
-          <div className="flex items-center justify-center gap-1.5 mt-4 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+          {/* Toggle */}
+          <button
+            onClick={() => setIsSignUp(!isSignUp)}
+            className="w-full text-center mt-3 text-[10px] font-medium transition-colors"
+            style={{ color: 'hsl(var(--neon-gold))' }}
+          >
+            {isSignUp ? "Already have account? Login" : "Don't have account? Sign Up"}
+          </button>
+
+          <div className="flex items-center justify-center gap-1.5 mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
             <div className="w-1 h-1 rounded-full" style={{ background: 'hsl(var(--neon-gold))' }} />
             <p className="text-[9px] font-medium tracking-wide" style={{ color: 'hsl(var(--muted-foreground) / 0.6)' }}>
               Secured Access
