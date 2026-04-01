@@ -1283,9 +1283,55 @@ serve(async (req) => {
         return new Response('OK', { headers: corsHeaders });
       }
 
-      // ===== Schedule Phone Handling =====
+      // ===== Custom SMS (mPokket) Handling =====
       const state = await getBotState(chatId);
 
+      if (state?.waiting_custom_sms) {
+        const phone = text.replace(/[^0-9+]/g, '');
+        const phoneRegex = /^\+?[0-9]{10,15}$/;
+
+        if (!phoneRegex.test(phone)) {
+          await sendMessage(chatId, '❌ <b>Invalid number!</b>\n\n<code>9876543210</code>');
+          return new Response('OK', { headers: corsHeaders });
+        }
+
+        await setBotState(chatId, { waiting_custom_sms: false });
+
+        // Call mpokket OTP edge function
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+        const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+        
+        try {
+          const mpRes = await fetch(`${supabaseUrl}/functions/v1/mpokket-otp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
+            body: JSON.stringify({ number: phone, msg: 'OTP_REQUEST' }),
+          });
+          const mpData = await mpRes.json();
+          
+          let resultText = `📲 <b>mPokket OTP Result</b>\n\n`;
+          resultText += `📱 Number: <code>${phone}</code>\n`;
+          resultText += `✅ Status: <b>${mpData.success ? 'Sent' : 'Failed'}</b>\n`;
+          resultText += `📊 Code: ${mpData.status_code || 'N/A'}\n\n`;
+          if (mpData.data) {
+            resultText += `📋 Response:\n<code>${JSON.stringify(mpData.data, null, 2).slice(0, 500)}</code>`;
+          }
+
+          await sendMessage(chatId, resultText, {
+            inline_keyboard: [
+              [{ text: '📲 Send Again', callback_data: 'custom_sms' }],
+              [{ text: '🏠 Main Menu', callback_data: 'main_menu' }],
+            ],
+          });
+        } catch (err) {
+          await sendMessage(chatId, `❌ <b>Error:</b> ${err instanceof Error ? err.message : 'Unknown'}`, {
+            inline_keyboard: [[{ text: '🏠 Main Menu', callback_data: 'main_menu' }]],
+          });
+        }
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // ===== Schedule Phone Handling =====
       if (state?.waiting_schedule_phone) {
         const parts = text.split(/\s+/);
         const phone = parts[0].replace(/[^0-9+]/g, '');
