@@ -680,7 +680,13 @@ serve(async (req) => {
       if (data === 'stop_hit') {
         await setBotState(chatId, { running: false, waiting_phone: false });
         await answerCallbackQuery(cb.id, '🛑 Stopped!');
-        // Don't edit here - the running loop will detect stop and edit the status message itself
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- Custom SMS (mPokket) ---
+      if (data === 'custom_sms') {
+        await setBotState(chatId, { waiting_custom_sms: true });
+        await editMessage(chatId, msgId, '📲 <b>Custom SMS (mPokket OTP)</b>\n\n📱 Phone number bhejo:\n<code>9876543210</code>\n\n<i>mPokket OTP send hoga is number pe</i>');
         return new Response('OK', { headers: corsHeaders });
       }
 
