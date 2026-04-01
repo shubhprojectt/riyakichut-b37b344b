@@ -567,6 +567,7 @@ async function getMainMenuKeyboard(admin: boolean, chatId?: number) {
   const keyboard: any[][] = [
     topRow,
     [{ text: `${modeIcon} Mode: ${modeText}`, callback_data: 'toggle_mode' }, { text: '📅 Schedule', callback_data: 'schedule_hit' }],
+    [{ text: '📲 Custom SMS', callback_data: 'custom_sms' }],
   ];
 
   if (admin) {
