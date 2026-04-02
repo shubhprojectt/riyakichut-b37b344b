@@ -2,8 +2,8 @@
 -- SHUBH OSINT - Complete Supabase Database Setup
 -- =====================================================
 -- Run this SQL in your new Supabase project's SQL Editor
--- Last Updated: 2026-03-08
--- Version: 5.2 (Premium System + IST Daily Limits)
+-- Last Updated: 2026-04-02
+-- Version: 5.3 (IST Daily Limits + Custom SMS Defaults)
 -- =====================================================
 -- NOTE: Credit system has been REMOVED. Authentication is now
 -- handled by simple site password (stored in app_settings).
@@ -452,7 +452,8 @@ VALUES ('main_settings', '{
     {"id": "randipanel", "label": "RANDI PANEL", "icon": "Skull", "color": "red", "placeholder": "", "searchType": "randipanel", "apiUrl": "", "enabled": true},
     {"id": "smsbomber", "label": "SMS BOMBER", "icon": "Bomb", "color": "orange", "placeholder": "", "searchType": "smsbomber", "apiUrl": "", "enabled": true},
     {"id": "calldark", "label": "CALL DARK", "icon": "PhoneCall", "color": "purple", "placeholder": "", "searchType": "calldark", "apiUrl": "", "enabled": true},
-    {"id": "imagetoinfo", "label": "Image to Info", "icon": "Camera", "color": "pink", "placeholder": "", "searchType": "imagetoinfo", "apiUrl": "", "enabled": true}
+    {"id": "imagetoinfo", "label": "Image to Info", "icon": "Camera", "color": "pink", "placeholder": "", "searchType": "imagetoinfo", "apiUrl": "", "enabled": true},
+    {"id": "mpokket", "label": "Mpokket", "icon": "Phone", "color": "yellow", "placeholder": "", "searchType": "mpokket", "apiUrl": "", "enabled": true}
   ],
   "telegramOsint": {
     "jwtToken": "",
@@ -514,6 +515,16 @@ VALUES ('hit_site_settings', '{
 }'::jsonb)
 ON CONFLICT (setting_key) DO NOTHING;
 
+-- Telegram Bot Settings (defaults for free plan and hit params)
+INSERT INTO public.app_settings (setting_key, setting_value)
+VALUES ('tgbot_config', '{
+  "dailyLimit": 5,
+  "defaultRounds": 1,
+  "defaultBatch": 5,
+  "defaultDelay": 2
+}'::jsonb)
+ON CONFLICT (setting_key) DO NOTHING;
+
 -- =====================================================
 -- EDGE FUNCTIONS LIST (deploy from supabase/functions/)
 -- =====================================================
@@ -534,6 +545,12 @@ ON CONFLICT (setting_key) DO NOTHING;
 -- 11. execute-scheduled-hits  - Cron-based scheduled bombing executor
 -- 12. fast-hit-all            - Hit ALL enabled APIs (Pro API style)
 -- 13. telegram-bot            - Telegram Bot webhook handler (v5.2)
+-- 14. mpokket-otp             - Custom SMS multi-service OTP relay
+--
+-- IMPORTANT CHANGES in v5.3:
+-- - Custom SMS now supports mPokket, Milkbasket, and Digihaat in one flow
+-- - tgbot_config defaults are seeded in app_settings
+-- - Mpokket tab is included in the default main page tabs list
 --
 -- IMPORTANT CHANGES in v5.2:
 -- - Premium system simplified: Only "Unlimited" plan (₹199)

@@ -95,6 +95,63 @@ async function getBotConfig(): Promise<{
   };
 }
 
+const CUSTOM_SMS_SERVICES = {
+  mpokket: {
+    label: 'mPokket',
+    msgLabel: 'Hash Key',
+    defaultMsg: 'OTP_REQUEST',
+    note: 'mPokket OTP send hoga is number pe',
+  },
+  milkbasket: {
+    label: 'Milkbasket',
+    msgLabel: 'App Hash',
+    defaultMsg: 'default',
+    note: 'Milkbasket OTP send hoga is number pe',
+  },
+  digihaat: {
+    label: 'Digihaat',
+    msgLabel: 'Message',
+    defaultMsg: 'hello',
+    note: 'Digihaat OTP send hoga is number pe',
+  },
+} as const;
+
+type CustomSmsService = keyof typeof CUSTOM_SMS_SERVICES;
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function getCustomSmsServiceKeyboard() {
+  return {
+    inline_keyboard: [
+      [
+        { text: '🟨 mPokket', callback_data: 'custom_sms_service:mpokket' },
+        { text: '🟩 Milkbasket', callback_data: 'custom_sms_service:milkbasket' },
+      ],
+      [{ text: '🟦 Digihaat', callback_data: 'custom_sms_service:digihaat' }],
+      [{ text: '🏠 Main Menu', callback_data: 'main_menu' }],
+    ],
+  };
+}
+
+function getCustomSmsServicePrompt() {
+  return '📲 <b>Custom SMS</b>\n\nService select karo:';
+}
+
+function getCustomSmsNumberPrompt(service: CustomSmsService) {
+  const serviceConfig = CUSTOM_SMS_SERVICES[service];
+  return `📲 <b>Custom SMS (${serviceConfig.label})</b>\n\n📱 Phone number bhejo:\n<code>98765432xx</code>\n\n<i>${serviceConfig.note}</i>`;
+}
+
+function getCustomSmsMsgPrompt(service: CustomSmsService, phone: string) {
+  const serviceConfig = CUSTOM_SMS_SERVICES[service];
+  return `📲 <b>Custom SMS (${serviceConfig.label})</b>\n\n📱 Number: <code>${phone}</code>\n📝 ${serviceConfig.msgLabel} bhejo:\n<code>${escapeHtml(serviceConfig.defaultMsg)}</code>`;
+}
+
 // ===== CF Workers =====
 async function getCfWorkers(): Promise<string[]> {
   const val = await getSetting('tgbot_cf_workers');
@@ -683,10 +740,27 @@ serve(async (req) => {
         return new Response('OK', { headers: corsHeaders });
       }
 
-      // --- Custom SMS (mPokket) ---
+      // --- Custom SMS ---
       if (data === 'custom_sms') {
-        await setBotState(chatId, { waiting_custom_sms: true });
-        await editMessage(chatId, msgId, '📲 <b>Custom SMS (mPokket OTP)</b>\n\n📱 Phone number bhejo:\n<code>9876543210</code>\n\n<i>mPokket OTP send hoga is number pe</i>');
+        await setBotState(chatId, { waiting_custom_sms_service: true });
+        await editMessage(chatId, msgId, getCustomSmsServicePrompt(), getCustomSmsServiceKeyboard());
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      if (data.startsWith('custom_sms_service:')) {
+        const service = data.split(':')[1] as CustomSmsService;
+        if (!(service in CUSTOM_SMS_SERVICES)) {
+          await editMessage(chatId, msgId, getCustomSmsServicePrompt(), getCustomSmsServiceKeyboard());
+          return new Response('OK', { headers: corsHeaders });
+        }
+
+        await setBotState(chatId, { waiting_custom_sms_number: true, customSmsService: service });
+        await editMessage(chatId, msgId, getCustomSmsNumberPrompt(service), {
+          inline_keyboard: [
+            [{ text: '⬅️ Back', callback_data: 'custom_sms' }],
+            [{ text: '🏠 Main Menu', callback_data: 'main_menu' }],
+          ],
+        });
         return new Response('OK', { headers: corsHeaders });
       }
 
@@ -1283,21 +1357,62 @@ serve(async (req) => {
         return new Response('OK', { headers: corsHeaders });
       }
 
-      // ===== Custom SMS (mPokket) Handling =====
+      // ===== Custom SMS Handling =====
       const state = await getBotState(chatId);
 
-      if (state?.waiting_custom_sms) {
+      if (state?.waiting_custom_sms || state?.waiting_custom_sms_service) {
+        await setBotState(chatId, { waiting_custom_sms_service: true });
+        await sendMessage(chatId, getCustomSmsServicePrompt(), getCustomSmsServiceKeyboard());
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      if (state?.waiting_custom_sms_number) {
         const phone = text.replace(/[^0-9+]/g, '');
         const phoneRegex = /^\+?[0-9]{10,15}$/;
+        const service = state.customSmsService as CustomSmsService | undefined;
 
         if (!phoneRegex.test(phone)) {
-          await sendMessage(chatId, '❌ <b>Invalid number!</b>\n\n<code>9876543210</code>');
+          await sendMessage(chatId, '❌ <b>Invalid number!</b>\n\n<code>98765432xx</code>');
           return new Response('OK', { headers: corsHeaders });
         }
 
-        await setBotState(chatId, { waiting_custom_sms: false });
+        if (!service || !(service in CUSTOM_SMS_SERVICES)) {
+          await setBotState(chatId, { waiting_custom_sms_service: true });
+          await sendMessage(chatId, getCustomSmsServicePrompt(), getCustomSmsServiceKeyboard());
+          return new Response('OK', { headers: corsHeaders });
+        }
 
-        // Call mpokket OTP edge function
+        await setBotState(chatId, {
+          waiting_custom_sms_msg: true,
+          customSmsService: service,
+          customSmsNumber: phone,
+        });
+
+        await sendMessage(chatId, getCustomSmsMsgPrompt(service, phone), {
+          inline_keyboard: [
+            [{ text: '⬅️ Change Service', callback_data: 'custom_sms' }],
+            [{ text: '🏠 Main Menu', callback_data: 'main_menu' }],
+          ],
+        });
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      if (state?.waiting_custom_sms_msg) {
+        const service = state.customSmsService as CustomSmsService | undefined;
+        const phone = String(state.customSmsNumber || '').replace(/[^0-9+]/g, '');
+
+        if (!service || !(service in CUSTOM_SMS_SERVICES) || !phone) {
+          await setBotState(chatId, { waiting_custom_sms_service: true });
+          await sendMessage(chatId, getCustomSmsServicePrompt(), getCustomSmsServiceKeyboard());
+          return new Response('OK', { headers: corsHeaders });
+        }
+
+        const serviceConfig = CUSTOM_SMS_SERVICES[service];
+        const msgValue = text || serviceConfig.defaultMsg;
+
+        await setBotState(chatId, {});
+
+        // Call custom SMS edge function
         const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
         const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
         
@@ -1305,21 +1420,25 @@ serve(async (req) => {
           const mpRes = await fetch(`${supabaseUrl}/functions/v1/mpokket-otp`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
-            body: JSON.stringify({ number: phone, msg: 'OTP_REQUEST' }),
+            body: JSON.stringify({ number: phone, msg: msgValue, service }),
           });
           const mpData = await mpRes.json();
           
-          let resultText = `📲 <b>mPokket OTP Result</b>\n\n`;
+          let resultText = `📲 <b>${serviceConfig.label} OTP Result</b>\n\n`;
+          resultText += `🧩 Service: <b>${serviceConfig.label}</b>\n`;
           resultText += `📱 Number: <code>${phone}</code>\n`;
+          resultText += `📝 ${serviceConfig.msgLabel}: <code>${escapeHtml(msgValue)}</code>\n`;
           resultText += `✅ Status: <b>${mpData.success ? 'Sent' : 'Failed'}</b>\n`;
           resultText += `📊 Code: ${mpData.status_code || 'N/A'}\n\n`;
-          if (mpData.data) {
-            resultText += `📋 Response:\n<code>${JSON.stringify(mpData.data, null, 2).slice(0, 500)}</code>`;
+          const responsePayload = mpData.data ?? mpData;
+          if (responsePayload) {
+            resultText += `📋 Response:\n<code>${escapeHtml(JSON.stringify(responsePayload, null, 2).slice(0, 800))}</code>`;
           }
 
           await sendMessage(chatId, resultText, {
             inline_keyboard: [
-              [{ text: '📲 Send Again', callback_data: 'custom_sms' }],
+              [{ text: '🔁 Same Service', callback_data: `custom_sms_service:${service}` }],
+              [{ text: '📲 All Services', callback_data: 'custom_sms' }],
               [{ text: '🏠 Main Menu', callback_data: 'main_menu' }],
             ],
           });
