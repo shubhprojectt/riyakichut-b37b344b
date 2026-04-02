@@ -1444,7 +1444,10 @@ serve(async (req) => {
           });
         } catch (err) {
           await sendMessage(chatId, `❌ <b>Error:</b> ${err instanceof Error ? err.message : 'Unknown'}`, {
-            inline_keyboard: [[{ text: '🏠 Main Menu', callback_data: 'main_menu' }]],
+            inline_keyboard: [
+              [{ text: '📲 All Services', callback_data: 'custom_sms' }],
+              [{ text: '🏠 Main Menu', callback_data: 'main_menu' }],
+            ],
           });
         }
         return new Response('OK', { headers: corsHeaders });
