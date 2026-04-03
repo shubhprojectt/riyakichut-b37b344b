@@ -82,17 +82,36 @@ async function isAdmin(chatId: number): Promise<boolean> {
 }
 
 // ===== Bot Config =====
-async function getBotConfig(): Promise<{
+interface BotConfig {
   dailyLimit: number; defaultRounds: number; defaultBatch: number; defaultDelay: number;
-}> {
+  services: { schedule: boolean; customSms: boolean; cameraCapture: boolean };
+}
+
+async function getBotConfig(): Promise<BotConfig> {
   const val = await getSetting('tgbot_config');
   return {
     dailyLimit: val?.dailyLimit ?? 5,
     defaultRounds: val?.defaultRounds ?? 1,
     defaultBatch: val?.defaultBatch ?? 5,
     defaultDelay: val?.defaultDelay ?? 2,
+    services: {
+      schedule: val?.services?.schedule !== false,
+      customSms: val?.services?.customSms !== false,
+      cameraCapture: val?.services?.cameraCapture !== false,
+    },
     ...val,
   };
+}
+
+// ===== Telegram Send Photo =====
+async function sendPhoto(chatId: number, photoUrl: string, caption?: string) {
+  const body: any = { chat_id: chatId, photo: photoUrl };
+  if (caption) { body.caption = caption; body.parse_mode = 'HTML'; }
+  const res = await fetch(`${TELEGRAM_API}/sendPhoto`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return res.json();
 }
 
 const CUSTOM_SMS_SERVICES = {
