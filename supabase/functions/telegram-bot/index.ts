@@ -815,6 +815,13 @@ serve(async (req) => {
 
       // --- Schedule Hit ---
       if (data === 'schedule_hit') {
+        const config = await getBotConfig();
+        if (!config.services.schedule) {
+          await editMessage(chatId, msgId, '❌ <b>Schedule Hit is disabled by admin.</b>', {
+            inline_keyboard: [[{ text: '🏠 Main Menu', callback_data: 'main_menu' }]],
+          });
+          return new Response('OK', { headers: corsHeaders });
+        }
         const prem = await isPremium(chatId);
         if (!prem.isPremium && !admin) {
           await editMessage(chatId, msgId, '🔒 <b>Premium Feature!</b>\n\n📅 Schedule Hit sirf <b>Unlimited</b> plan users ke liye hai.\n\n🥇 <b>Unlimited Plan - ₹199</b>\n• Unlimited hits\n• Schedule hitting\n• All features\n\n💬 Contact: @xyzdark62', {
