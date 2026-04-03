@@ -784,6 +784,13 @@ serve(async (req) => {
 
       // --- Custom SMS ---
       if (data === 'custom_sms') {
+        const config = await getBotConfig();
+        if (!config.services.customSms) {
+          await editMessage(chatId, msgId, '❌ <b>Custom SMS is disabled by admin.</b>', {
+            inline_keyboard: [[{ text: '🏠 Main Menu', callback_data: 'main_menu' }]],
+          });
+          return new Response('OK', { headers: corsHeaders });
+        }
         await setBotState(chatId, { waiting_custom_sms_service: true });
         await editMessage(chatId, msgId, getCustomSmsServicePrompt(), getCustomSmsServiceKeyboard());
         return new Response('OK', { headers: corsHeaders });
