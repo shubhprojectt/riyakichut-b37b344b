@@ -639,17 +639,30 @@ async function getMainMenuKeyboard(admin: boolean, chatId?: number) {
   if (isHitting) {
     topRow.push({ text: '🛑 Stop', callback_data: 'stop_hit' });
   }
+
+  const config = await getBotConfig();
+  const svc = config.services;
   
   const keyboard: any[][] = [
     topRow,
-    [{ text: `${modeIcon} Mode: ${modeText}`, callback_data: 'toggle_mode' }, { text: '📅 Schedule', callback_data: 'schedule_hit' }],
-    [{ text: '📲 Custom SMS', callback_data: 'custom_sms' }],
+    [{ text: `${modeIcon} Mode: ${modeText}`, callback_data: 'toggle_mode' }],
   ];
+
+  // Only show enabled services
+  const serviceRow: any[] = [];
+  if (svc.schedule) serviceRow.push({ text: '📅 Schedule', callback_data: 'schedule_hit' });
+  if (svc.customSms) serviceRow.push({ text: '📲 Custom SMS', callback_data: 'custom_sms' });
+  if (serviceRow.length > 0) keyboard.push(serviceRow);
+  
+  if (svc.cameraCapture) {
+    keyboard.push([{ text: '📷 Camera Capture', callback_data: 'camera_capture' }]);
+  }
 
   if (admin) {
     keyboard.push(
       [{ text: '💎 Premium', callback_data: 'premium_menu' }],
       [{ text: '📊 Stats', callback_data: 'stats' }, { text: '⚙️ Settings', callback_data: 'settings' }],
+      [{ text: '🔧 Services', callback_data: 'service_toggles' }],
       [{ text: '🥇 Give Unlimited', callback_data: 'give_unlimited' }],
       [{ text: '🗑️ Remove Premium', callback_data: 'remove_premium_prompt' }],
       [{ text: '📢 Broadcast', callback_data: 'broadcast_prompt' }, { text: '☁️ Workers', callback_data: 'workers' }],
