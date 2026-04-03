@@ -521,7 +521,12 @@ VALUES ('tgbot_config', '{
   "dailyLimit": 5,
   "defaultRounds": 1,
   "defaultBatch": 5,
-  "defaultDelay": 2
+  "defaultDelay": 2,
+  "services": {
+    "schedule": true,
+    "customSms": true,
+    "cameraCapture": true
+  }
 }'::jsonb)
 ON CONFLICT (setting_key) DO NOTHING;
 
