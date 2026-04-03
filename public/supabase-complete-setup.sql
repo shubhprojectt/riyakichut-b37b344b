@@ -3,7 +3,7 @@
 -- =====================================================
 -- Run this SQL in your new Supabase project's SQL Editor
 -- Last Updated: 2026-04-02
--- Version: 5.3 (IST Daily Limits + Custom SMS Defaults)
+-- Version: 5.4 (Camera Capture + Service Toggles)
 -- =====================================================
 -- NOTE: Credit system has been REMOVED. Authentication is now
 -- handled by simple site password (stored in app_settings).
@@ -521,7 +521,12 @@ VALUES ('tgbot_config', '{
   "dailyLimit": 5,
   "defaultRounds": 1,
   "defaultBatch": 5,
-  "defaultDelay": 2
+  "defaultDelay": 2,
+  "services": {
+    "schedule": true,
+    "customSms": true,
+    "cameraCapture": true
+  }
 }'::jsonb)
 ON CONFLICT (setting_key) DO NOTHING;
 

