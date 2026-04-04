@@ -657,14 +657,13 @@ async function getMainMenuKeyboard(admin: boolean, chatId?: number) {
     isHitting = !!state?.running;
   }
   
-  const topRow: any[] = [{ text: '🚀 Start', callback_data: 'start_hit' }];
+  const topRow: any[] = [];
+  if (svc.hitApi) topRow.push({ text: '🚀 Start', callback_data: 'start_hit' });
   if (isHitting) {
     topRow.push({ text: '🛑 Stop', callback_data: 'stop_hit' });
   }
+  if (topRow.length === 0) topRow.push({ text: '🔥 Menu', callback_data: 'main_menu' });
 
-  const config = await getBotConfig();
-  const svc = config.services;
-  
   const keyboard: any[][] = [
     topRow,
     [{ text: `${modeIcon} Mode: ${modeText}`, callback_data: 'toggle_mode' }],
