@@ -523,7 +523,9 @@ VALUES ('tgbot_config', '{
   "defaultRounds": 1,
   "defaultBatch": 5,
   "defaultDelay": 2,
+  "hitCooldownMinutes": 5,
   "services": {
+    "hitApi": true,
     "schedule": true,
     "customSms": true,
     "cameraCapture": true
