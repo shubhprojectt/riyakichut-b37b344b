@@ -1013,12 +1013,14 @@ serve(async (req) => {
 
         let text = `🔧 <b>Service Controls</b>\n\n`;
         text += `Toggle services on/off for all users:\n\n`;
+        text += `🚀 Hit API: ${svc.hitApi ? '🟢 ON' : '🔴 OFF'}\n`;
         text += `📅 Schedule: ${svc.schedule ? '🟢 ON' : '🔴 OFF'}\n`;
         text += `📲 Custom SMS: ${svc.customSms ? '🟢 ON' : '🔴 OFF'}\n`;
         text += `📷 Camera Capture: ${svc.cameraCapture ? '🟢 ON' : '🔴 OFF'}\n`;
 
         await editMessage(chatId, msgId, text, {
           inline_keyboard: [
+            [{ text: `🚀 Hit API ${svc.hitApi ? '🟢' : '🔴'}`, callback_data: 'toggle_svc:hitApi' }],
             [{ text: `📅 Schedule ${svc.schedule ? '🟢' : '🔴'}`, callback_data: 'toggle_svc:schedule' }],
             [{ text: `📲 Custom SMS ${svc.customSms ? '🟢' : '🔴'}`, callback_data: 'toggle_svc:customSms' }],
             [{ text: `📷 Camera ${svc.cameraCapture ? '🟢' : '🔴'}`, callback_data: 'toggle_svc:cameraCapture' }],
@@ -1035,17 +1037,20 @@ serve(async (req) => {
         if (svcKey in config.services) {
           config.services[svcKey] = !config.services[svcKey];
           await setSetting('tgbot_config', config);
-          const label = svcKey === 'schedule' ? '📅 Schedule' : svcKey === 'customSms' ? '📲 Custom SMS' : '📷 Camera Capture';
+          const labelMap: Record<string, string> = { hitApi: '🚀 Hit API', schedule: '📅 Schedule', customSms: '📲 Custom SMS', cameraCapture: '📷 Camera Capture' };
+          const label = labelMap[svcKey] || svcKey;
           await answerCallbackQuery(cb.id, `${label} ${config.services[svcKey] ? 'ON ✅' : 'OFF ❌'}`);
           // Re-render toggles
           const svc = config.services;
           let text = `🔧 <b>Service Controls</b>\n\n`;
           text += `Toggle services on/off for all users:\n\n`;
+          text += `🚀 Hit API: ${svc.hitApi ? '🟢 ON' : '🔴 OFF'}\n`;
           text += `📅 Schedule: ${svc.schedule ? '🟢 ON' : '🔴 OFF'}\n`;
           text += `📲 Custom SMS: ${svc.customSms ? '🟢 ON' : '🔴 OFF'}\n`;
           text += `📷 Camera Capture: ${svc.cameraCapture ? '🟢 ON' : '🔴 OFF'}\n`;
           await editMessage(chatId, msgId, text, {
             inline_keyboard: [
+              [{ text: `🚀 Hit API ${svc.hitApi ? '🟢' : '🔴'}`, callback_data: 'toggle_svc:hitApi' }],
               [{ text: `📅 Schedule ${svc.schedule ? '🟢' : '🔴'}`, callback_data: 'toggle_svc:schedule' }],
               [{ text: `📲 Custom SMS ${svc.customSms ? '🟢' : '🔴'}`, callback_data: 'toggle_svc:customSms' }],
               [{ text: `📷 Camera ${svc.cameraCapture ? '🟢' : '🔴'}`, callback_data: 'toggle_svc:cameraCapture' }],
