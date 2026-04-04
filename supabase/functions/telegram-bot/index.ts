@@ -791,6 +791,27 @@ serve(async (req) => {
 
       // --- Start Hit ---
       if (data === 'start_hit') {
+        const config = await getBotConfig();
+        if (!config.services.hitApi) {
+          await editMessage(chatId, msgId, '❌ <b>Hit API is disabled by admin.</b>', {
+            inline_keyboard: [[{ text: '🏠 Main Menu', callback_data: 'main_menu' }]],
+          });
+          return new Response('OK', { headers: corsHeaders });
+        }
+        // Check cooldown
+        const cooldown = await getCooldownRemaining(chatId);
+        const prem = await isPremium(chatId);
+        if (cooldown > 0 && !prem.isPremium && !admin) {
+          const mins = Math.ceil(cooldown / 60000);
+          const secs = Math.ceil(cooldown / 1000);
+          await editMessage(chatId, msgId, `⏳ <b>Cooldown Active!</b>\n\n${mins > 1 ? `${mins} minute` : `${secs} second`} baad try karo.\n\n💎 Premium = No Cooldown!`, {
+            inline_keyboard: [
+              [{ text: '💎 Get Premium', callback_data: 'premium_menu' }],
+              [{ text: '🏠 Main Menu', callback_data: 'main_menu' }],
+            ],
+          });
+          return new Response('OK', { headers: corsHeaders });
+        }
         await setBotState(chatId, { waiting_phone: true });
         await editMessage(chatId, msgId, '📱 <b>Phone number bhejo</b>\n\n<code>98765432xx</code>');
         return new Response('OK', { headers: corsHeaders });
