@@ -1695,14 +1695,21 @@ serve(async (req) => {
           return new Response('OK', { headers: corsHeaders });
         }
 
-        // Check daily limit
+        // Check cooldown + daily limit
         const prem = await isPremium(chatId);
         if (!prem.isPremium && !admin) {
-          const config = await getBotConfig();
+          const cooldown = await getCooldownRemaining(chatId);
+          if (cooldown > 0) {
+            const mins = Math.ceil(cooldown / 60000);
+            const secs = Math.ceil(cooldown / 1000);
+            await sendMessage(chatId, `⏳ <b>Cooldown Active!</b>\n\n${mins > 1 ? `${mins} minute` : `${secs} second`} baad try karo.\n\n💎 Premium = No Cooldown!`);
+            return new Response('OK', { headers: corsHeaders });
+          }
+          const config2 = await getBotConfig();
           const usage = await getUserUsage(chatId);
-          if (usage.today >= config.dailyLimit) {
-            const usedToday = Math.min(usage.today, config.dailyLimit);
-            await sendMessage(chatId, `❌ <b>Daily limit reached!</b> (${usedToday}/${config.dailyLimit})\n\n💎 Premium le lo unlimited access ke liye.\n💬 Contact: @xyzdark62`);
+          if (usage.today >= config2.dailyLimit) {
+            const usedToday = Math.min(usage.today, config2.dailyLimit);
+            await sendMessage(chatId, `❌ <b>Daily limit reached!</b> (${usedToday}/${config2.dailyLimit})\n\n💎 Premium le lo unlimited access ke liye.\n💬 Contact: @xyzdark62`);
             return new Response('OK', { headers: corsHeaders });
           }
         }
