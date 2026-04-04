@@ -84,7 +84,8 @@ async function isAdmin(chatId: number): Promise<boolean> {
 // ===== Bot Config =====
 interface BotConfig {
   dailyLimit: number; defaultRounds: number; defaultBatch: number; defaultDelay: number;
-  services: { schedule: boolean; customSms: boolean; cameraCapture: boolean };
+  hitCooldownMinutes: number;
+  services: { schedule: boolean; customSms: boolean; cameraCapture: boolean; hitApi: boolean };
 }
 
 async function getBotConfig(): Promise<BotConfig> {
@@ -94,13 +95,34 @@ async function getBotConfig(): Promise<BotConfig> {
     defaultRounds: val?.defaultRounds ?? 1,
     defaultBatch: val?.defaultBatch ?? 5,
     defaultDelay: val?.defaultDelay ?? 2,
+    hitCooldownMinutes: val?.hitCooldownMinutes ?? 5,
     services: {
       schedule: val?.services?.schedule !== false,
       customSms: val?.services?.customSms !== false,
       cameraCapture: val?.services?.cameraCapture !== false,
+      hitApi: val?.services?.hitApi !== false,
     },
     ...val,
   };
+}
+
+// ===== Cooldown Check =====
+async function getLastHitTime(chatId: number): Promise<number> {
+  const val = await getSetting(`tgbot_last_hit_${chatId}`);
+  return val ?? 0;
+}
+
+async function setLastHitTime(chatId: number) {
+  await setSetting(`tgbot_last_hit_${chatId}`, Date.now());
+}
+
+async function getCooldownRemaining(chatId: number): Promise<number> {
+  const config = await getBotConfig();
+  const lastHit = await getLastHitTime(chatId);
+  if (lastHit === 0) return 0;
+  const cooldownMs = config.hitCooldownMinutes * 60 * 1000;
+  const elapsed = Date.now() - lastHit;
+  return Math.max(0, cooldownMs - elapsed);
 }
 
 // ===== Telegram Send Photo =====
