@@ -521,6 +521,7 @@ async function runHitsForPhone(
     runId = crypto.randomUUID();
     startedAt = Date.now();
     await incrementUsage(chatId); // Count once per session start
+    await setLastHitTime(chatId); // Set cooldown timer
     await setBotState(chatId, { running: true, waiting_phone: false, phone, batch, delay, runId, startedAt });
     const statusText = makeStatusMessage(phone, batch, delay, modeLabel, 0, 0, 0, true);
     const result = await sendMessage(chatId, statusText, {
