@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Settings, Minimize2, Maximize2, Square, Image, Trash2 } from "lucide-react";
+import { Settings, Minimize2, Maximize2, Square, Image, Trash2, LogOut } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useSettings } from "@/contexts/SettingsContext";
+import { useAuth } from "@/contexts/AuthContext";
 import defaultLoaderImage from "@/assets/loader-logo.jpg";
 import {
   Dialog,
