@@ -2,8 +2,8 @@
 -- SHUBH OSINT - Complete Supabase Database Setup
 -- =====================================================
 -- Run this SQL in your new Supabase project's SQL Editor
--- Last Updated: 2026-04-04
--- Version: 5.5 (Hit API Service Toggle + Cooldown + Persistent Camera Links)
+-- Last Updated: 2026-04-05
+-- Version: 5.6 (Auth Toggles - Signup/Login ON/OFF from Admin)
 -- =====================================================
 -- =====================================================
 -- NOTE: Credit system has been REMOVED. Authentication is now
@@ -705,4 +705,16 @@ SELECT cron.schedule(
 -- /setlimit N - Set free user daily limit (admin)
 -- /givepremium ID unlimited DAYS - Give premium (admin)
 -- /removepremium ID - Remove premium (admin)
+-- =====================================================
+
+-- =====================================================
+-- DEFAULT AUTH TOGGLES
+-- =====================================================
+INSERT INTO app_settings (setting_key, setting_value)
+VALUES ('signup_enabled', 'true')
+ON CONFLICT (setting_key) DO NOTHING;
+
+INSERT INTO app_settings (setting_key, setting_value)
+VALUES ('login_enabled', 'true')
+ON CONFLICT (setting_key) DO NOTHING;
 -- =====================================================

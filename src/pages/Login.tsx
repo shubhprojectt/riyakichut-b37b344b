@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import HackerLoader from "@/components/HackerLoader";
 
@@ -14,6 +15,8 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showLoader, setShowLoader] = useState(true);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [signupEnabled, setSignupEnabled] = useState(true);
+  const [loginEnabled, setLoginEnabled] = useState(true);
   const { signIn, signUp, isAuthenticated } = useAuth();
   const { settings } = useSettings();
   const navigate = useNavigate();
@@ -27,8 +30,26 @@ const Login = () => {
     if (isAuthenticated) navigate("/");
   }, [isAuthenticated, navigate]);
 
+  useEffect(() => {
+    const fetchToggles = async () => {
+      const { data: s } = await supabase.from('app_settings').select('setting_value').eq('setting_key', 'signup_enabled').maybeSingle();
+      const { data: l } = await supabase.from('app_settings').select('setting_value').eq('setting_key', 'login_enabled').maybeSingle();
+      if (s) setSignupEnabled(s.setting_value === true || s.setting_value === 'true' || s.setting_value === '"true"');
+      if (l) setLoginEnabled(l.setting_value === true || l.setting_value === 'true' || l.setting_value === '"true"');
+    };
+    fetchToggles();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSignUp && !signupEnabled) {
+      toast({ title: "Signup Disabled", description: "Admin ne signup band rakha hai", variant: "destructive" });
+      return;
+    }
+    if (!isSignUp && !loginEnabled) {
+      toast({ title: "Login Disabled", description: "Admin ne login band rakha hai", variant: "destructive" });
+      return;
+    }
     if (!email.trim() || !password.trim()) {
       toast({ title: "Error", description: "Email aur password dono daalo", variant: "destructive" });
       return;
@@ -169,13 +190,27 @@ const Login = () => {
           </form>
 
           {/* Toggle */}
-          <button
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="w-full text-center mt-3 text-[10px] font-medium transition-colors"
-            style={{ color: 'hsl(var(--neon-gold))' }}
-          >
-            {isSignUp ? "Already have account? Login" : "Don't have account? Sign Up"}
-          </button>
+          {signupEnabled ? (
+            <button
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="w-full text-center mt-3 text-[10px] font-medium transition-colors"
+              style={{ color: 'hsl(var(--neon-gold))' }}
+            >
+              {isSignUp ? "Already have account? Login" : "Don't have account? Sign Up"}
+            </button>
+          ) : !isSignUp ? null : null}
+
+          {/* Disabled message */}
+          {isSignUp && !signupEnabled && (
+            <div className="mt-3 p-2 rounded-lg text-center" style={{ background: 'rgba(255,50,50,0.1)', border: '1px solid rgba(255,50,50,0.2)' }}>
+              <p className="text-[10px] text-destructive font-medium">🚫 Admin ne signup band rakha hai</p>
+            </div>
+          )}
+          {!isSignUp && !loginEnabled && (
+            <div className="mt-3 p-2 rounded-lg text-center" style={{ background: 'rgba(255,50,50,0.1)', border: '1px solid rgba(255,50,50,0.2)' }}>
+              <p className="text-[10px] text-destructive font-medium">🚫 Admin ne login band rakha hai</p>
+            </div>
+          )}
 
           <div className="flex items-center justify-center gap-1.5 mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
             <div className="w-1 h-1 rounded-full" style={{ background: 'hsl(var(--neon-gold))' }} />

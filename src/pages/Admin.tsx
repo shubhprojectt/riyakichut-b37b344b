@@ -171,6 +171,31 @@ const Admin = () => {
   const [editingApi, setEditingApi] = useState<HitApi | null>(null);
   const [allEnabled, setAllEnabled] = useState(true);
 
+  // Signup/Login toggle state
+  const [signupEnabled, setSignupEnabled] = useState(true);
+  const [loginEnabled, setLoginEnabled] = useState(true);
+
+  useEffect(() => {
+    const fetchAuthToggles = async () => {
+      const { data: signupData } = await supabase.from('app_settings').select('setting_value').eq('setting_key', 'signup_enabled').maybeSingle();
+      const { data: loginData } = await supabase.from('app_settings').select('setting_value').eq('setting_key', 'login_enabled').maybeSingle();
+      if (signupData) setSignupEnabled(signupData.setting_value === true || signupData.setting_value === 'true' || signupData.setting_value === '"true"');
+      if (loginData) setLoginEnabled(loginData.setting_value === true || loginData.setting_value === 'true' || loginData.setting_value === '"true"');
+    };
+    fetchAuthToggles();
+  }, []);
+
+  const toggleAuthSetting = async (key: string, value: boolean, setter: (v: boolean) => void) => {
+    setter(value);
+    const { data: existing } = await supabase.from('app_settings').select('id').eq('setting_key', key).maybeSingle();
+    if (existing) {
+      await supabase.from('app_settings').update({ setting_value: value }).eq('setting_key', key);
+    } else {
+      await supabase.from('app_settings').insert({ setting_key: key, setting_value: value });
+    }
+    toast({ title: "Updated", description: `${key.replace('_', ' ')} ${value ? 'enabled' : 'disabled'}` });
+  };
+
   useEffect(() => {
     if (isAdminUser) { fetchSearchHistory(); }
   }, [isAdminUser]);
@@ -343,6 +368,27 @@ const Admin = () => {
 
           {/* ── TOOLS TAB ── */}
           <TabsContent value="tools" className="mt-0 space-y-4">
+            {/* Auth Controls */}
+            <Section title="Auth Controls" icon={Shield} defaultOpen>
+              <PanelCard title="Signup & Login" description="Control website registration and login access">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-border/30 bg-background/30">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Signup</p>
+                      <p className="text-[10px] text-muted-foreground">New users can create accounts</p>
+                    </div>
+                    <Switch checked={signupEnabled} onCheckedChange={(v) => toggleAuthSetting('signup_enabled', v, setSignupEnabled)} />
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-border/30 bg-background/30">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Login</p>
+                      <p className="text-[10px] text-muted-foreground">Existing users can sign in</p>
+                    </div>
+                    <Switch checked={loginEnabled} onCheckedChange={(v) => toggleAuthSetting('login_enabled', v, setLoginEnabled)} />
+                  </div>
+                </div>
+              </PanelCard>
+            </Section>
             <Section title="Tab Configuration" icon={LayoutGrid} defaultOpen>
               <div className="space-y-3">
                 {settings.tabs.map((tab) => (
