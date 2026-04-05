@@ -146,6 +146,7 @@ const AdminSettings = () => {
                    className="w-full h-full object-cover"
                  />
                </div>
+              </div>
            </div>
 
           {/* Logout */}
