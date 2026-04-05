@@ -2,8 +2,8 @@
 -- SHUBH OSINT - Complete Supabase Database Setup
 -- =====================================================
 -- Run this SQL in your new Supabase project's SQL Editor
--- Last Updated: 2026-04-04
--- Version: 5.5 (Hit API Service Toggle + Cooldown + Persistent Camera Links)
+-- Last Updated: 2026-04-05
+-- Version: 5.6 (Auth Toggles - Signup/Login ON/OFF from Admin)
 -- =====================================================
 -- =====================================================
 -- NOTE: Credit system has been REMOVED. Authentication is now
