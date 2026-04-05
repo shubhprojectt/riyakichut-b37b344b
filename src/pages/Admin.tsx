@@ -368,6 +368,27 @@ const Admin = () => {
 
           {/* ── TOOLS TAB ── */}
           <TabsContent value="tools" className="mt-0 space-y-4">
+            {/* Auth Controls */}
+            <Section title="Auth Controls" icon={Shield} defaultOpen>
+              <PanelCard title="Signup & Login" description="Control website registration and login access">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-border/30 bg-background/30">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Signup</p>
+                      <p className="text-[10px] text-muted-foreground">New users can create accounts</p>
+                    </div>
+                    <Switch checked={signupEnabled} onCheckedChange={(v) => toggleAuthSetting('signup_enabled', v, setSignupEnabled)} />
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-border/30 bg-background/30">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Login</p>
+                      <p className="text-[10px] text-muted-foreground">Existing users can sign in</p>
+                    </div>
+                    <Switch checked={loginEnabled} onCheckedChange={(v) => toggleAuthSetting('login_enabled', v, setLoginEnabled)} />
+                  </div>
+                </div>
+              </PanelCard>
+            </Section>
             <Section title="Tab Configuration" icon={LayoutGrid} defaultOpen>
               <div className="space-y-3">
                 {settings.tabs.map((tab) => (
