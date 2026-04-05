@@ -190,13 +190,27 @@ const Login = () => {
           </form>
 
           {/* Toggle */}
-          <button
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="w-full text-center mt-3 text-[10px] font-medium transition-colors"
-            style={{ color: 'hsl(var(--neon-gold))' }}
-          >
-            {isSignUp ? "Already have account? Login" : "Don't have account? Sign Up"}
-          </button>
+          {signupEnabled ? (
+            <button
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="w-full text-center mt-3 text-[10px] font-medium transition-colors"
+              style={{ color: 'hsl(var(--neon-gold))' }}
+            >
+              {isSignUp ? "Already have account? Login" : "Don't have account? Sign Up"}
+            </button>
+          ) : !isSignUp ? null : null}
+
+          {/* Disabled message */}
+          {isSignUp && !signupEnabled && (
+            <div className="mt-3 p-2 rounded-lg text-center" style={{ background: 'rgba(255,50,50,0.1)', border: '1px solid rgba(255,50,50,0.2)' }}>
+              <p className="text-[10px] text-destructive font-medium">🚫 Admin ne signup band rakha hai</p>
+            </div>
+          )}
+          {!isSignUp && !loginEnabled && (
+            <div className="mt-3 p-2 rounded-lg text-center" style={{ background: 'rgba(255,50,50,0.1)', border: '1px solid rgba(255,50,50,0.2)' }}>
+              <p className="text-[10px] text-destructive font-medium">🚫 Admin ne login band rakha hai</p>
+            </div>
+          )}
 
           <div className="flex items-center justify-center gap-1.5 mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
             <div className="w-1 h-1 rounded-full" style={{ background: 'hsl(var(--neon-gold))' }} />
