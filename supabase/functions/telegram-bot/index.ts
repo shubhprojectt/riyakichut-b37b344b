@@ -647,6 +647,8 @@ async function runHitsForPhone(
 
 // ===== Main Menu Keyboard =====
 async function getMainMenuKeyboard(admin: boolean, chatId?: number) {
+  const config = await getBotConfig();
+  const svc = config.services;
   const mode = await getHitProxyMode();
   const modeIcon = mode === 'cloudflare' ? '☁️' : '⚡';
   const modeText = mode === 'cloudflare' ? 'CF Worker' : 'Edge Fn';
