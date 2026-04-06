@@ -217,8 +217,8 @@ const Admin = () => {
   };
 
   useEffect(() => {
-    if (isAdminUser) { fetchSearchHistory(); }
-  }, [isAdminUser]);
+    if (isAdminAuthenticated) { fetchSearchHistory(); }
+  }, [isAdminAuthenticated]);
 
   const fetchSearchHistory = async () => {
     const { data, error } = await supabase.from("search_history").select("*").order("searched_at", { ascending: false }).limit(100);
