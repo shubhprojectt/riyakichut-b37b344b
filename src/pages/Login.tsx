@@ -1,23 +1,18 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Lock, Crown, Sparkles, Mail, UserPlus, LogIn } from "lucide-react";
+import { Loader2, Crown, Sparkles, LogIn, Lock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import HackerLoader from "@/components/HackerLoader";
 
 const Login = () => {
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showLoader, setShowLoader] = useState(true);
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [signupEnabled, setSignupEnabled] = useState(true);
   const [loginEnabled, setLoginEnabled] = useState(true);
-  const { signIn, signUp, isAuthenticated } = useAuth();
   const { settings } = useSettings();
   const navigate = useNavigate();
 
@@ -27,14 +22,14 @@ const Login = () => {
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated) navigate("/");
-  }, [isAuthenticated, navigate]);
+    // If already logged in, go home
+    const token = sessionStorage.getItem('siteSessionToken');
+    if (token) navigate("/");
+  }, [navigate]);
 
   useEffect(() => {
     const fetchToggles = async () => {
-      const { data: s } = await supabase.from('app_settings').select('setting_value').eq('setting_key', 'signup_enabled').maybeSingle();
       const { data: l } = await supabase.from('app_settings').select('setting_value').eq('setting_key', 'login_enabled').maybeSingle();
-      if (s) setSignupEnabled(s.setting_value === true || s.setting_value === 'true' || s.setting_value === '"true"');
       if (l) setLoginEnabled(l.setting_value === true || l.setting_value === 'true' || l.setting_value === '"true"');
     };
     fetchToggles();
@@ -42,29 +37,28 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSignUp && !signupEnabled) {
-      toast({ title: "Signup Disabled", description: "Admin ne signup band rakha hai", variant: "destructive" });
+    if (!loginEnabled) {
+      toast({ title: "Login Disabled", description: "🚫 Admin ne login band rakha hai", variant: "destructive" });
       return;
     }
-    if (!isSignUp && !loginEnabled) {
-      toast({ title: "Login Disabled", description: "Admin ne login band rakha hai", variant: "destructive" });
-      return;
-    }
-    if (!email.trim() || !password.trim()) {
-      toast({ title: "Error", description: "Email aur password dono daalo", variant: "destructive" });
+    if (!password.trim()) {
+      toast({ title: "Error", description: "Password daalo", variant: "destructive" });
       return;
     }
     setIsLoading(true);
     try {
-      const result = isSignUp ? await signUp(email, password) : await signIn(email, password);
-      if (result.success) {
-        toast({ title: isSignUp ? "Account Created!" : "Welcome Back!", description: isSignUp ? "Signup successful, logged in!" : "Access granted" });
-        navigate("/");
+      const { data, error } = await supabase.functions.invoke('auth-login', {
+        body: { password, deviceId: navigator.userAgent.slice(0, 50) }
+      });
+      if (error || !data?.success) {
+        toast({ title: "Error", description: data?.error || "Invalid password", variant: "destructive" });
       } else {
-        toast({ title: "Error", description: result.error || "Authentication failed", variant: "destructive" });
+        sessionStorage.setItem('siteSessionToken', data.sessionToken);
+        toast({ title: "Welcome!", description: "Access granted" });
+        navigate("/");
       }
     } catch {
-      toast({ title: "Error", description: "Authentication failed", variant: "destructive" });
+      toast({ title: "Error", description: "Connection failed", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -128,18 +122,18 @@ const Login = () => {
               </span>
             </h1>
             <p className="text-[10px] mt-1 font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
-              {isSignUp ? "Create your account" : "Login to continue"}
+              Enter password to continue
             </p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-3">
             <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email address"
-              className="h-10 text-sm rounded-xl transition-all"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="h-10 text-sm rounded-xl transition-all text-center tracking-[0.2em]"
               style={{
                 background: 'rgba(255,255,255,0.03)',
                 border: '1.5px solid rgba(255,200,100,0.15)',
@@ -149,23 +143,9 @@ const Login = () => {
               autoFocus
             />
 
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              className="h-10 text-sm rounded-xl transition-all"
-              style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1.5px solid rgba(255,200,100,0.15)',
-                color: 'hsl(var(--foreground))'
-              }}
-              disabled={isLoading}
-            />
-
             <Button
               type="submit"
-              disabled={isLoading || !email.trim() || !password.trim()}
+              disabled={isLoading || !password.trim()}
               className="w-full h-10 rounded-xl text-xs font-bold tracking-wider transition-all duration-300 active:scale-[0.98]"
               style={{
                 background: 'linear-gradient(135deg, hsl(var(--neon-gold)), hsl(var(--neon-orange)))',
@@ -175,11 +155,6 @@ const Login = () => {
             >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
-              ) : isSignUp ? (
-                <>
-                  <UserPlus className="w-3.5 h-3.5 mr-1.5" />
-                  SIGN UP
-                </>
               ) : (
                 <>
                   <LogIn className="w-3.5 h-3.5 mr-1.5" />
@@ -189,24 +164,7 @@ const Login = () => {
             </Button>
           </form>
 
-          {/* Toggle */}
-          {signupEnabled ? (
-            <button
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="w-full text-center mt-3 text-[10px] font-medium transition-colors"
-              style={{ color: 'hsl(var(--neon-gold))' }}
-            >
-              {isSignUp ? "Already have account? Login" : "Don't have account? Sign Up"}
-            </button>
-          ) : !isSignUp ? null : null}
-
-          {/* Disabled message */}
-          {isSignUp && !signupEnabled && (
-            <div className="mt-3 p-2 rounded-lg text-center" style={{ background: 'rgba(255,50,50,0.1)', border: '1px solid rgba(255,50,50,0.2)' }}>
-              <p className="text-[10px] text-destructive font-medium">🚫 Admin ne signup band rakha hai</p>
-            </div>
-          )}
-          {!isSignUp && !loginEnabled && (
+          {!loginEnabled && (
             <div className="mt-3 p-2 rounded-lg text-center" style={{ background: 'rgba(255,50,50,0.1)', border: '1px solid rgba(255,50,50,0.2)' }}>
               <p className="text-[10px] text-destructive font-medium">🚫 Admin ne login band rakha hai</p>
             </div>
