@@ -328,9 +328,14 @@ const Admin = () => {
             </Button>
             <h1 className="text-base font-bold text-foreground">Admin Panel</h1>
           </div>
-          <Button variant="outline" size="sm" onClick={resetSettings} className="glass-card border-border/30">
-            <RefreshCw className="w-4 h-4" /> Reset
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={resetSettings} className="glass-card border-border/30">
+              <RefreshCw className="w-4 h-4" /> Reset
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleAdminLogout} className="glass-card border-destructive/30 text-destructive hover:bg-destructive/10">
+              <LogOut className="w-4 h-4" /> Logout
+            </Button>
+          </div>
         </div>
       </div>
 
