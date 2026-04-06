@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import {
-  Settings, Palette, Key, History, LayoutGrid, Database, ArrowLeft, Save,
+  Settings, Palette, Key, History, LayoutGrid, Database, ArrowLeft, ArrowRight, Save,
   Trash2, RefreshCw, Shield, Eye, EyeOff, ExternalLink, Type, Upload, X,
   Image, Send, Camera, Music, Coins, Plus, Power, RotateCcw, Loader2,
-  ChevronDown, ChevronUp, PhoneCall, List, Code, Download, Fingerprint, Copy, Zap, Info, LogOut
+  ChevronDown, ChevronUp, PhoneCall, List, Code, Download, Fingerprint, Copy, Zap, Info, LogOut,
+  Lock as LockIcon
 } from "lucide-react";
 import * as Icons from "lucide-react";
 import { useNavigate } from "react-router-dom";
