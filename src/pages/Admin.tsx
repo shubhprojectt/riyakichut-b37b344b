@@ -267,50 +267,45 @@ const Admin = () => {
   };
   const handleToggleAll = (enabled: boolean) => { setAllEnabled(enabled); toggleAll(enabled); };
 
-  // Auth check - must be admin
-  if (authLoading) {
+  // Admin password login check
+  if (!isAdminAuthenticated) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-foreground">Loading...</div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
         <div className="fixed inset-0 pointer-events-none">
           <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] bg-primary/[0.05] rounded-full blur-[120px]" />
+          <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-secondary/[0.04] rounded-full blur-[100px]" />
         </div>
-        <div className="w-full max-w-sm relative z-10">
-          <div className="glass-card rounded-3xl p-5 text-center">
-            <Shield className="w-10 h-10 text-primary mx-auto mb-3" />
-            <h1 className="text-base font-bold text-foreground mb-2">Admin Access</h1>
-            <p className="text-xs text-muted-foreground mb-4">Please login first</p>
-            <Button onClick={() => navigate("/login")} className="w-full h-10 bg-gradient-to-r from-primary to-secondary text-primary-foreground">
-              Go to Login
-            </Button>
+        <div className={`relative z-10 w-full max-w-sm space-y-6 transition-transform ${adminShake ? 'animate-[shake_0.3s_ease-in-out]' : ''}`}>
+          <div className="glass-card rounded-3xl p-8 space-y-8">
+            <div className="flex justify-center">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/25 to-secondary/25 border border-primary/20 flex items-center justify-center glow-gold">
+                <Lock className="w-7 h-7 text-primary/80" />
+              </div>
+            </div>
+            <div className="text-center space-y-1">
+              <h1 className="text-xl font-bold text-foreground tracking-tight">Admin Access</h1>
+              <p className="text-xs text-muted-foreground">Enter admin password to continue</p>
+            </div>
+            <div className="space-y-2">
+              <Input
+                type="password"
+                value={adminPasswordInput}
+                onChange={e => { setAdminPasswordInput(e.target.value); setAdminLoginError(''); }}
+                onKeyDown={e => e.key === 'Enter' && handleAdminLogin()}
+                className="h-12 bg-background/30 border-primary/15 text-foreground text-center text-base tracking-[0.3em] placeholder:text-muted-foreground/30 placeholder:tracking-normal focus:border-primary/40 focus:ring-primary/20"
+                placeholder="••••••••"
+                disabled={adminLoginLoading}
+              />
+              {adminLoginError && (
+                <p className="text-destructive/80 text-[11px] text-center">{adminLoginError}</p>
+              )}
+            </div>
+            <button onClick={handleAdminLogin} disabled={adminLoginLoading}
+              className="w-full h-11 rounded-xl bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 glow-gold disabled:opacity-50">
+              {adminLoginLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Continue <ArrowRight className="w-4 h-4" /></>}
+            </button>
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAdminUser) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
-        <div className="fixed inset-0 pointer-events-none">
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] bg-primary/[0.05] rounded-full blur-[120px]" />
-        </div>
-        <div className="w-full max-w-sm relative z-10">
-          <div className="glass-card rounded-3xl p-5 text-center">
-            <Shield className="w-10 h-10 text-red-400 mx-auto mb-3" />
-            <h1 className="text-base font-bold text-foreground mb-2">Access Denied</h1>
-            <p className="text-xs text-muted-foreground mb-4">You don't have admin permissions.<br/>Email: {user?.email}</p>
-            <Button variant="outline" onClick={() => navigate("/")} className="w-full h-10 glass-card border-border/30">
-              <ArrowLeft className="w-4 h-4" /> Back to Home
-            </Button>
-          </div>
+          <p className="text-center text-muted-foreground/30 text-[11px]">Authorized personnel only</p>
         </div>
       </div>
     );
