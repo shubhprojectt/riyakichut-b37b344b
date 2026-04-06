@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 const AdminSettings = () => {
   const { settings, updateSettings } = useSettings();
-  const { signOut, isAuthenticated, user } = useAuth();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
    const [loaderUrlInput, setLoaderUrlInput] = useState(settings.loaderImageUrl || "");
 
