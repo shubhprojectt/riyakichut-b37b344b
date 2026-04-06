@@ -154,7 +154,12 @@ const Admin = () => {
   const [showTelegramKey, setShowTelegramKey] = useState(false);
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
 
-  const { isAuthenticated, isAdmin: isAdminUser, isLoading: authLoading, user } = useAuth();
+  // Password-based admin auth (no email auth)
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [adminPasswordInput, setAdminPasswordInput] = useState('');
+  const [adminLoginLoading, setAdminLoginLoading] = useState(false);
+  const [adminLoginError, setAdminLoginError] = useState('');
+  const [adminShake, setAdminShake] = useState(false);
 
   const [localSitePassword, setLocalSitePassword] = useState(settings.sitePassword);
   const [localAdminPassword, setLocalAdminPassword] = useState(settings.adminPassword);
@@ -174,25 +179,41 @@ const Admin = () => {
   const [signupEnabled, setSignupEnabled] = useState(true);
   const [loginEnabled, setLoginEnabled] = useState(true);
 
+  // Check session on mount
   useEffect(() => {
-    const fetchAuthToggles = async () => {
-      const { data: signupData } = await supabase.from('app_settings').select('setting_value').eq('setting_key', 'signup_enabled').maybeSingle();
-      const { data: loginData } = await supabase.from('app_settings').select('setting_value').eq('setting_key', 'login_enabled').maybeSingle();
-      if (signupData) setSignupEnabled(signupData.setting_value === true || signupData.setting_value === 'true' || signupData.setting_value === '"true"');
-      if (loginData) setLoginEnabled(loginData.setting_value === true || loginData.setting_value === 'true' || loginData.setting_value === '"true"');
-    };
-    fetchAuthToggles();
+    const token = sessionStorage.getItem('adminSessionToken');
+    if (token) setIsAdminAuthenticated(true);
   }, []);
 
-  const toggleAuthSetting = async (key: string, value: boolean, setter: (v: boolean) => void) => {
-    setter(value);
-    const { data: existing } = await supabase.from('app_settings').select('id').eq('setting_key', key).maybeSingle();
-    if (existing) {
-      await supabase.from('app_settings').update({ setting_value: value }).eq('setting_key', key);
-    } else {
-      await supabase.from('app_settings').insert({ setting_key: key, setting_value: value });
+  const handleAdminLogin = async () => {
+    if (!adminPasswordInput.trim()) return;
+    setAdminLoginLoading(true);
+    setAdminLoginError('');
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-admin', {
+        body: { password: adminPasswordInput }
+      });
+      if (error || !data?.success) {
+        setAdminLoginError(data?.error || 'Invalid password');
+        setAdminShake(true);
+        setTimeout(() => { setAdminLoginError(''); setAdminShake(false); }, 1500);
+      } else {
+        sessionStorage.setItem('adminSessionToken', data.sessionToken);
+        setIsAdminAuthenticated(true);
+      }
+    } catch {
+      setAdminLoginError('Connection error');
+      setAdminShake(true);
+      setTimeout(() => { setAdminLoginError(''); setAdminShake(false); }, 1500);
+    } finally {
+      setAdminLoginLoading(false);
     }
-    toast({ title: "Updated", description: `${key.replace('_', ' ')} ${value ? 'enabled' : 'disabled'}` });
+  };
+
+  const handleAdminLogout = () => {
+    sessionStorage.removeItem('adminSessionToken');
+    setIsAdminAuthenticated(false);
+    setAdminPasswordInput('');
   };
 
   useEffect(() => {
