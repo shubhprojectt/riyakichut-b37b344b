@@ -280,7 +280,7 @@ const Admin = () => {
           <div className="glass-card rounded-3xl p-8 space-y-8">
             <div className="flex justify-center">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/25 to-secondary/25 border border-primary/20 flex items-center justify-center glow-gold">
-                <Lock className="w-7 h-7 text-primary/80" />
+                <LockIcon className="w-7 h-7 text-primary/80" />
               </div>
             </div>
             <div className="text-center space-y-1">
