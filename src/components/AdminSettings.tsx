@@ -150,28 +150,23 @@ const AdminSettings = () => {
            </div>
 
           {/* Logout */}
-          {isAuthenticated && (
-            <div className="pt-2 border-t border-border">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <LogOut className="w-4 h-4 text-destructive" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Logout</p>
-                    <p className="text-[10px] text-muted-foreground truncate max-w-[200px]">{user?.email}</p>
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => { setIsOpen(false); signOut(); }}
-                  className="text-xs"
-                >
-                  <LogOut className="w-3.5 h-3.5 mr-1" />
-                  Logout
-                </Button>
+          <div className="pt-2 border-t border-border">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <LogOut className="w-4 h-4 text-destructive" />
+                <p className="text-sm font-medium text-foreground">Logout</p>
               </div>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => { setIsOpen(false); sessionStorage.removeItem('siteSessionToken'); navigate('/login'); }}
+                className="text-xs"
+              >
+                <LogOut className="w-3.5 h-3.5 mr-1" />
+                Logout
+              </Button>
             </div>
-          )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
