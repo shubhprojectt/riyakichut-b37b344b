@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { 
-  Settings, Palette, Key, History, LayoutGrid, Database, ArrowLeft, Save,
+import {
+  Settings, Palette, Key, History, LayoutGrid, Database, ArrowLeft, ArrowRight, Save,
   Trash2, RefreshCw, Shield, Eye, EyeOff, ExternalLink, Type, Upload, X,
   Image, Send, Camera, Music, Coins, Plus, Power, RotateCcw, Loader2,
-  ChevronDown, ChevronUp, PhoneCall, List, Code, Download, Fingerprint, Copy, Zap, Info, LogOut
+  ChevronDown, ChevronUp, PhoneCall, List, Code, Download, Fingerprint, Copy, Zap, Info, LogOut,
+  Lock as LockIcon
 } from "lucide-react";
 import * as Icons from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -155,7 +155,12 @@ const Admin = () => {
   const [showTelegramKey, setShowTelegramKey] = useState(false);
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
 
-  const { isAuthenticated, isAdmin: isAdminUser, isLoading: authLoading, user } = useAuth();
+  // Password-based admin auth (no email auth)
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [adminPasswordInput, setAdminPasswordInput] = useState('');
+  const [adminLoginLoading, setAdminLoginLoading] = useState(false);
+  const [adminLoginError, setAdminLoginError] = useState('');
+  const [adminShake, setAdminShake] = useState(false);
 
   const [localSitePassword, setLocalSitePassword] = useState(settings.sitePassword);
   const [localAdminPassword, setLocalAdminPassword] = useState(settings.adminPassword);
@@ -175,30 +180,46 @@ const Admin = () => {
   const [signupEnabled, setSignupEnabled] = useState(true);
   const [loginEnabled, setLoginEnabled] = useState(true);
 
+  // Check session on mount
   useEffect(() => {
-    const fetchAuthToggles = async () => {
-      const { data: signupData } = await supabase.from('app_settings').select('setting_value').eq('setting_key', 'signup_enabled').maybeSingle();
-      const { data: loginData } = await supabase.from('app_settings').select('setting_value').eq('setting_key', 'login_enabled').maybeSingle();
-      if (signupData) setSignupEnabled(signupData.setting_value === true || signupData.setting_value === 'true' || signupData.setting_value === '"true"');
-      if (loginData) setLoginEnabled(loginData.setting_value === true || loginData.setting_value === 'true' || loginData.setting_value === '"true"');
-    };
-    fetchAuthToggles();
+    const token = sessionStorage.getItem('adminSessionToken');
+    if (token) setIsAdminAuthenticated(true);
   }, []);
 
-  const toggleAuthSetting = async (key: string, value: boolean, setter: (v: boolean) => void) => {
-    setter(value);
-    const { data: existing } = await supabase.from('app_settings').select('id').eq('setting_key', key).maybeSingle();
-    if (existing) {
-      await supabase.from('app_settings').update({ setting_value: value }).eq('setting_key', key);
-    } else {
-      await supabase.from('app_settings').insert({ setting_key: key, setting_value: value });
+  const handleAdminLogin = async () => {
+    if (!adminPasswordInput.trim()) return;
+    setAdminLoginLoading(true);
+    setAdminLoginError('');
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-admin', {
+        body: { password: adminPasswordInput }
+      });
+      if (error || !data?.success) {
+        setAdminLoginError(data?.error || 'Invalid password');
+        setAdminShake(true);
+        setTimeout(() => { setAdminLoginError(''); setAdminShake(false); }, 1500);
+      } else {
+        sessionStorage.setItem('adminSessionToken', data.sessionToken);
+        setIsAdminAuthenticated(true);
+      }
+    } catch {
+      setAdminLoginError('Connection error');
+      setAdminShake(true);
+      setTimeout(() => { setAdminLoginError(''); setAdminShake(false); }, 1500);
+    } finally {
+      setAdminLoginLoading(false);
     }
-    toast({ title: "Updated", description: `${key.replace('_', ' ')} ${value ? 'enabled' : 'disabled'}` });
+  };
+
+  const handleAdminLogout = () => {
+    sessionStorage.removeItem('adminSessionToken');
+    setIsAdminAuthenticated(false);
+    setAdminPasswordInput('');
   };
 
   useEffect(() => {
-    if (isAdminUser) { fetchSearchHistory(); }
-  }, [isAdminUser]);
+    if (isAdminAuthenticated) { fetchSearchHistory(); }
+  }, [isAdminAuthenticated]);
 
   const fetchSearchHistory = async () => {
     const { data, error } = await supabase.from("search_history").select("*").order("searched_at", { ascending: false }).limit(100);
@@ -247,50 +268,45 @@ const Admin = () => {
   };
   const handleToggleAll = (enabled: boolean) => { setAllEnabled(enabled); toggleAll(enabled); };
 
-  // Auth check - must be admin
-  if (authLoading) {
+  // Admin password login check
+  if (!isAdminAuthenticated) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-foreground">Loading...</div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
         <div className="fixed inset-0 pointer-events-none">
           <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] bg-primary/[0.05] rounded-full blur-[120px]" />
+          <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-secondary/[0.04] rounded-full blur-[100px]" />
         </div>
-        <div className="w-full max-w-sm relative z-10">
-          <div className="glass-card rounded-3xl p-5 text-center">
-            <Shield className="w-10 h-10 text-primary mx-auto mb-3" />
-            <h1 className="text-base font-bold text-foreground mb-2">Admin Access</h1>
-            <p className="text-xs text-muted-foreground mb-4">Please login first</p>
-            <Button onClick={() => navigate("/login")} className="w-full h-10 bg-gradient-to-r from-primary to-secondary text-primary-foreground">
-              Go to Login
-            </Button>
+        <div className={`relative z-10 w-full max-w-sm space-y-6 transition-transform ${adminShake ? 'animate-[shake_0.3s_ease-in-out]' : ''}`}>
+          <div className="glass-card rounded-3xl p-8 space-y-8">
+            <div className="flex justify-center">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/25 to-secondary/25 border border-primary/20 flex items-center justify-center glow-gold">
+                <LockIcon className="w-7 h-7 text-primary/80" />
+              </div>
+            </div>
+            <div className="text-center space-y-1">
+              <h1 className="text-xl font-bold text-foreground tracking-tight">Admin Access</h1>
+              <p className="text-xs text-muted-foreground">Enter admin password to continue</p>
+            </div>
+            <div className="space-y-2">
+              <Input
+                type="password"
+                value={adminPasswordInput}
+                onChange={e => { setAdminPasswordInput(e.target.value); setAdminLoginError(''); }}
+                onKeyDown={e => e.key === 'Enter' && handleAdminLogin()}
+                className="h-12 bg-background/30 border-primary/15 text-foreground text-center text-base tracking-[0.3em] placeholder:text-muted-foreground/30 placeholder:tracking-normal focus:border-primary/40 focus:ring-primary/20"
+                placeholder="••••••••"
+                disabled={adminLoginLoading}
+              />
+              {adminLoginError && (
+                <p className="text-destructive/80 text-[11px] text-center">{adminLoginError}</p>
+              )}
+            </div>
+            <button onClick={handleAdminLogin} disabled={adminLoginLoading}
+              className="w-full h-11 rounded-xl bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 glow-gold disabled:opacity-50">
+              {adminLoginLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Continue <ArrowRight className="w-4 h-4" /></>}
+            </button>
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAdminUser) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
-        <div className="fixed inset-0 pointer-events-none">
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] bg-primary/[0.05] rounded-full blur-[120px]" />
-        </div>
-        <div className="w-full max-w-sm relative z-10">
-          <div className="glass-card rounded-3xl p-5 text-center">
-            <Shield className="w-10 h-10 text-red-400 mx-auto mb-3" />
-            <h1 className="text-base font-bold text-foreground mb-2">Access Denied</h1>
-            <p className="text-xs text-muted-foreground mb-4">You don't have admin permissions.<br/>Email: {user?.email}</p>
-            <Button variant="outline" onClick={() => navigate("/")} className="w-full h-10 glass-card border-border/30">
-              <ArrowLeft className="w-4 h-4" /> Back to Home
-            </Button>
-          </div>
+          <p className="text-center text-muted-foreground/30 text-[11px]">Authorized personnel only</p>
         </div>
       </div>
     );
@@ -312,9 +328,14 @@ const Admin = () => {
             </Button>
             <h1 className="text-base font-bold text-foreground">Admin Panel</h1>
           </div>
-          <Button variant="outline" size="sm" onClick={resetSettings} className="glass-card border-border/30">
-            <RefreshCw className="w-4 h-4" /> Reset
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={resetSettings} className="glass-card border-border/30">
+              <RefreshCw className="w-4 h-4" /> Reset
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleAdminLogout} className="glass-card border-destructive/30 text-destructive hover:bg-destructive/10">
+              <LogOut className="w-4 h-4" /> Logout
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -377,14 +398,28 @@ const Admin = () => {
                       <p className="text-sm font-semibold text-foreground">Signup</p>
                       <p className="text-[10px] text-muted-foreground">New users can create accounts</p>
                     </div>
-                    <Switch checked={signupEnabled} onCheckedChange={(v) => toggleAuthSetting('signup_enabled', v, setSignupEnabled)} />
+                    <Switch checked={signupEnabled} onCheckedChange={(v) => {
+                      setSignupEnabled(v);
+                      supabase.from('app_settings').select('id').eq('setting_key', 'signup_enabled').maybeSingle().then(({ data: ex }) => {
+                        if (ex) supabase.from('app_settings').update({ setting_value: v }).eq('setting_key', 'signup_enabled');
+                        else supabase.from('app_settings').insert({ setting_key: 'signup_enabled', setting_value: v });
+                      });
+                      toast({ title: "Updated", description: `Signup ${v ? 'enabled' : 'disabled'}` });
+                    }} />
                   </div>
                   <div className="flex items-center justify-between p-3 rounded-xl border border-border/30 bg-background/30">
                     <div>
                       <p className="text-sm font-semibold text-foreground">Login</p>
                       <p className="text-[10px] text-muted-foreground">Existing users can sign in</p>
                     </div>
-                    <Switch checked={loginEnabled} onCheckedChange={(v) => toggleAuthSetting('login_enabled', v, setLoginEnabled)} />
+                    <Switch checked={loginEnabled} onCheckedChange={(v) => {
+                      setLoginEnabled(v);
+                      supabase.from('app_settings').select('id').eq('setting_key', 'login_enabled').maybeSingle().then(({ data: ex }) => {
+                        if (ex) supabase.from('app_settings').update({ setting_value: v }).eq('setting_key', 'login_enabled');
+                        else supabase.from('app_settings').insert({ setting_key: 'login_enabled', setting_value: v });
+                      });
+                      toast({ title: "Updated", description: `Login ${v ? 'enabled' : 'disabled'}` });
+                    }} />
                   </div>
                 </div>
               </PanelCard>
