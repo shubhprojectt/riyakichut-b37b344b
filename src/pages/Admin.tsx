@@ -392,7 +392,14 @@ const Admin = () => {
                       <p className="text-sm font-semibold text-foreground">Signup</p>
                       <p className="text-[10px] text-muted-foreground">New users can create accounts</p>
                     </div>
-                    <Switch checked={signupEnabled} onCheckedChange={(v) => toggleAuthSetting('signup_enabled', v, setSignupEnabled)} />
+                    <Switch checked={signupEnabled} onCheckedChange={(v) => {
+                      setSignupEnabled(v);
+                      supabase.from('app_settings').select('id').eq('setting_key', 'signup_enabled').maybeSingle().then(({ data: ex }) => {
+                        if (ex) supabase.from('app_settings').update({ setting_value: v }).eq('setting_key', 'signup_enabled');
+                        else supabase.from('app_settings').insert({ setting_key: 'signup_enabled', setting_value: v });
+                      });
+                      toast({ title: "Updated", description: `Signup ${v ? 'enabled' : 'disabled'}` });
+                    }} />
                   </div>
                   <div className="flex items-center justify-between p-3 rounded-xl border border-border/30 bg-background/30">
                     <div>
