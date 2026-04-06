@@ -3,7 +3,7 @@ import { Settings, Minimize2, Maximize2, Square, Image, Trash2, LogOut } from "l
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useSettings } from "@/contexts/SettingsContext";
-import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import defaultLoaderImage from "@/assets/loader-logo.jpg";
 import {
   Dialog,
