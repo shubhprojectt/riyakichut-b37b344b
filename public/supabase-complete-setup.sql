@@ -2,19 +2,45 @@
 -- SHUBH OSINT - Complete Supabase Database Setup
 -- =====================================================
 -- Run this SQL in your new Supabase project's SQL Editor
--- Last Updated: 2026-04-05
--- Version: 5.6 (Auth Toggles - Signup/Login ON/OFF from Admin)
+-- Last Updated: 2026-04-07
+-- Version: 6.0 (Email Auth + Admin Panel + Signup/Login Toggles)
 -- =====================================================
--- =====================================================
--- NOTE: Credit system has been REMOVED. Authentication is now
--- handled by simple site password (stored in app_settings).
--- Tables: access_passwords, user_sessions, credit_usage are
--- LEGACY and no longer used by the application.
+-- Authentication: Email + Password (Supabase Auth)
+-- First signup automatically becomes admin
+-- Admin panel: manage settings, toggle signup/login
+-- Legacy tables (access_passwords, user_sessions, credit_usage)
+-- are kept for reference but no longer used.
 -- =====================================================
 
 -- =====================================================
--- 1. CREATE TABLES
+-- 1. ENUMS
 -- =====================================================
+
+DO $$ BEGIN
+  CREATE TYPE public.app_role AS ENUM ('admin', 'user');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- =====================================================
+-- 2. CREATE TABLES
+-- =====================================================
+
+-- Profiles Table (stores user info, linked to auth.users)
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID NOT NULL PRIMARY KEY,
+  email TEXT,
+  display_name TEXT,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- User Roles Table (RBAC - first user = admin)
+CREATE TABLE IF NOT EXISTS public.user_roles (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL,
+  role public.app_role NOT NULL,
+  UNIQUE (user_id, role)
+);
 
 -- [LEGACY] Access Passwords Table (no longer used - kept for reference)
 CREATE TABLE IF NOT EXISTS public.access_passwords (
@@ -62,7 +88,7 @@ CREATE TABLE IF NOT EXISTS public.app_settings (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
--- Captured Photos Table (stores photo data or URLs)
+-- Captured Photos Table
 CREATE TABLE IF NOT EXISTS public.captured_photos (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   session_id TEXT NOT NULL,
@@ -72,7 +98,7 @@ CREATE TABLE IF NOT EXISTS public.captured_photos (
   captured_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
--- Captured Videos Table (stores video URLs from storage)
+-- Captured Videos Table
 CREATE TABLE IF NOT EXISTS public.captured_videos (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   session_id TEXT NOT NULL,
@@ -83,7 +109,7 @@ CREATE TABLE IF NOT EXISTS public.captured_videos (
   captured_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
--- Search History Table (logs all searches)
+-- Search History Table
 CREATE TABLE IF NOT EXISTS public.search_history (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   search_type TEXT NOT NULL,
@@ -92,7 +118,7 @@ CREATE TABLE IF NOT EXISTS public.search_history (
   searched_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
--- Hit APIs Table (stores API configs for Hit Engine - v3.8)
+-- Hit APIs Table (v3.8+)
 CREATE TABLE IF NOT EXISTS public.hit_apis (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
@@ -107,11 +133,12 @@ CREATE TABLE IF NOT EXISTS public.hit_apis (
   force_proxy BOOLEAN NOT NULL DEFAULT false,
   rotation_enabled BOOLEAN NOT NULL DEFAULT false,
   residential_proxy_enabled BOOLEAN NOT NULL DEFAULT false,
+  fail_count INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
--- Scheduled Hits Table (v4.0 - cron-based automated API hitting)
+-- Scheduled Hits Table (v4.0+)
 CREATE TABLE IF NOT EXISTS public.scheduled_hits (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   phone_number TEXT NOT NULL,
@@ -127,9 +154,11 @@ CREATE TABLE IF NOT EXISTS public.scheduled_hits (
 );
 
 -- =====================================================
--- 2. ENABLE ROW LEVEL SECURITY
+-- 3. ENABLE ROW LEVEL SECURITY
 -- =====================================================
 
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.access_passwords ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.credit_usage ENABLE ROW LEVEL SECURITY;
@@ -141,25 +170,39 @@ ALTER TABLE public.hit_apis ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.scheduled_hits ENABLE ROW LEVEL SECURITY;
 
 -- =====================================================
--- 3. RLS POLICIES
+-- 4. RLS POLICIES
 -- =====================================================
 
--- Access Passwords - No direct access (only via edge functions with service role)
+-- Profiles - Users can read/update their own profile
+DROP POLICY IF EXISTS "Users can read own profile" ON public.profiles;
+CREATE POLICY "Users can read own profile" ON public.profiles
+  FOR SELECT TO authenticated USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+CREATE POLICY "Users can update own profile" ON public.profiles
+  FOR UPDATE TO authenticated USING (auth.uid() = id);
+
+-- User Roles - Users can read their own roles
+DROP POLICY IF EXISTS "Users can read own roles" ON public.user_roles;
+CREATE POLICY "Users can read own roles" ON public.user_roles
+  FOR SELECT TO authenticated USING (auth.uid() = user_id);
+
+-- Access Passwords - No direct access (legacy)
 DROP POLICY IF EXISTS "No direct access to passwords" ON public.access_passwords;
 CREATE POLICY "No direct access to passwords" ON public.access_passwords
   AS RESTRICTIVE FOR ALL USING (false);
 
--- User Sessions - No direct access (only via edge functions)
+-- User Sessions - No direct access (legacy)
 DROP POLICY IF EXISTS "No direct access to sessions" ON public.user_sessions;
 CREATE POLICY "No direct access to sessions" ON public.user_sessions
   AS RESTRICTIVE FOR ALL USING (false);
 
--- Credit Usage - No direct access (only via edge functions)
+-- Credit Usage - No direct access (legacy)
 DROP POLICY IF EXISTS "No direct access to credit usage" ON public.credit_usage;
 CREATE POLICY "No direct access to credit usage" ON public.credit_usage
   AS RESTRICTIVE FOR ALL USING (false);
 
--- App Settings - Public read/write (for settings sync across devices)
+-- App Settings - Public read/write
 DROP POLICY IF EXISTS "Anyone can read settings" ON public.app_settings;
 CREATE POLICY "Anyone can read settings" ON public.app_settings
   FOR SELECT TO public USING (true);
@@ -172,7 +215,7 @@ DROP POLICY IF EXISTS "Anyone can update settings" ON public.app_settings;
 CREATE POLICY "Anyone can update settings" ON public.app_settings
   FOR UPDATE TO public USING (true);
 
--- Captured Photos - Public access (PERMISSIVE for camera capture)
+-- Captured Photos - Public access
 DROP POLICY IF EXISTS "Anyone can view captured photos" ON public.captured_photos;
 CREATE POLICY "Anyone can view captured photos" ON public.captured_photos
   FOR SELECT TO public USING (true);
@@ -185,7 +228,7 @@ DROP POLICY IF EXISTS "Anyone can delete captured photos" ON public.captured_pho
 CREATE POLICY "Anyone can delete captured photos" ON public.captured_photos
   FOR DELETE TO public USING (true);
 
--- Captured Videos - Public access (PERMISSIVE for video capture)
+-- Captured Videos - Public access
 DROP POLICY IF EXISTS "Anyone can view captured videos metadata" ON public.captured_videos;
 CREATE POLICY "Anyone can view captured videos metadata" ON public.captured_videos
   FOR SELECT TO public USING (true);
@@ -198,7 +241,7 @@ DROP POLICY IF EXISTS "Anyone can delete video metadata" ON public.captured_vide
 CREATE POLICY "Anyone can delete video metadata" ON public.captured_videos
   FOR DELETE TO public USING (true);
 
--- Search History - Public access (view, insert, delete)
+-- Search History - Public access
 DROP POLICY IF EXISTS "Anyone can view search history" ON public.search_history;
 CREATE POLICY "Anyone can view search history" ON public.search_history
   FOR SELECT TO public USING (true);
@@ -211,7 +254,7 @@ DROP POLICY IF EXISTS "Anyone can delete search history" ON public.search_histor
 CREATE POLICY "Anyone can delete search history" ON public.search_history
   FOR DELETE TO public USING (true);
 
--- Hit APIs - Public CRUD (admin-password protected in frontend)
+-- Hit APIs - Public CRUD
 DROP POLICY IF EXISTS "Anyone can read hit apis" ON public.hit_apis;
 CREATE POLICY "Anyone can read hit apis" ON public.hit_apis
   FOR SELECT TO public USING (true);
@@ -228,7 +271,7 @@ DROP POLICY IF EXISTS "Anyone can delete hit apis" ON public.hit_apis;
 CREATE POLICY "Anyone can delete hit apis" ON public.hit_apis
   FOR DELETE TO public USING (true);
 
--- Scheduled Hits - Public CRUD (for scheduled bombing feature)
+-- Scheduled Hits - Public CRUD
 DROP POLICY IF EXISTS "Anyone can read scheduled hits" ON public.scheduled_hits;
 CREATE POLICY "Anyone can read scheduled hits" ON public.scheduled_hits
   FOR SELECT TO public USING (true);
@@ -246,29 +289,25 @@ CREATE POLICY "Anyone can delete scheduled hits" ON public.scheduled_hits
   FOR DELETE TO public USING (true);
 
 -- =====================================================
--- 4. STORAGE BUCKETS
+-- 5. STORAGE BUCKETS
 -- =====================================================
 
--- Create storage bucket for captured videos
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('captured-videos', 'captured-videos', true)
 ON CONFLICT (id) DO NOTHING;
 
--- Create storage bucket for captured photos
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('captured-photos', 'captured-photos', true)
 ON CONFLICT (id) DO NOTHING;
 
--- Create storage bucket for backgrounds and logos
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('backgrounds', 'backgrounds', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- =====================================================
--- 5. STORAGE POLICIES
+-- 6. STORAGE POLICIES
 -- =====================================================
 
--- Storage policies for captured-videos bucket
 DROP POLICY IF EXISTS "Anyone can view captured videos" ON storage.objects;
 CREATE POLICY "Anyone can view captured videos" ON storage.objects
   FOR SELECT USING (bucket_id = 'captured-videos');
@@ -281,7 +320,6 @@ DROP POLICY IF EXISTS "Anyone can delete captured videos" ON storage.objects;
 CREATE POLICY "Anyone can delete captured videos" ON storage.objects
   FOR DELETE USING (bucket_id = 'captured-videos');
 
--- Storage policies for captured-photos bucket
 DROP POLICY IF EXISTS "Public can view captured photos" ON storage.objects;
 CREATE POLICY "Public can view captured photos" ON storage.objects
   FOR SELECT USING (bucket_id = 'captured-photos');
@@ -294,7 +332,6 @@ DROP POLICY IF EXISTS "Anyone can delete captured photos" ON storage.objects;
 CREATE POLICY "Anyone can delete captured photos" ON storage.objects
   FOR DELETE USING (bucket_id = 'captured-photos');
 
--- Storage policies for backgrounds bucket
 DROP POLICY IF EXISTS "Public can view backgrounds" ON storage.objects;
 CREATE POLICY "Public can view backgrounds" ON storage.objects
   FOR SELECT USING (bucket_id = 'backgrounds');
@@ -312,7 +349,7 @@ CREATE POLICY "Anyone can delete backgrounds" ON storage.objects
   FOR DELETE USING (bucket_id = 'backgrounds');
 
 -- =====================================================
--- 6. FUNCTIONS AND TRIGGERS
+-- 7. FUNCTIONS
 -- =====================================================
 
 -- Update timestamp function
@@ -324,36 +361,86 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SET search_path = public;
 
--- Trigger for app_settings
+-- Has Role function (security definer - avoids RLS recursion)
+CREATE OR REPLACE FUNCTION public.has_role(_user_id UUID, _role public.app_role)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.user_roles
+    WHERE user_id = _user_id AND role = _role
+  )
+$$;
+
+-- Handle new user signup (auto-assign admin to first user)
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  user_count integer;
+BEGIN
+  -- Create profile
+  INSERT INTO public.profiles (id, email, display_name)
+  VALUES (NEW.id, NEW.email, COALESCE(NEW.raw_user_meta_data->>'display_name', split_part(NEW.email, '@', 1)));
+
+  -- First admin auto-assign
+  SELECT COUNT(*) INTO user_count FROM public.user_roles WHERE role = 'admin';
+  
+  IF user_count = 0 THEN
+    INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, 'admin');
+  ELSE
+    INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, 'user');
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+-- =====================================================
+-- 8. TRIGGERS
+-- =====================================================
+
+-- Auto-create profile + role on signup
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_new_user();
+
+-- Update timestamps
 DROP TRIGGER IF EXISTS update_app_settings_updated_at ON public.app_settings;
 CREATE TRIGGER update_app_settings_updated_at
   BEFORE UPDATE ON public.app_settings
-  FOR EACH ROW
-  EXECUTE FUNCTION public.update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
--- Trigger for access_passwords
 DROP TRIGGER IF EXISTS update_access_passwords_updated_at ON public.access_passwords;
 CREATE TRIGGER update_access_passwords_updated_at
   BEFORE UPDATE ON public.access_passwords
-  FOR EACH ROW
-  EXECUTE FUNCTION public.update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
--- Trigger for hit_apis
 DROP TRIGGER IF EXISTS update_hit_apis_updated_at ON public.hit_apis;
 CREATE TRIGGER update_hit_apis_updated_at
   BEFORE UPDATE ON public.hit_apis
-  FOR EACH ROW
-  EXECUTE FUNCTION public.update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
--- Trigger for scheduled_hits
 DROP TRIGGER IF EXISTS update_scheduled_hits_updated_at ON public.scheduled_hits;
 CREATE TRIGGER update_scheduled_hits_updated_at
   BEFORE UPDATE ON public.scheduled_hits
-  FOR EACH ROW
-  EXECUTE FUNCTION public.update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON public.profiles;
+CREATE TRIGGER update_profiles_updated_at
+  BEFORE UPDATE ON public.profiles
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- =====================================================
--- 7. INDEXES (for better query performance)
+-- 9. INDEXES
 -- =====================================================
 
 CREATE INDEX IF NOT EXISTS idx_app_settings_key ON public.app_settings(setting_key);
@@ -373,19 +460,19 @@ CREATE INDEX IF NOT EXISTS idx_hit_apis_name ON public.hit_apis(name);
 CREATE INDEX IF NOT EXISTS idx_scheduled_hits_active ON public.scheduled_hits(is_active);
 CREATE INDEX IF NOT EXISTS idx_scheduled_hits_next ON public.scheduled_hits(next_execution_at);
 CREATE INDEX IF NOT EXISTS idx_scheduled_hits_phone ON public.scheduled_hits(phone_number);
+CREATE INDEX IF NOT EXISTS idx_user_roles_user ON public.user_roles(user_id);
 
 -- =====================================================
--- 8. REALTIME
+-- 10. REALTIME
 -- =====================================================
 
--- Enable realtime for hit_apis table (live sync across clients)
 ALTER PUBLICATION supabase_realtime ADD TABLE public.hit_apis;
 
 -- =====================================================
--- 9. DEFAULT DATA
+-- 11. DEFAULT DATA
 -- =====================================================
 
--- Main Settings (includes admin password, session ID, search tabs, CALL DARK, etc.)
+-- Main Settings
 INSERT INTO public.app_settings (setting_key, setting_value)
 VALUES ('main_settings', '{
   "sitePassword": "dark",
@@ -479,7 +566,7 @@ VALUES ('main_settings', '{
 }'::jsonb)
 ON CONFLICT (setting_key) DO NOTHING;
 
--- Hit Site Settings (customizable labels for Quick Hit Engine)
+-- Hit Site Settings
 INSERT INTO public.app_settings (setting_key, setting_value)
 VALUES ('hit_site_settings', '{
   "siteName": "SHUBH OSINT",
@@ -516,7 +603,7 @@ VALUES ('hit_site_settings', '{
 }'::jsonb)
 ON CONFLICT (setting_key) DO NOTHING;
 
--- Telegram Bot Settings (defaults for free plan and hit params)
+-- Telegram Bot Config
 INSERT INTO public.app_settings (setting_key, setting_value)
 VALUES ('tgbot_config', '{
   "dailyLimit": 5,
@@ -533,10 +620,43 @@ VALUES ('tgbot_config', '{
 }'::jsonb)
 ON CONFLICT (setting_key) DO NOTHING;
 
+-- Auth Toggles (signup/login on/off from admin)
+INSERT INTO app_settings (setting_key, setting_value)
+VALUES ('signup_enabled', 'true')
+ON CONFLICT (setting_key) DO NOTHING;
+
+INSERT INTO app_settings (setting_key, setting_value)
+VALUES ('login_enabled', 'true')
+ON CONFLICT (setting_key) DO NOTHING;
+
+-- =====================================================
+-- 12. PG_CRON SETUP (for Scheduled Hits)
+-- =====================================================
+-- Enable pg_cron and pg_net extensions first from
+-- Supabase Dashboard > Database > Extensions
+
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
+
+-- Create cron job (REPLACE placeholders)
+-- REPLACE <YOUR-PROJECT-REF> with your Supabase project ref
+-- REPLACE <YOUR-ANON-KEY> with your Supabase anon/public key
+SELECT cron.schedule(
+  'execute-scheduled-hits-every-minute',
+  '* * * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://<YOUR-PROJECT-REF>.supabase.co/functions/v1/execute-scheduled-hits',
+    headers := '{"Content-Type": "application/json", "Authorization": "Bearer <YOUR-ANON-KEY>"}'::jsonb,
+    body := '{}'::jsonb
+  ) AS request_id;
+  $$
+);
+
 -- =====================================================
 -- EDGE FUNCTIONS LIST (deploy from supabase/functions/)
 -- =====================================================
--- Version 5.2 Edge Functions:
+-- Version 6.0 Edge Functions:
 -- [LEGACY - no longer used by app]:
 -- 1.  auth-login              - (LEGACY) User login with credit password
 -- 2.  auth-verify             - (LEGACY) Verify session token & get credits
@@ -553,168 +673,64 @@ ON CONFLICT (setting_key) DO NOTHING;
 -- 11. execute-scheduled-hits  - Cron-based scheduled bombing executor
 -- 12. fast-hit-all            - Hit ALL enabled APIs (Pro API style)
 -- 13. telegram-bot            - Telegram Bot webhook handler (v5.2)
--- 14. mpokket-otp             - Custom SMS multi-service OTP relay
+-- 14. mpokket-otp             - Custom SMS multi-service OTP relay (mPokket + Milkbasket + Digihaat)
+-- 15. verify-admin            - Verify admin password via edge function
 --
--- IMPORTANT CHANGES in v5.3:
--- - Custom SMS now supports mPokket, Milkbasket, and Digihaat in one flow
--- - tgbot_config defaults are seeded in app_settings
--- - Mpokket tab is included in the default main page tabs list
---
--- IMPORTANT CHANGES in v5.2:
--- - Premium system simplified: Only "Unlimited" plan (₹199)
--- - Daily limit counter uses IST timezone (UTC+5:30) for reset
--- - Free users: 5 daily hits (configurable), 5-min time limit per session
--- - Usage counter capped at dailyLimit for free users (no 85/5 bug)
--- - incrementUsage called once at session start (not per round)
--- - Schedule Hit locked to premium users only
--- - Daily limit display: "2/5" format on /start, main_menu, stats
--- - Contact admin: @xyzdark62
---
--- IMPORTANT CHANGES in v4.4:
--- - CORS FIX: All edge functions now include extended CORS headers
--- - Quick Hit Engine: All UI labels now customizable via admin settings
--- - hit_site_settings added to app_settings for Hit Engine label sync
--- - Image to Info tab added to default tab config
 -- =====================================================
-
--- =====================================================
--- EDGE FUNCTION CORS HEADERS (CRITICAL - v4.4)
--- =====================================================
--- ALL edge functions MUST use this CORS header format:
---
+-- CORS HEADERS (all edge functions must use):
 -- const corsHeaders = {
 --   'Access-Control-Allow-Origin': '*',
 --   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 -- };
+-- =====================================================
+
+-- =====================================================
+-- SETUP GUIDE (Self-hosted Supabase)
+-- =====================================================
+-- 1. Create new Supabase project
+-- 2. Run this entire SQL in SQL Editor
+-- 3. Deploy edge functions: supabase functions deploy --project-ref YOUR_REF
+-- 4. Set secrets:
+--    supabase secrets set TELEGRAM_BOT_TOKEN=your_bot_token
+-- 5. Set Telegram webhook:
+--    GET https://YOUR_REF.supabase.co/functions/v1/telegram-bot?action=setwebhook
+-- 6. First signup on website = admin (automatic)
+-- 7. Admin panel: toggle signup/login, manage settings
+-- 8. For pg_cron: replace <YOUR-PROJECT-REF> and <YOUR-ANON-KEY> above
 --
--- Without these extended headers, newer @supabase/supabase-js versions
--- will fail CORS preflight on Vercel/custom domain deployments.
+-- ADMIN SETUP:
+-- - First user to signup becomes admin automatically
+-- - Admin can toggle signup on/off from admin panel
+-- - Admin can toggle login on/off from admin panel
+-- - Admin password for Hit Engine stored in hit_site_settings
 -- =====================================================
 
 -- =====================================================
--- 10. PG_CRON SETUP (for Scheduled Hits)
+-- QUICK REFERENCE: Tables & Purpose
 -- =====================================================
--- IMPORTANT: Enable pg_cron and pg_net extensions first from
--- Supabase Dashboard > Database > Extensions
--- Then run this SQL to create the cron job:
-
--- Enable extensions
-CREATE EXTENSION IF NOT EXISTS pg_cron;
-CREATE EXTENSION IF NOT EXISTS pg_net;
-
--- Create cron job that calls execute-scheduled-hits every minute
--- REPLACE <YOUR-PROJECT-REF> with your Supabase project ref
--- REPLACE <YOUR-ANON-KEY> with your Supabase anon/public key
-SELECT cron.schedule(
-  'execute-scheduled-hits-every-minute',
-  '* * * * *',
-  $$
-  SELECT net.http_post(
-    url := 'https://<YOUR-PROJECT-REF>.supabase.co/functions/v1/execute-scheduled-hits',
-    headers := '{"Content-Type": "application/json", "Authorization": "Bearer <YOUR-ANON-KEY>"}'::jsonb,
-    body := '{}'::jsonb
-  ) AS request_id;
-  $$
-);
-
--- =====================================================
--- 11. FAST-HIT-ALL API REFERENCE (v4.3)
--- =====================================================
--- GET:  /functions/v1/fast-hit-all?phone=9876543210&rounds=5&batch=5&delay=2&timeout=15&key=SECRET
--- POST: /functions/v1/fast-hit-all?key=SECRET
---       Body: {"phone":"9876543210","rounds":5,"batch":5,"delay":2,"timeout":15}
---
--- Parameters:
--- | Param   | Type   | Default | Range  | Description                    |
--- |---------|--------|---------|--------|--------------------------------|
--- | phone   | string | -       | 10+    | Target phone number (required) |
--- | rounds  | int    | 1       | 1-50   | Number of hit rounds           |
--- | batch   | int    | 5       | 1-20   | APIs per batch (simultaneous)  |
--- | delay   | float  | 2       | 0-60   | Seconds between rounds         |
--- | timeout | float  | 15      | 3-30   | Per-API timeout in seconds     |
--- | key     | string | -       | -      | Secret key (if configured)     |
-
--- =====================================================
--- QUICK REFERENCE: Tables & Their Purpose
--- =====================================================
--- access_passwords  : [LEGACY] Stores login credentials with credit info
--- user_sessions     : [LEGACY] Active login sessions tracking
--- credit_usage      : [LEGACY] Logs all credit deductions
--- app_settings      : Global app configuration (JSON)
---                     - main_settings: All admin settings synced across devices
---                     - hit_site_settings: Quick Hit Engine customizable labels
---                     - fast_api_secret_key: for fast-hit-all auth
---                     - tgbot_admin_ids: Telegram bot admin user IDs (array)
---                     - tgbot_config: Bot defaults (dailyLimit, defaultRounds, defaultBatch, defaultDelay)
---                     - tgbot_cf_workers: CF Worker URLs for load-balanced proxy (array)
---                     - tgbot_premium_users: Premium user plans + expiry (object)
---                     - tgbot_global_stats: totalHits, totalUsers counters
---                     - tgbot_all_users: All user chat IDs for broadcast (array)
---                     - tgbot_access_keys: Access key passwords (array)
---                     - tgbot_state_{chatId}: Per-user bot state (running, phone, runId, startedAt, etc.)
---                     - tgbot_usage_{chatId}: Per-user daily/total usage counters (IST timezone reset)
--- captured_photos   : Camera capture photo metadata + device info
--- captured_videos   : Video capture metadata & URLs
--- search_history    : All search queries log
--- hit_apis          : API Hit Engine configurations
---                     - name, url, method, headers, body, body_type
---                     - query_params, enabled, proxy/rotation settings
---                     - Realtime sync enabled for live updates
--- scheduled_hits    : Scheduled bombing configurations
---                     - phone_number, start_time, interval_seconds
---                     - max_rounds, is_active, total_hits
---                     - Executed by pg_cron + execute-scheduled-hits
---                     - Locked to premium users only
--- =====================================================
---
--- =====================================================
--- TELEGRAM BOT SETUP (v5.2)
--- =====================================================
--- 1. Set TELEGRAM_BOT_TOKEN in Edge Function Secrets
--- 2. Deploy: supabase functions deploy telegram-bot
--- 3. Set webhook: GET https://<PROJECT>.supabase.co/functions/v1/telegram-bot?action=setwebhook
--- 4. First user to send /setadmin becomes admin
---
--- Bot Features:
--- - Non-stop API hitting with CF Worker proxy + load balancing
--- - runId-based session locking (instant stop via button or /stop)
--- - Self-continue architecture (bypasses edge function timeout)
--- - Premium system: Single "Unlimited" plan (₹199)
--- - Daily limit for free users: 5 hits/day (IST timezone reset at midnight)
--- - Free user time limit: 5 minutes per session (auto-stop with upsell)
--- - Usage counter capped at dailyLimit (prevents 85/5 display bug)
--- - Schedule Hit: Premium-only feature
--- - Admin panel: manage APIs, keys, workers, premium, broadcast
--- - Mode toggle: Edge Function ↔ CF Worker (synced with website)
--- - Progress bar + live status message (single message, edited in-place)
--- - Daily limit display: "2/5" format everywhere
---
--- Bot Commands:
--- /start - Main menu (shows daily limit for free users)
--- /stop - Stop current hitting
--- /stats - View statistics (capped display)
--- /settings - View/change settings
--- /help - All commands
--- /setadmin - First-time admin setup
--- /apis - List APIs (admin)
--- /addapi NAME|URL - Add API (admin)
--- /workers - List CF workers
--- /addworker URL - Add worker (admin)
--- /broadcast MSG - Broadcast to all (admin)
--- /setmode edge|cf - Change proxy mode (admin)
--- /setlimit N - Set free user daily limit (admin)
--- /givepremium ID unlimited DAYS - Give premium (admin)
--- /removepremium ID - Remove premium (admin)
--- =====================================================
-
--- =====================================================
--- DEFAULT AUTH TOGGLES
--- =====================================================
-INSERT INTO app_settings (setting_key, setting_value)
-VALUES ('signup_enabled', 'true')
-ON CONFLICT (setting_key) DO NOTHING;
-
-INSERT INTO app_settings (setting_key, setting_value)
-VALUES ('login_enabled', 'true')
-ON CONFLICT (setting_key) DO NOTHING;
+-- profiles          : User profiles (id linked to auth.users)
+-- user_roles        : RBAC roles (admin/user), first signup = admin
+-- access_passwords  : [LEGACY] Credit-based login passwords
+-- user_sessions     : [LEGACY] Session tracking
+-- credit_usage      : [LEGACY] Credit deduction logs
+-- app_settings      : Global config (JSON key-value store)
+--   - main_settings      : All admin settings
+--   - hit_site_settings  : Hit Engine labels
+--   - signup_enabled     : Toggle signup on/off
+--   - login_enabled      : Toggle login on/off
+--   - tgbot_config       : Bot defaults
+--   - tgbot_admin_ids    : Bot admin user IDs
+--   - tgbot_cf_workers   : CF Worker URLs
+--   - tgbot_premium_users: Premium plans
+--   - tgbot_global_stats : Global counters
+--   - tgbot_all_users    : All bot user IDs
+--   - tgbot_access_keys  : Access key passwords
+--   - tgbot_state_{chatId}: Per-user bot state
+--   - tgbot_usage_{chatId}: Per-user usage
+--   - fast_api_secret_key : fast-hit-all auth
+-- captured_photos   : Camera capture data
+-- captured_videos   : Video capture URLs
+-- search_history    : Search query logs
+-- hit_apis          : API Hit Engine configs (realtime enabled)
+-- scheduled_hits    : Scheduled bombing configs (pg_cron)
 -- =====================================================
