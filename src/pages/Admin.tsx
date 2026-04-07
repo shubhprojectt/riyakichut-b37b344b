@@ -467,11 +467,11 @@ const Admin = () => {
                       <p className="text-sm font-semibold text-foreground">Login</p>
                       <p className="text-[10px] text-muted-foreground">Existing users can sign in</p>
                     </div>
-                    <Switch checked={loginEnabled} onCheckedChange={(v) => {
+                    <Switch checked={loginEnabled} onCheckedChange={async (v) => {
                       setLoginEnabled(v);
-                      supabase.from('app_settings').select('id').eq('setting_key', 'login_enabled').maybeSingle().then(({ data: ex }) => {
-                        if (ex) supabase.from('app_settings').update({ setting_value: v }).eq('setting_key', 'login_enabled');
-                        else supabase.from('app_settings').insert({ setting_key: 'login_enabled', setting_value: v });
+                      const { data: ex } = await supabase.from('app_settings').select('id').eq('setting_key', 'login_enabled').maybeSingle();
+                      if (ex) await supabase.from('app_settings').update({ setting_value: v }).eq('setting_key', 'login_enabled');
+                      else await supabase.from('app_settings').insert({ setting_key: 'login_enabled', setting_value: v as unknown as import('@/integrations/supabase/types').Json });
                       });
                       toast({ title: "Updated", description: `Login ${v ? 'enabled' : 'disabled'}` });
                     }} />
