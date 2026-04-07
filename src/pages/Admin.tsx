@@ -472,7 +472,6 @@ const Admin = () => {
                       const { data: ex } = await supabase.from('app_settings').select('id').eq('setting_key', 'login_enabled').maybeSingle();
                       if (ex) await supabase.from('app_settings').update({ setting_value: v }).eq('setting_key', 'login_enabled');
                       else await supabase.from('app_settings').insert({ setting_key: 'login_enabled', setting_value: v as unknown as import('@/integrations/supabase/types').Json });
-                      });
                       toast({ title: "Updated", description: `Login ${v ? 'enabled' : 'disabled'}` });
                     }} />
                   </div>
