@@ -72,45 +72,8 @@ serve(async (req) => {
       );
     }
 
-    // Mark password as used (no device binding - same password works on all devices)
-    if (!passwordRecord.is_used) {
-      const { error: updateError } = await supabase
-        .from('access_passwords')
-        .update({
-          is_used: true,
-          used_at: new Date().toISOString()
-        })
-        .eq('id', passwordRecord.id);
-
-      if (updateError) {
-        console.error('Error updating password:', updateError);
-      }
-    }
-
-    // Deactivate any existing sessions for this password
-    await supabase
-      .from('user_sessions')
-      .update({ is_active: false })
-      .eq('password_id', passwordRecord.id);
-
-    // Create new session
+    // Generate session token (no one-time use restriction, password can be used unlimited times)
     const sessionToken = generateSessionToken();
-    const { error: sessionError } = await supabase
-      .from('user_sessions')
-      .insert({
-        password_id: passwordRecord.id,
-        device_id: deviceId,
-        session_token: sessionToken,
-        is_active: true
-      });
-
-    if (sessionError) {
-      console.error('Error creating session:', sessionError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to create session' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     console.log(`Login successful for password ${passwordRecord.id}`);
 

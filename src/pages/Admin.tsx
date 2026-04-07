@@ -231,9 +231,65 @@ const Admin = () => {
     if (!error) { setSearchHistory([]); toast({ title: "History Cleared", description: "All search history deleted" }); }
   };
 
-  const savePasswords = () => {
-    updateSettings({ sitePassword: localSitePassword, adminPassword: localAdminPassword, allSearchAccessKey: localAllSearchKey, telegramOsintAccessKey: localTelegramKey });
-    toast({ title: "Saved", description: "Passwords & Access Keys updated successfully" });
+  const savePasswords = async () => {
+    // Save access keys to settings
+    updateSettings({ allSearchAccessKey: localAllSearchKey, telegramOsintAccessKey: localTelegramKey });
+
+    // Change admin password via edge function if modified
+    if (localAdminPassword && localAdminPassword !== settings.adminPassword) {
+      try {
+        const { data, error } = await supabase.functions.invoke('verify-admin', {
+          body: { password: adminPasswordInput, action: 'change_password', newPassword: localAdminPassword }
+        });
+        if (error || !data?.success) {
+          toast({ title: "Error", description: "Admin password change failed: " + (data?.error || 'Unknown error'), variant: "destructive" });
+          return;
+        }
+        updateSettings({ adminPassword: localAdminPassword });
+        toast({ title: "✅ Admin Password Changed", description: "Naya admin password set ho gaya" });
+      } catch {
+        toast({ title: "Error", description: "Admin password change failed", variant: "destructive" });
+        return;
+      }
+    }
+
+    // Update site password in access_passwords table
+    if (localSitePassword && localSitePassword !== settings.sitePassword) {
+      try {
+        const { data, error } = await supabase.functions.invoke('admin-passwords', {
+          body: { action: 'list', adminPassword: localAdminPassword || settings.adminPassword }
+        });
+        if (!error && data?.passwords?.length > 0) {
+          // Update the first password's display and hash
+          const firstPw = data.passwords[0];
+          await supabase.functions.invoke('admin-passwords', {
+            body: { 
+              action: 'delete', 
+              adminPassword: localAdminPassword || settings.adminPassword,
+              passwordId: firstPw.id 
+            }
+          });
+        }
+        // Create new password with the new site password
+        await supabase.functions.invoke('admin-passwords', {
+          body: { 
+            action: 'create', 
+            adminPassword: localAdminPassword || settings.adminPassword,
+            credits: 9999,
+            customPassword: localSitePassword
+          }
+        });
+        updateSettings({ sitePassword: localSitePassword });
+        toast({ title: "✅ Site Password Changed", description: `Naya site password: ${localSitePassword.toUpperCase()}` });
+      } catch {
+        toast({ title: "Error", description: "Site password change failed", variant: "destructive" });
+        return;
+      }
+    }
+
+    if (localAdminPassword === settings.adminPassword && localSitePassword === settings.sitePassword) {
+      toast({ title: "Saved", description: "Access Keys updated" });
+    }
   };
 
   // Hit Engine handlers
