@@ -217,8 +217,47 @@ const Admin = () => {
     setAdminPasswordInput('');
   };
 
+  const parseBooleanSetting = (value: unknown, fallback = true) => {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') {
+      const normalized = value.replace(/"/g, '').trim().toLowerCase();
+      if (normalized === 'true') return true;
+      if (normalized === 'false') return false;
+    }
+    return fallback;
+  };
+
+  const loadAuthToggles = async () => {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('setting_key, setting_value')
+      .in('setting_key', ['signup_enabled', 'login_enabled']);
+
+    if (error) return;
+
+    const signupRow = data?.find((row) => row.setting_key === 'signup_enabled');
+    const loginRow = data?.find((row) => row.setting_key === 'login_enabled');
+
+    setSignupEnabled(parseBooleanSetting(signupRow?.setting_value, true));
+    setLoginEnabled(parseBooleanSetting(loginRow?.setting_value, true));
+  };
+
+  const saveAuthToggle = async (key: 'signup_enabled' | 'login_enabled', value: boolean) => {
+    const { error } = await supabase
+      .from('app_settings')
+      .upsert(
+        { setting_key: key, setting_value: value as unknown as import('@/integrations/supabase/types').Json },
+        { onConflict: 'setting_key' }
+      );
+
+    if (error) throw error;
+  };
+
   useEffect(() => {
-    if (isAdminAuthenticated) { fetchSearchHistory(); }
+    if (isAdminAuthenticated) {
+      fetchSearchHistory();
+      loadAuthToggles();
+    }
   }, [isAdminAuthenticated]);
 
   const fetchSearchHistory = async () => {
@@ -455,11 +494,15 @@ const Admin = () => {
                       <p className="text-[10px] text-muted-foreground">New users can create accounts</p>
                     </div>
                     <Switch checked={signupEnabled} onCheckedChange={async (v) => {
+                      const previous = signupEnabled;
                       setSignupEnabled(v);
-                      const { data: ex } = await supabase.from('app_settings').select('id').eq('setting_key', 'signup_enabled').maybeSingle();
-                      if (ex) await supabase.from('app_settings').update({ setting_value: v }).eq('setting_key', 'signup_enabled');
-                      else await supabase.from('app_settings').insert({ setting_key: 'signup_enabled', setting_value: v as unknown as import('@/integrations/supabase/types').Json });
-                      toast({ title: "Updated", description: `Signup ${v ? 'enabled' : 'disabled'}` });
+                      try {
+                        await saveAuthToggle('signup_enabled', v);
+                        toast({ title: "Updated", description: `Signup ${v ? 'enabled' : 'disabled'}` });
+                      } catch {
+                        setSignupEnabled(previous);
+                        toast({ title: "Error", description: "Signup toggle save nahi hua", variant: "destructive" });
+                      }
                     }} />
                   </div>
                   <div className="flex items-center justify-between p-3 rounded-xl border border-border/30 bg-background/30">
@@ -468,11 +511,15 @@ const Admin = () => {
                       <p className="text-[10px] text-muted-foreground">Existing users can sign in</p>
                     </div>
                     <Switch checked={loginEnabled} onCheckedChange={async (v) => {
+                      const previous = loginEnabled;
                       setLoginEnabled(v);
-                      const { data: ex } = await supabase.from('app_settings').select('id').eq('setting_key', 'login_enabled').maybeSingle();
-                      if (ex) await supabase.from('app_settings').update({ setting_value: v }).eq('setting_key', 'login_enabled');
-                      else await supabase.from('app_settings').insert({ setting_key: 'login_enabled', setting_value: v as unknown as import('@/integrations/supabase/types').Json });
-                      toast({ title: "Updated", description: `Login ${v ? 'enabled' : 'disabled'}` });
+                      try {
+                        await saveAuthToggle('login_enabled', v);
+                        toast({ title: "Updated", description: `Login ${v ? 'enabled' : 'disabled'}` });
+                      } catch {
+                        setLoginEnabled(previous);
+                        toast({ title: "Error", description: "Login toggle save nahi hua", variant: "destructive" });
+                      }
                     }} />
                   </div>
                 </div>
