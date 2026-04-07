@@ -217,8 +217,47 @@ const Admin = () => {
     setAdminPasswordInput('');
   };
 
+  const parseBooleanSetting = (value: unknown, fallback = true) => {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') {
+      const normalized = value.replace(/"/g, '').trim().toLowerCase();
+      if (normalized === 'true') return true;
+      if (normalized === 'false') return false;
+    }
+    return fallback;
+  };
+
+  const loadAuthToggles = async () => {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('setting_key, setting_value')
+      .in('setting_key', ['signup_enabled', 'login_enabled']);
+
+    if (error) return;
+
+    const signupRow = data?.find((row) => row.setting_key === 'signup_enabled');
+    const loginRow = data?.find((row) => row.setting_key === 'login_enabled');
+
+    setSignupEnabled(parseBooleanSetting(signupRow?.setting_value, true));
+    setLoginEnabled(parseBooleanSetting(loginRow?.setting_value, true));
+  };
+
+  const saveAuthToggle = async (key: 'signup_enabled' | 'login_enabled', value: boolean) => {
+    const { error } = await supabase
+      .from('app_settings')
+      .upsert(
+        { setting_key: key, setting_value: value as unknown as import('@/integrations/supabase/types').Json },
+        { onConflict: 'setting_key' }
+      );
+
+    if (error) throw error;
+  };
+
   useEffect(() => {
-    if (isAdminAuthenticated) { fetchSearchHistory(); }
+    if (isAdminAuthenticated) {
+      fetchSearchHistory();
+      loadAuthToggles();
+    }
   }, [isAdminAuthenticated]);
 
   const fetchSearchHistory = async () => {
