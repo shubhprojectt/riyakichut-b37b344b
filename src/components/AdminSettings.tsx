@@ -159,7 +159,7 @@ const AdminSettings = () => {
               <Button
                 size="sm"
                 variant="destructive"
-                onClick={() => { setIsOpen(false); sessionStorage.removeItem('siteSessionToken'); navigate('/login'); }}
+                onClick={async () => { setIsOpen(false); await (await import('@/integrations/supabase/client')).supabase.auth.signOut(); navigate('/login'); }}
                 className="text-xs"
               >
                 <LogOut className="w-3.5 h-3.5 mr-1" />

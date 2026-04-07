@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Crown, Sparkles, LogIn, Lock } from "lucide-react";
+import { Loader2, Crown, Sparkles, LogIn, UserPlus, Mail, Lock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -9,9 +9,12 @@ import { toast } from "@/hooks/use-toast";
 import HackerLoader from "@/components/HackerLoader";
 
 const Login = () => {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showLoader, setShowLoader] = useState(true);
+  const [isSignup, setIsSignup] = useState(false);
+  const [signupEnabled, setSignupEnabled] = useState(true);
   const [loginEnabled, setLoginEnabled] = useState(true);
   const { settings } = useSettings();
   const navigate = useNavigate();
@@ -23,12 +26,17 @@ const Login = () => {
 
   useEffect(() => {
     // If already logged in, go home
-    const token = sessionStorage.getItem('siteSessionToken');
-    if (token) navigate("/");
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) navigate("/");
+    };
+    checkSession();
   }, [navigate]);
 
   useEffect(() => {
     const fetchToggles = async () => {
+      const { data: s } = await supabase.from('app_settings').select('setting_value').eq('setting_key', 'signup_enabled').maybeSingle();
+      if (s) setSignupEnabled(s.setting_value === true || s.setting_value === 'true' || s.setting_value === '"true"');
       const { data: l } = await supabase.from('app_settings').select('setting_value').eq('setting_key', 'login_enabled').maybeSingle();
       if (l) setLoginEnabled(l.setting_value === true || l.setting_value === 'true' || l.setting_value === '"true"');
     };
@@ -37,25 +45,40 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!loginEnabled) {
+    if (isSignup && !signupEnabled) {
+      toast({ title: "Signup Disabled", description: "🚫 Admin ne signup band rakha hai", variant: "destructive" });
+      return;
+    }
+    if (!isSignup && !loginEnabled) {
       toast({ title: "Login Disabled", description: "🚫 Admin ne login band rakha hai", variant: "destructive" });
       return;
     }
-    if (!password.trim()) {
-      toast({ title: "Error", description: "Password daalo", variant: "destructive" });
+    if (!email.trim() || !password.trim()) {
+      toast({ title: "Error", description: "Email aur password daalo", variant: "destructive" });
+      return;
+    }
+    if (password.length < 6) {
+      toast({ title: "Error", description: "Password kam se kam 6 characters ka hona chahiye", variant: "destructive" });
       return;
     }
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('auth-login', {
-        body: { password, deviceId: navigator.userAgent.slice(0, 50) }
-      });
-      if (error || !data?.success) {
-        toast({ title: "Error", description: data?.error || "Invalid password", variant: "destructive" });
+      if (isSignup) {
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) {
+          toast({ title: "Signup Error", description: error.message, variant: "destructive" });
+        } else {
+          toast({ title: "Welcome!", description: "Account ban gaya! Login ho rahe ho..." });
+          navigate("/");
+        }
       } else {
-        sessionStorage.setItem('siteSessionToken', data.sessionToken);
-        toast({ title: "Welcome!", description: "Access granted" });
-        navigate("/");
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+          toast({ title: "Login Error", description: error.message, variant: "destructive" });
+        } else {
+          toast({ title: "Welcome back!", description: "Login successful" });
+          navigate("/");
+        }
       }
     } catch {
       toast({ title: "Error", description: "Connection failed", variant: "destructive" });
@@ -80,7 +103,7 @@ const Login = () => {
       </div>
 
       {/* Card */}
-      <div className="relative w-full max-w-[300px]">
+      <div className="relative w-full max-w-[320px]">
         <div className="absolute -inset-2 rounded-2xl blur-xl opacity-30" style={{ background: 'linear-gradient(135deg, hsl(var(--neon-gold)), hsl(var(--neon-pink)), hsl(var(--neon-purple)))' }} />
         
         <div className="absolute -inset-[1.5px] rounded-2xl overflow-hidden">
@@ -122,30 +145,50 @@ const Login = () => {
               </span>
             </h1>
             <p className="text-[10px] mt-1 font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
-              Enter password to continue
+              {isSignup ? "Create your account" : "Login to continue"}
             </p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-3">
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="h-10 text-sm rounded-xl transition-all text-center tracking-[0.2em]"
-              style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1.5px solid rgba(255,200,100,0.15)',
-                color: 'hsl(var(--foreground))'
-              }}
-              disabled={isLoading}
-              autoFocus
-            />
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'hsl(var(--muted-foreground))' }} />
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email address"
+                className="h-10 text-sm rounded-xl pl-9 transition-all"
+                style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1.5px solid rgba(255,200,100,0.15)',
+                  color: 'hsl(var(--foreground))'
+                }}
+                disabled={isLoading}
+                autoFocus
+              />
+            </div>
+
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'hsl(var(--muted-foreground))' }} />
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password (min 6 chars)"
+                className="h-10 text-sm rounded-xl pl-9 transition-all"
+                style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1.5px solid rgba(255,200,100,0.15)',
+                  color: 'hsl(var(--foreground))'
+                }}
+                disabled={isLoading}
+              />
+            </div>
 
             <Button
               type="submit"
-              disabled={isLoading || !password.trim()}
+              disabled={isLoading || !email.trim() || !password.trim()}
               className="w-full h-10 rounded-xl text-xs font-bold tracking-wider transition-all duration-300 active:scale-[0.98]"
               style={{
                 background: 'linear-gradient(135deg, hsl(var(--neon-gold)), hsl(var(--neon-orange)))',
@@ -155,6 +198,11 @@ const Login = () => {
             >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
+              ) : isSignup ? (
+                <>
+                  <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+                  SIGN UP
+                </>
               ) : (
                 <>
                   <LogIn className="w-3.5 h-3.5 mr-1.5" />
@@ -164,9 +212,23 @@ const Login = () => {
             </Button>
           </form>
 
-          {!loginEnabled && (
+          {/* Toggle signup/login */}
+          <div className="mt-3 text-center">
+            <button
+              type="button"
+              onClick={() => setIsSignup(!isSignup)}
+              className="text-[10px] font-medium transition-colors"
+              style={{ color: 'hsl(var(--neon-gold))' }}
+            >
+              {isSignup ? "Already have an account? Login" : "Don't have an account? Sign Up"}
+            </button>
+          </div>
+
+          {((!signupEnabled && isSignup) || (!loginEnabled && !isSignup)) && (
             <div className="mt-3 p-2 rounded-lg text-center" style={{ background: 'rgba(255,50,50,0.1)', border: '1px solid rgba(255,50,50,0.2)' }}>
-              <p className="text-[10px] text-destructive font-medium">🚫 Admin ne login band rakha hai</p>
+              <p className="text-[10px] text-destructive font-medium">
+                🚫 Admin ne {isSignup ? "signup" : "login"} band rakha hai
+              </p>
             </div>
           )}
 
