@@ -1,14 +1,12 @@
 import { LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const CreditDisplay = () => {
   const navigate = useNavigate();
-  const isLoggedIn = !!sessionStorage.getItem('siteSessionToken');
 
-  if (!isLoggedIn) return null;
-
-  const handleLogout = () => {
-    sessionStorage.removeItem('siteSessionToken');
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     navigate('/login');
   };
 
