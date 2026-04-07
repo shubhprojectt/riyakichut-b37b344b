@@ -656,7 +656,7 @@ SELECT cron.schedule(
 -- =====================================================
 -- EDGE FUNCTIONS LIST (deploy from supabase/functions/)
 -- =====================================================
--- Version 6.0 Edge Functions:
+-- Version 6.1 Edge Functions:
 -- [LEGACY - no longer used by app]:
 -- 1.  auth-login              - (LEGACY) User login with credit password
 -- 2.  auth-verify             - (LEGACY) Verify session token & get credits
@@ -672,7 +672,7 @@ SELECT cron.schedule(
 -- 10. image-to-info           - Image analysis API
 -- 11. execute-scheduled-hits  - Cron-based scheduled bombing executor
 -- 12. fast-hit-all            - Hit ALL enabled APIs (Pro API style)
--- 13. telegram-bot            - Telegram Bot webhook handler (v5.2)
+-- 13. telegram-bot            - Telegram Bot webhook handler (v6.1 - optimized batch queries, cache, fire-and-forget)
 -- 14. mpokket-otp             - Custom SMS multi-service OTP relay (mPokket + Milkbasket + Digihaat)
 -- 15. verify-admin            - Verify admin password via edge function
 --
