@@ -13,31 +13,19 @@ const PasswordProtection = ({ children }: PasswordProtectionProps) => {
 
   useEffect(() => {
     const checkSession = async () => {
-      const token = sessionStorage.getItem('siteSessionToken');
-      if (!token) {
-        setIsChecking(false);
-        setIsValid(false);
-        return;
-      }
-
-      try {
-        const { data } = await supabase.functions.invoke('auth-verify', {
-          body: { sessionToken: token }
-        });
-        if (data?.valid) {
-          setIsValid(true);
-        } else {
-          sessionStorage.removeItem('siteSessionToken');
-          setIsValid(false);
-        }
-      } catch {
-        // If verify fails, still allow if token exists (offline mode)
-        setIsValid(true);
-      }
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsValid(!!session);
       setIsChecking(false);
     };
 
     checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsValid(!!session);
+      setIsChecking(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   if (isChecking) {
