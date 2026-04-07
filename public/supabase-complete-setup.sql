@@ -3,7 +3,7 @@
 -- =====================================================
 -- Run this SQL in your new Supabase project's SQL Editor
 -- Last Updated: 2026-04-07
--- Version: 6.0 (Email Auth + Admin Panel + Signup/Login Toggles)
+-- Version: 6.1 (Optimized Bot + Auth Toggle Fix + Logout)
 -- =====================================================
 -- Authentication: Email + Password (Supabase Auth)
 -- First signup automatically becomes admin
