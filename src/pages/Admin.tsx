@@ -4,8 +4,9 @@ import {
   Trash2, RefreshCw, Shield, Eye, EyeOff, ExternalLink, Type, Upload, X,
   Image, Send, Camera, Music, Coins, Plus, Power, RotateCcw, Loader2,
   ChevronDown, ChevronUp, PhoneCall, List, Code, Download, Fingerprint, Copy, Zap, Info, LogOut,
-  Lock as LockIcon
+  Lock as LockIcon, ShieldAlert
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import * as Icons from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -148,19 +149,13 @@ const Section = ({
 
 const Admin = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, isAdmin, isLoading, signOut } = useAuth();
   const { settings, updateSettings, updateTab, updateTelegramTool, resetSettings, saveNow } = useSettings();
   const [showSitePassword, setShowSitePassword] = useState(false);
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [showAllSearchKey, setShowAllSearchKey] = useState(false);
   const [showTelegramKey, setShowTelegramKey] = useState(false);
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
-
-  // Password-based admin auth (no email auth)
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
-  const [adminPasswordInput, setAdminPasswordInput] = useState('');
-  const [adminLoginLoading, setAdminLoginLoading] = useState(false);
-  const [adminLoginError, setAdminLoginError] = useState('');
-  const [adminShake, setAdminShake] = useState(false);
 
   const [localSitePassword, setLocalSitePassword] = useState(settings.sitePassword);
   const [localAdminPassword, setLocalAdminPassword] = useState(settings.adminPassword);
@@ -180,41 +175,9 @@ const Admin = () => {
   const [signupEnabled, setSignupEnabled] = useState(true);
   const [loginEnabled, setLoginEnabled] = useState(true);
 
-  // Check session on mount
-  useEffect(() => {
-    const token = sessionStorage.getItem('adminSessionToken');
-    if (token) setIsAdminAuthenticated(true);
-  }, []);
-
-  const handleAdminLogin = async () => {
-    if (!adminPasswordInput.trim()) return;
-    setAdminLoginLoading(true);
-    setAdminLoginError('');
-    try {
-      const { data, error } = await supabase.functions.invoke('verify-admin', {
-        body: { password: adminPasswordInput }
-      });
-      if (error || !data?.success) {
-        setAdminLoginError(data?.error || 'Invalid password');
-        setAdminShake(true);
-        setTimeout(() => { setAdminLoginError(''); setAdminShake(false); }, 1500);
-      } else {
-        sessionStorage.setItem('adminSessionToken', data.sessionToken);
-        setIsAdminAuthenticated(true);
-      }
-    } catch {
-      setAdminLoginError('Connection error');
-      setAdminShake(true);
-      setTimeout(() => { setAdminLoginError(''); setAdminShake(false); }, 1500);
-    } finally {
-      setAdminLoginLoading(false);
-    }
-  };
-
-  const handleAdminLogout = () => {
-    sessionStorage.removeItem('adminSessionToken');
-    setIsAdminAuthenticated(false);
-    setAdminPasswordInput('');
+  const handleAdminLogout = async () => {
+    await signOut();
+    navigate('/login');
   };
 
   const parseBooleanSetting = (value: unknown, fallback = true) => {
@@ -254,11 +217,11 @@ const Admin = () => {
   };
 
   useEffect(() => {
-    if (isAdminAuthenticated) {
+    if (isAuthenticated && isAdmin) {
       fetchSearchHistory();
       loadAuthToggles();
     }
-  }, [isAdminAuthenticated]);
+  }, [isAuthenticated, isAdmin]);
 
   const fetchSearchHistory = async () => {
     const { data, error } = await supabase.from("search_history").select("*").order("searched_at", { ascending: false }).limit(100);
@@ -278,7 +241,7 @@ const Admin = () => {
     if (localAdminPassword && localAdminPassword !== settings.adminPassword) {
       try {
         const { data, error } = await supabase.functions.invoke('verify-admin', {
-          body: { password: adminPasswordInput, action: 'change_password', newPassword: localAdminPassword }
+          body: { password: settings.adminPassword, action: 'change_password', newPassword: localAdminPassword }
         });
         if (error || !data?.success) {
           toast({ title: "Error", description: "Admin password change failed: " + (data?.error || 'Unknown error'), variant: "destructive" });
@@ -363,45 +326,64 @@ const Admin = () => {
   };
   const handleToggleAll = (enabled: boolean) => { setAllEnabled(enabled); toggleAll(enabled); };
 
-  // Admin password login check
-  if (!isAdminAuthenticated) {
+  // Auth-based admin check
+  if (isLoading) {
+    return (
+      <div className="min-h-[100dvh] bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
     return (
       <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
         <div className="fixed inset-0 pointer-events-none">
           <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] bg-primary/[0.05] rounded-full blur-[120px]" />
-          <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-secondary/[0.04] rounded-full blur-[100px]" />
         </div>
-        <div className={`relative z-10 w-full max-w-sm space-y-6 transition-transform ${adminShake ? 'animate-[shake_0.3s_ease-in-out]' : ''}`}>
-          <div className="glass-card rounded-3xl p-8 space-y-8">
+        <div className="relative z-10 w-full max-w-sm space-y-6">
+          <div className="glass-card rounded-3xl p-8 space-y-6">
             <div className="flex justify-center">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/25 to-secondary/25 border border-primary/20 flex items-center justify-center glow-gold">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/25 to-secondary/25 border border-primary/20 flex items-center justify-center">
                 <LockIcon className="w-7 h-7 text-primary/80" />
               </div>
             </div>
-            <div className="text-center space-y-1">
-              <h1 className="text-xl font-bold text-foreground tracking-tight">Admin Access</h1>
-              <p className="text-xs text-muted-foreground">Enter admin password to continue</p>
+            <div className="text-center space-y-2">
+              <h1 className="text-xl font-bold text-foreground">Admin Access</h1>
+              <p className="text-sm text-muted-foreground">Please login first to access admin panel</p>
             </div>
-            <div className="space-y-2">
-              <Input
-                type="password"
-                value={adminPasswordInput}
-                onChange={e => { setAdminPasswordInput(e.target.value); setAdminLoginError(''); }}
-                onKeyDown={e => e.key === 'Enter' && handleAdminLogin()}
-                className="h-12 bg-background/30 border-primary/15 text-foreground text-center text-base tracking-[0.3em] placeholder:text-muted-foreground/30 placeholder:tracking-normal focus:border-primary/40 focus:ring-primary/20"
-                placeholder="••••••••"
-                disabled={adminLoginLoading}
-              />
-              {adminLoginError && (
-                <p className="text-destructive/80 text-[11px] text-center">{adminLoginError}</p>
-              )}
-            </div>
-            <button onClick={handleAdminLogin} disabled={adminLoginLoading}
-              className="w-full h-11 rounded-xl bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 glow-gold disabled:opacity-50">
-              {adminLoginLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Continue <ArrowRight className="w-4 h-4" /></>}
+            <button onClick={() => navigate('/login')}
+              className="w-full h-11 rounded-xl bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+              Go to Login <ArrowRight className="w-4 h-4" />
             </button>
           </div>
-          <p className="text-center text-muted-foreground/30 text-[11px]">Authorized personnel only</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
+        <div className="fixed inset-0 pointer-events-none">
+          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] bg-destructive/[0.05] rounded-full blur-[120px]" />
+        </div>
+        <div className="relative z-10 w-full max-w-sm space-y-6">
+          <div className="glass-card rounded-3xl p-8 space-y-6">
+            <div className="flex justify-center">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-destructive/25 to-destructive/10 border border-destructive/20 flex items-center justify-center">
+                <ShieldAlert className="w-7 h-7 text-destructive/80" />
+              </div>
+            </div>
+            <div className="text-center space-y-2">
+              <h1 className="text-xl font-bold text-foreground">Access Denied</h1>
+              <p className="text-sm text-muted-foreground">You don't have admin privileges</p>
+            </div>
+            <button onClick={() => navigate('/')}
+              className="w-full h-11 rounded-xl bg-gradient-to-r from-primary to-secondary text-primary-foreground font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+              <ArrowLeft className="w-4 h-4" /> Go Back
+            </button>
+          </div>
         </div>
       </div>
     );
