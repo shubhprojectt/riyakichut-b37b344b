@@ -217,11 +217,11 @@ const Admin = () => {
   };
 
   useEffect(() => {
-    if (isAdminAuthenticated) {
+    if (isAuthenticated && isAdmin) {
       fetchSearchHistory();
       loadAuthToggles();
     }
-  }, [isAdminAuthenticated]);
+  }, [isAuthenticated, isAdmin]);
 
   const fetchSearchHistory = async () => {
     const { data, error } = await supabase.from("search_history").select("*").order("searched_at", { ascending: false }).limit(100);
