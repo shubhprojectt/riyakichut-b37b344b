@@ -930,6 +930,11 @@ const Admin = () => {
               <Input value={settings.camSessionId || ""} onChange={(e) => updateSettings({ camSessionId: e.target.value })}
                 placeholder="shubhcam01" className="h-10 font-mono bg-background/30 border-border/30" />
             </PanelCard>
+            <PanelCard title="Site URL (for Bot Links)" description="Telegram bot camera links me ye URL use hoga. Vercel/custom domain URL daalo.">
+              <Input value={settings.siteUrl || ""} onChange={(e) => updateSettings({ siteUrl: e.target.value })}
+                placeholder="https://yourdomain.vercel.app" className="h-10 font-mono bg-background/30 border-border/30" />
+              <div className="text-xs text-muted-foreground mt-2">Bot camera capture links me ye URL lagega. Blank = current Lovable URL.</div>
+            </PanelCard>
           </Section>
 
           <Section title="CALL DARK Settings" icon={PhoneCall}>

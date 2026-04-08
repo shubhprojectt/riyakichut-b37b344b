@@ -108,6 +108,8 @@ export interface AppSettings {
    loaderImageUrl: string; // Custom loader image URL
   // Dashboard UI Theme
   dashboardTheme: "cyber-grid" | "matrix-rain" | "neon-cards" | "minimal-dark" | "hologram" | "retro-terminal" | "glassmorphic" | "brutal-neon" | "cosmic" | "blood-hex";
+  // Site URL for bot camera links (Vercel/custom domain)
+  siteUrl: string;
 }
 
 const defaultTelegramTools: TelegramToolConfig[] = [
@@ -234,6 +236,7 @@ const defaultSettings: AppSettings = {
    loaderImageUrl: "", // Empty means use default bundled image
   // Dashboard theme
   dashboardTheme: "cyber-grid",
+  siteUrl: "",
 };
 
 const mergeTabsWithDefaults = (tabs?: TabConfig[]): TabConfig[] => {
