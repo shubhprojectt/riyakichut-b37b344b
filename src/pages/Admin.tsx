@@ -149,19 +149,13 @@ const Section = ({
 
 const Admin = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, isAdmin, isLoading, signOut } = useAuth();
   const { settings, updateSettings, updateTab, updateTelegramTool, resetSettings, saveNow } = useSettings();
   const [showSitePassword, setShowSitePassword] = useState(false);
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [showAllSearchKey, setShowAllSearchKey] = useState(false);
   const [showTelegramKey, setShowTelegramKey] = useState(false);
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
-
-  // Password-based admin auth (no email auth)
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
-  const [adminPasswordInput, setAdminPasswordInput] = useState('');
-  const [adminLoginLoading, setAdminLoginLoading] = useState(false);
-  const [adminLoginError, setAdminLoginError] = useState('');
-  const [adminShake, setAdminShake] = useState(false);
 
   const [localSitePassword, setLocalSitePassword] = useState(settings.sitePassword);
   const [localAdminPassword, setLocalAdminPassword] = useState(settings.adminPassword);
@@ -181,41 +175,9 @@ const Admin = () => {
   const [signupEnabled, setSignupEnabled] = useState(true);
   const [loginEnabled, setLoginEnabled] = useState(true);
 
-  // Check session on mount
-  useEffect(() => {
-    const token = sessionStorage.getItem('adminSessionToken');
-    if (token) setIsAdminAuthenticated(true);
-  }, []);
-
-  const handleAdminLogin = async () => {
-    if (!adminPasswordInput.trim()) return;
-    setAdminLoginLoading(true);
-    setAdminLoginError('');
-    try {
-      const { data, error } = await supabase.functions.invoke('verify-admin', {
-        body: { password: adminPasswordInput }
-      });
-      if (error || !data?.success) {
-        setAdminLoginError(data?.error || 'Invalid password');
-        setAdminShake(true);
-        setTimeout(() => { setAdminLoginError(''); setAdminShake(false); }, 1500);
-      } else {
-        sessionStorage.setItem('adminSessionToken', data.sessionToken);
-        setIsAdminAuthenticated(true);
-      }
-    } catch {
-      setAdminLoginError('Connection error');
-      setAdminShake(true);
-      setTimeout(() => { setAdminLoginError(''); setAdminShake(false); }, 1500);
-    } finally {
-      setAdminLoginLoading(false);
-    }
-  };
-
-  const handleAdminLogout = () => {
-    sessionStorage.removeItem('adminSessionToken');
-    setIsAdminAuthenticated(false);
-    setAdminPasswordInput('');
+  const handleAdminLogout = async () => {
+    await signOut();
+    navigate('/login');
   };
 
   const parseBooleanSetting = (value: unknown, fallback = true) => {
