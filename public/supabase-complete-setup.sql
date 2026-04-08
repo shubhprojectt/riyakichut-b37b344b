@@ -3,11 +3,12 @@
 -- =====================================================
 -- Run this SQL in your new Supabase project's SQL Editor
 -- Last Updated: 2026-04-07
--- Version: 6.1 (Optimized Bot + Auth Toggle Fix + Logout)
+-- Version: 6.2 (Auth-based Admin Panel - No Edge Function Password)
 -- =====================================================
 -- Authentication: Email + Password (Supabase Auth)
--- First signup automatically becomes admin
--- Admin panel: manage settings, toggle signup/login
+-- First signup automatically becomes admin (via handle_new_user trigger)
+-- Admin panel: Protected by Supabase Auth + user_roles (admin role check)
+-- No more edge function password verification needed for admin access
 -- Legacy tables (access_passwords, user_sessions, credit_usage)
 -- are kept for reference but no longer used.
 -- =====================================================
