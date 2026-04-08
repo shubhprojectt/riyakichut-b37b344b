@@ -241,7 +241,7 @@ const Admin = () => {
     if (localAdminPassword && localAdminPassword !== settings.adminPassword) {
       try {
         const { data, error } = await supabase.functions.invoke('verify-admin', {
-          body: { password: adminPasswordInput, action: 'change_password', newPassword: localAdminPassword }
+          body: { password: settings.adminPassword, action: 'change_password', newPassword: localAdminPassword }
         });
         if (error || !data?.success) {
           toast({ title: "Error", description: "Admin password change failed: " + (data?.error || 'Unknown error'), variant: "destructive" });
