@@ -3,16 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
-
-async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password + "shubh_admin_salt_2024");
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -34,40 +26,32 @@ serve(async (req) => {
       );
     }
 
-    // Get stored admin password hash
-    const { data: stored } = await supabase
+    // Get admin password from main_settings
+    const { data: settingsRow } = await supabase
       .from('app_settings')
       .select('setting_value')
-      .eq('setting_key', 'admin_password_hash')
+      .eq('setting_key', 'main_settings')
       .maybeSingle();
 
-    const inputHash = await hashPassword(password);
+    const settings = settingsRow?.setting_value as any;
+    const storedPassword = settings?.adminPassword || 'admin123';
 
-    // If no password set yet, use default hash
-    const defaultHash = await hashPassword('admin123');
-    const storedHash = stored?.setting_value || defaultHash;
-
-    if (inputHash !== storedHash) {
+    // Direct password comparison - no hashing
+    if (password !== storedPassword) {
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid password' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // If action is change_password, update it
+    // If action is change_password, update main_settings
     if (action === 'change_password' && newPassword) {
-      const newHash = await hashPassword(newPassword);
-      const { data: existing } = await supabase
+      const updatedSettings = { ...settings, adminPassword: newPassword };
+      
+      await supabase
         .from('app_settings')
-        .select('id')
-        .eq('setting_key', 'admin_password_hash')
-        .maybeSingle();
-
-      if (existing) {
-        await supabase.from('app_settings').update({ setting_value: newHash }).eq('setting_key', 'admin_password_hash');
-      } else {
-        await supabase.from('app_settings').insert({ setting_key: 'admin_password_hash', setting_value: newHash });
-      }
+        .update({ setting_value: updatedSettings })
+        .eq('setting_key', 'main_settings');
 
       return new Response(
         JSON.stringify({ success: true, message: 'Password changed' }),
