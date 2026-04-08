@@ -4,8 +4,9 @@ import {
   Trash2, RefreshCw, Shield, Eye, EyeOff, ExternalLink, Type, Upload, X,
   Image, Send, Camera, Music, Coins, Plus, Power, RotateCcw, Loader2,
   ChevronDown, ChevronUp, PhoneCall, List, Code, Download, Fingerprint, Copy, Zap, Info, LogOut,
-  Lock as LockIcon
+  Lock as LockIcon, ShieldAlert
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import * as Icons from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
