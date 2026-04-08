@@ -236,6 +236,7 @@ const defaultSettings: AppSettings = {
    loaderImageUrl: "", // Empty means use default bundled image
   // Dashboard theme
   dashboardTheme: "cyber-grid",
+  siteUrl: "",
 };
 
 const mergeTabsWithDefaults = (tabs?: TabConfig[]): TabConfig[] => {
