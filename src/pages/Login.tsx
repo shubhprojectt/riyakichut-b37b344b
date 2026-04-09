@@ -221,10 +221,10 @@ const Login = () => {
             </button>
           </div>
 
-          {((!signupEnabled && isSignup) || (!loginEnabled && !isSignup)) && (
+          {(!signupEnabled && isSignup) && (
             <div className="mt-3 p-2 rounded-lg text-center" style={{ background: 'rgba(255,50,50,0.1)', border: '1px solid rgba(255,50,50,0.2)' }}>
               <p className="text-[10px] text-destructive font-medium">
-                🚫 Admin ne {isSignup ? "signup" : "login"} band rakha hai
+                🚫 Admin ne signup band rakha hai
               </p>
             </div>
           )}
