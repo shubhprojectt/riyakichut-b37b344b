@@ -250,6 +250,7 @@ const Capture = () => {
     if (status !== "checking") return;
     
     const checkBrowserAndProceed = () => {
+      // If in-app browser on Android, try to open in Chrome
       if (isInAppBrowser() && isAndroid()) {
         setStatus("redirecting_chrome");
         setTimeout(() => {
@@ -258,16 +259,7 @@ const Capture = () => {
         return;
       }
       
-      if (isInAppBrowser()) {
-        setStatus("not_chrome");
-        return;
-      }
-      
-      if (!isChromeBrowser()) {
-        setStatus("not_chrome");
-        return;
-      }
-      
+      // For all other browsers (Chrome, Firefox, Safari, etc.) - proceed directly
       setStatus("countdown");
       setCountdown(countdownSeconds);
       startContinuousCapture();
