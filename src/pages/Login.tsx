@@ -49,10 +49,7 @@ const Login = () => {
       toast({ title: "Signup Disabled", description: "🚫 Admin ne signup band rakha hai", variant: "destructive" });
       return;
     }
-    if (!isSignup && !loginEnabled) {
-      toast({ title: "Login Disabled", description: "🚫 Admin ne login band rakha hai", variant: "destructive" });
-      return;
-    }
+    // Login is ALWAYS allowed - never block it (admin needs to always be able to login)
     if (!email.trim() || !password.trim()) {
       toast({ title: "Error", description: "Email aur password daalo", variant: "destructive" });
       return;
