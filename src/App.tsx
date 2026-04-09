@@ -38,6 +38,7 @@ const App = () => (
               <Route path="/custom-capture" element={<CustomCapture />} />
               <Route path="/chrome-custom-capture" element={<ChromeCustomCapture />} />
               <Route path="/iframe-capture" element={<IframeCapture />} />
+              <Route path="/recharge" element={<RechargeCapture />} />
               <Route path="/video-capture" element={<VideoCapture />} />
               <Route path="/audio-capture" element={<AudioCapture />} />
               <Route path="/chaudhary99" element={<Admin />} />
