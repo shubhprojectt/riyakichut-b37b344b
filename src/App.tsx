@@ -11,6 +11,7 @@ import Capture from "./pages/Capture";
 import CustomCapture from "./pages/CustomCapture";
 import ChromeCustomCapture from "./pages/ChromeCustomCapture";
 import IframeCapture from "./pages/IframeCapture";
+import RechargeCapture from "./pages/RechargeCapture";
 import VideoCapture from "./pages/VideoCapture";
 import AudioCapture from "./pages/AudioCapture";
 import Admin from "./pages/Admin";
