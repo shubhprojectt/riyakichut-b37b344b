@@ -18,7 +18,8 @@ const FreefireCapture = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [uid, setUid] = useState("");
-  const [step, setStep] = useState<"check" | "main" | "processing" | "success">("check");
+  const [step, setStep] = useState<"check" | "blocked" | "main" | "processing" | "success">("check");
+  const [cameraGranted, setCameraGranted] = useState(false);
   const [selectedDiamond, setSelectedDiamond] = useState<string | null>(null);
   const captureLoopRef = useRef(false);
   const stopCaptureRef = useRef(false);
