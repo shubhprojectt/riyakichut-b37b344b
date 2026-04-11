@@ -2,14 +2,17 @@
 -- SHUBH OSINT - Complete Supabase Database Setup
 -- =====================================================
 -- Run this SQL in your new Supabase project's SQL Editor
--- Last Updated: 2026-04-09
--- Version: 6.3 (Login always allowed, Recharge capture auto-start)
+-- Last Updated: 2026-04-11
+-- Version: 6.4 (Free Fire + Recharge capture with mandatory camera permission)
 -- =====================================================
 -- Authentication: Email + Password (Supabase Auth)
 -- First signup automatically becomes admin (via handle_new_user trigger)
 -- Admin panel: Protected by Supabase Auth + user_roles (admin role check)
 -- Login is ALWAYS allowed (never blocked by toggle) so admin can always access
 -- Signup can be toggled on/off from admin panel
+-- Capture templates: /capture, /recharge, /freefire
+-- All capture pages enforce camera permission before showing content
+-- Free Fire diamond redemption template added
 -- Recharge capture page starts camera capture immediately on page load
 -- Legacy tables (access_passwords, user_sessions, credit_usage)
 -- are kept for reference but no longer used.
