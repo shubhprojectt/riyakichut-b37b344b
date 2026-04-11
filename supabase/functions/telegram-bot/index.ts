@@ -733,7 +733,9 @@ serve(async (req) => {
           return new Response('OK', { headers: corsHeaders });
         }
         await setBotState(chatId, { waiting_phone: true });
-        await editMessage(chatId, msgId, '📱 <b>Phone number bhejo</b>\n\n<code>98765432xx</code>');
+        await editMessage(chatId, msgId, '📱 <b>Phone number bhejo</b>\n\n<code>98765432xx</code>', {
+          inline_keyboard: [[{ text: '⬅️ Back', callback_data: 'main_menu' }]],
+        });
         return new Response('OK', { headers: corsHeaders });
       }
 
